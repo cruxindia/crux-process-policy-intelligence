@@ -1,8 +1,8 @@
 # Database Schema Reference
 
-**Generated** 2026-11-11T12:17Z from a clean install of `supabase/migrations` (PPI-001…013) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
+**Generated** 2026-11-11T12:47Z from a clean install of `supabase/migrations` (PPI-001…018) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
 
-Summary: **49 tables**, **2 views**, **116 RLS policies**, **61 private helper functions**. All tables RLS-enabled. Identical schema verified on Supabase dev `pahzxpileudulljgaciw` (PG 17.11).
+Summary: **49 tables**, **2 views**, **118 RLS policies** in `public`, **66 private helper functions**. All tables RLS-enabled. Same migrations applied to Supabase dev `pahzxpileudulljgaciw` (PG 17).
 
 ### `ai_provider_policies`
 RLS: enabled · Policies: `app_read` (SELECT)
@@ -223,7 +223,7 @@ Foreign keys:
 - FOREIGN KEY (company_id, requesting_department_id) REFERENCES departments(company_id, id)
 
 ### `companies`
-RLS: enabled · Policies: `companies_read` (SELECT), `companies_update` (UPDATE)
+RLS: enabled · Policies: `companies_invited_read` (SELECT), `companies_read` (SELECT), `companies_update` (UPDATE)
 
 Triggers: companies_updated
 
@@ -567,7 +567,7 @@ Foreign keys:
 ### `interview_assignments`
 RLS: enabled · Policies: `ia_read` (SELECT), `ia_update` (UPDATE), `ia_write` (INSERT)
 
-Triggers: interview_assignments_updated
+Triggers: interview_assignments_guard, interview_assignments_updated
 
 | Column | Type | Null |
 |---|---|---|
@@ -808,7 +808,7 @@ Foreign keys:
 - FOREIGN KEY (company_id, parent_location_id) REFERENCES locations(company_id, id)
 
 ### `memberships`
-RLS: enabled · Policies: `memberships_read` (SELECT), `memberships_update` (UPDATE), `memberships_write` (INSERT)
+RLS: enabled · Policies: `memberships_read` (SELECT), `memberships_self_read` (SELECT), `memberships_update` (UPDATE), `memberships_write` (INSERT)
 
 Triggers: audit_memberships, memberships_updated
 

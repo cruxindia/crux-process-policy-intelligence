@@ -7,9 +7,9 @@ Requirements baseline: [`docs/pack/README_START_HERE.md`](docs/pack/README_START
 
 | Layer | Status | Evidence |
 |---|---|---|
-| Database foundation (Phases 1–2) + MVP domain schema + invitations + private evidence storage | Implemented, tested: 9 pgTAP files / 149 assertions pass locally (PG 16), in GitHub Actions, and on Supabase (PG 17) | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
-| Hosted dev database | Provisioned: Supabase `crux-process-policy-intelligence` (`pahzxpileudulljgaciw`, ap-south-1 Mumbai, Free plan), migrations PPI-001…014 applied, private bucket `evidence-private`, empty (no seed) | `docs/pack/00_GOVERNANCE/PROGRESS_AND_DECISION_LOG.md` S-02 |
-| Application UI / API | Not Started | — |
+| Database foundation (Phases 1–2) + MVP domain schema + invitations + private evidence storage + app RPCs/guards | Implemented, tested: 12 pgTAP files / 177 assertions pass locally (PG 16) and on Supabase (PG 17); CI runs them on every push | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
+| Hosted dev database | Provisioned: Supabase `crux-process-policy-intelligence` (`pahzxpileudulljgaciw`, ap-south-1 Mumbai, Free plan), migrations PPI-001…018 applied, private bucket `evidence-private`; only data is the synthetic E2E tenant `E2E-SYNTH` (D-025) | `docs/pack/00_GOVERNANCE/PROGRESS_AND_DECISION_LOG.md` S-02 |
+| Web app (first slice) | Implemented, tested end-to-end on Supabase dev: sign-in (magic link, invitation-only), accept invitation, discovery setup, respondent interview with autosave/revisions/submit, process-status table. **Not deployed** (hosting decision open) | `web/`, `web/e2e/interview-flow.cjs` |
 | AI provider adapter | Not Started (DB-level provider policy guard only) | `ai_provider_policies` |
 
 Nothing here is approved CRUX policy. Seed data is synthetic.
@@ -35,7 +35,17 @@ supabase/migrations/       ordered migrations: <timestamp>_ppi_<nnn>_<name>.sql
 supabase/seed/             SYNTHETIC data only (2 companies)
 supabase/tests/            pgTAP tests; _harness/ = local Supabase stubs (never deployed)
 scripts/test-db.sh         clean-install + full test run on a throwaway Postgres
+web/                       Next.js app (user JWT only; never service_role)
 ```
+
+## Run the web app locally
+
+```bash
+cd web && cp .env.example .env.local   # fill in the publishable key (public; RLS protects data)
+npm ci && npm run dev
+```
+
+Before real use, in Supabase Auth: enable the Custom Access Token hook `public.custom_access_token_hook`, disable sign-ups, set Site URL / redirect URLs (`<app>/auth/confirm`), configure custom SMTP.
 
 ## Run the database tests locally
 

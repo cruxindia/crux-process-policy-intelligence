@@ -12,12 +12,12 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 
 | Req | Title | DB status | App status | Evidence (DB) | Gaps / next |
 |---|---|---|---|---|---|
-| FR-01 | Identity & organisation | Tested | Not Started | PPI-002, PPI-014; tests 02, 09 (invite → accept, hosted) | Supabase Auth invite call + sign-in UI not built; entities/locations have no admin UI |
+| FR-01 | Identity & organisation | Tested | Tested (E2E, dev) | PPI-002, PPI-014, PPI-016; tests 02, 09, 11; `web/app/login`, `web/app/page.tsx`; E2E S-04 | Sending invitations (server-only Auth invite route) and org/entity/location admin UI not built; Auth settings + hook activation pending (D-023, D-024) |
 | FR-02 | Roles, permissions, scope, delegation | Tested | Not Started | PPI-003; tests 01, 02 | Delegation only by `role.manage` holders; authority matrix is candidate (AQ-005) |
-| FR-03 | Department discovery | Drafted | Not Started | departments.mandate; templates exist | Department profile fields + interview templates not loaded |
+| FR-03 | Department discovery | Tested (question set) | Tested (E2E, dev) | PPI-015 starter set (12 department questions, generic); test 10; E2E S-04 | Structured department profile built from reviewed answers not built; wording not yet reviewed by CRUX |
 | FR-04 | Company DNA, VOC, CTQ | Not Started | Not Started | — | Deferred after MVP (C-02, pending approval) |
-| FR-05 | Interview campaigns & sessions | Tested | Not Started | PPI-005; test 03 | |
-| FR-06 | Adaptive question engine | Implemented (data only) | Not Started | `question_templates.branch_rules`, `interview_questions.rationale/generated_by` | Branch-rule evaluator + AI follow-up generator not built |
+| FR-05 | Interview campaigns & sessions | Tested | Tested (E2E, dev) | PPI-005, PPI-015, PPI-017, PPI-018; tests 03, 10, 12; `web/app/c/[companyId]/discovery`, `…/interviews/[assignmentId]`; E2E S-04 | Reviewer workspace (review/reopen) and reminders not built |
+| FR-06 | Adaptive question engine | Implemented (data only) | Not Started (fixed question set only) | `question_templates.branch_rules`, `interview_questions.rationale/generated_by` | Branch-rule evaluator + AI follow-up generator not built |
 | FR-07 | Process discovery | Tested | Not Started | PPI-007; test 06 | RACI table, metrics/SLA tables, exceptions table not yet separate entities |
 | FR-08 | Policy discovery | Implemented (partial) | Not Started | `knowledge_records.record_type='policy_rule'`, `state_kind='policy'` | Dedicated policy entities + deviation analysis not built |
 | FR-09 | Shared knowledge & provenance | Tested | Not Started | PPI-006, PPI-014; tests 04, 09 (private bucket on Supabase Storage) | Server-side SHA-256 check of uploaded bytes not built (app layer) |
@@ -27,7 +27,7 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 | FR-13 | Legal applicability support | Not Started | Not Started | — | Phase 9; qualified-review gate (AC-09) pending |
 | FR-14 | Documents & governance | Tested | Not Started | PPI-009; tests 07, 08 | Templates, drafting assistant, export not built |
 | FR-15 | Notifications & reminders | Tested (in-app, idempotent) | Not Started | PPI-010; tests 05, 08 | Email deferred (AQ-014); reminder scheduler not built |
-| FR-16 | Dashboards | Tested (MVP view) | Not Started | `dashboard_process_status`; test 08; docs/DASHBOARD_METRICS.md | Other metrics need definitions (AQ-015) |
+| FR-16 | Dashboards | Tested (MVP view) | Implemented (company home table; not E2E-asserted) | `dashboard_process_status`; test 08; docs/DASHBOARD_METRICS.md | Other metrics need definitions (AQ-015) |
 | FR-17 | Search | Implemented (index only) | Not Started | GIN FTS index on knowledge | Search function/API not built |
 | FR-18 | Continuous improvement | Implemented (partial) | Not Started | `document_change_requests`, `state_kind='to_be'` | Trials/before-after metrics not built |
 | FR-19 | Audit & history | Tested | Not Started | PPI-004; tests 07, 08 | Export/evidence packs not built |
@@ -38,7 +38,7 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 |---|---|---|---|
 | NFR-01 | Deny-by-default security | Tested (DB) | RLS on 49/49 tables; anon has no grants; test 01 |
 | NFR-02 | Multi-tenant-safe model | Tested (DB) | Composite tenant FKs; test 02 |
-| NFR-03 | Responsive UI | Not Started | — |
+| NFR-03 | Responsive UI | Implemented (partial) | CSS grid collapses below 640 px, tables scroll; light/dark; not yet tested on a phone |
 | NFR-04 | Accessible forms/autosave | Implemented (autosave storage only) | `interview_answer_drafts` |
 | NFR-05 | Reliable interview resume | Tested (DB) | test 03 |
 | NFR-06 | Idempotent jobs & retries | Tested (DB) | `enqueue_job`/`claim_jobs` SKIP LOCKED; test 08 |
