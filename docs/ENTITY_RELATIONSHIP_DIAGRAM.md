@@ -1,6 +1,6 @@
 # Entity Relationship Diagram — MVP domains
 
-**Status:** Implemented (migrations PPI-001…012) · Tested locally (131 pgTAP assertions) · Not accepted · 2026-11-11
+**Status:** Implemented (migrations PPI-001…013) · Tested: local + CI 131 assertions; Supabase PG 17 66 assertions · Not accepted · 2026-11-11
 Column-level detail: `DATABASE_SCHEMA_REFERENCE.md` (generated). Every tenant table carries `company_id`; relationships below are enforced with composite `(company_id, id)` foreign keys, so a row can only reference rows of the same company.
 
 ## 1. Organisation, access and audit

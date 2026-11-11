@@ -2,11 +2,11 @@
 
 **Document status:** Drafted · **Version:** 0.2 · **Date:** 2026-11-11 · **Owner:** to be assigned
 **Basis:** MASTER_PRD v1.0 (FR-01–FR-19, §5 NFRs), MASTER_CLAUDE_BUILD_PROMPT §13 (MVP) and §14 (critical acceptance scenarios).
-**Evidence base:** repository `crux-process-policy-intelligence` (local, not yet pushed). Test evidence = `scripts/test-db.sh` clean install on PostgreSQL 16.15 + pgTAP: **8 files, 131 assertions, 0 failures** (2026-11-11). Mutation check: removing two safeguards made the suite fail (exit 1).
+**Evidence base:** repository `crux-process-policy-intelligence` (local, not yet pushed). Test evidence = `scripts/test-db.sh` clean install on PostgreSQL 16.15 + pgTAP: **8 files, 131 assertions, 0 failures** (2026-11-11). Mutation check: removing two safeguards made the suite fail (exit 1). **S-02:** GitHub Actions run #1 green; Supabase dev (PG 17.11) migrated with identical schema fingerprint; hosted run of files 01/02/03/07 = 66/66 pass (AC-01, 04, 05, 06, 07, 08, 11 re-verified on the hosted engine).
 
 Status vocabulary (Master §15). Two layers are tracked separately because the database layer enforces governance but no user-facing application exists yet:
 - **DB** = schema, RLS, triggers, functions. **App** = UI/API/worker/AI adapter.
-- "Tested" means tested on a local disposable PostgreSQL, not on Supabase and not in CI.
+- "Tested" = local PG 16 + GitHub Actions; hosted Supabase PG 17 verified for files 01/02/03/07.
 
 ## 1. Functional requirements
 

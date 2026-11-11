@@ -7,8 +7,8 @@ Requirements baseline: [`docs/pack/README_START_HERE.md`](docs/pack/README_START
 
 | Layer | Status | Evidence |
 |---|---|---|
-| Database foundation (Phases 1–2) + MVP domain schema | Implemented, tested locally | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
-| Hosted database | Not provisioned | AQ-019 |
+| Database foundation (Phases 1–2) + MVP domain schema | Implemented, tested (local PG 16 + GitHub Actions + Supabase PG 17) | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
+| Hosted dev database | Provisioned: Supabase `crux-process-policy-intelligence` (`pahzxpileudulljgaciw`, ap-south-1 Mumbai, Free plan), migrations PPI-001…013 applied, empty (no seed) | `docs/pack/00_GOVERNANCE/PROGRESS_AND_DECISION_LOG.md` S-02 |
 | Application UI / API | Not Started | — |
 | AI provider adapter | Not Started (DB-level provider policy guard only) | `ai_provider_policies` |
 
@@ -45,4 +45,4 @@ Requires PostgreSQL 15+ binaries and the pgTAP extension.
 ./scripts/test-db.sh            # creates a throwaway cluster, applies all migrations + seed, runs tests, deletes cluster
 ```
 
-On Supabase (once a project exists): `supabase db push` then `supabase test db`. The `_harness` stub is **not** applied on Supabase — Supabase provides `auth`, `anon`, `authenticated`, `service_role`.
+Hosted dev project: `pahzxpileudulljgaciw` (Mumbai). Migration file timestamps match the project's migration history, so `supabase link --project-ref pahzxpileudulljgaciw && supabase db push` applies only new files. The `_harness` stub is **not** applied on Supabase — Supabase provides `auth`, `anon`, `authenticated`, `service_role`.

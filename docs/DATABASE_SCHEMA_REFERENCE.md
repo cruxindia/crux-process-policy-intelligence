@@ -1,8 +1,8 @@
 # Database Schema Reference
 
-**Generated** 2026-11-11T11:34Z from a clean install of `supabase/migrations` (PPI-001…012) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
+**Generated** 2026-11-11T12:17Z from a clean install of `supabase/migrations` (PPI-001…013) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
 
-Summary: **49 tables**, **2 views**, **110 RLS policies**, **61 private helper functions**. All tables RLS-enabled. Enforcement helpers live in schema `private` (not exposed via the API).
+Summary: **49 tables**, **2 views**, **116 RLS policies**, **61 private helper functions**. All tables RLS-enabled. Identical schema verified on Supabase dev `pahzxpileudulljgaciw` (PG 17.11).
 
 ### `ai_provider_policies`
 RLS: enabled · Policies: `app_read` (SELECT)
@@ -884,7 +884,7 @@ Foreign keys:
 - FOREIGN KEY (company_id, process_id) REFERENCES processes(company_id, id)
 
 ### `process_edges`
-RLS: enabled · Policies: `pe_read` (SELECT), `pe_write` (ALL)
+RLS: enabled · Policies: `pe_delete` (DELETE), `pe_insert` (INSERT), `pe_read` (SELECT), `pe_update` (UPDATE)
 
 Triggers: process_edges_guard
 
@@ -904,7 +904,7 @@ Foreign keys:
 - FOREIGN KEY (company_id, process_version_id, to_step_id) REFERENCES process_steps(company_id, process_version_id, id) ON DELETE CASCADE
 
 ### `process_step_sources`
-RLS: enabled · Policies: `pss_read` (SELECT), `pss_write` (ALL)
+RLS: enabled · Policies: `pss_delete` (DELETE), `pss_insert` (INSERT), `pss_read` (SELECT), `pss_update` (UPDATE)
 
 Triggers: process_step_sources_guard
 
@@ -920,7 +920,7 @@ Foreign keys:
 - FOREIGN KEY (company_id, process_step_id) REFERENCES process_steps(company_id, id) ON DELETE CASCADE
 
 ### `process_steps`
-RLS: enabled · Policies: `ps_read` (SELECT), `ps_write` (ALL)
+RLS: enabled · Policies: `ps_delete` (DELETE), `ps_insert` (INSERT), `ps_read` (SELECT), `ps_update` (UPDATE)
 
 Triggers: process_steps_guard
 

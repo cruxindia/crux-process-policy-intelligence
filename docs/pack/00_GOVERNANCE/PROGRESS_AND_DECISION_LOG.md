@@ -1,21 +1,21 @@
 # Progress and Decision Log
 
 **Last consolidated:** 2026-11-11  
-**Current baseline version:** 1.2 (S-01 database foundation)  
+**Current baseline version:** 1.3 (S-02 hosted dev database + GitHub)  
 **Rule:** A status may be changed to Implemented, Tested or Accepted only when a file, working feature, test result or explicit human decision can be identified. Use only the Master §15 vocabulary: Not Started / Planned / In Progress / Drafted / Implemented / Tested / Accepted / Blocked / Deferred / Superseded.
 
 ## 1. Current overall status
 
 **Phase 0 — Drafted (awaiting owner acceptance). Phases 1–2 database layer — Implemented and Tested locally. Application layer — Not Started.**
 - S-00 (audit): no pre-existing repository/code for this platform (evidence: `REPOSITORY_AUDIT.md` §2, §11). Re-checked at S-01 start: linked computer still has no connected folders; GitHub list unchanged.
-- S-01 (build): new repository `crux-process-policy-intelligence` created **locally** (git, not yet pushed — GitHub CLI token in the build workspace is invalid; owner must create the empty private repo). 12 migrations, synthetic seed, 8 pgTAP files. Clean install + suite: **131 assertions, 0 failures** on PostgreSQL 16.15 (`scripts/test-db.sh`). Not yet run on Supabase (PostgreSQL 17) or in CI.
+- S-01 (build): new repository `crux-process-policy-intelligence` created **locally** (git, not yet pushed — GitHub CLI token in the build workspace is invalid; owner must create the empty private repo). 12 migrations, synthetic seed, 8 pgTAP files. Clean install + suite: **131 assertions, 0 failures** on PostgreSQL 16.15 (`scripts/test-db.sh`). S-02 (hosting): repo pushed to private GitHub `cruxindia/crux-process-policy-intelligence`; GitHub Actions `db-tests` run #1 passed. Supabase dev project created in Mumbai and migrated (PPI-001…013); hosted schema fingerprint identical to tested schema; hosted pgTAP run (files 01, 02, 03, 07 — 66 assertions) passed on PostgreSQL 17.11 with full rollback.
 
 ## 2. Workstream status
 
 | Workstream | Spec status | Impl. status | Evidence / next action |
 |---|---|---|---|
 | Phase 0 audit & scope baseline | Drafted | n/a | `REPOSITORY_AUDIT.md`, `REQUIREMENTS_TRACEABILITY_MATRIX.md`; owner acceptance pending; decisions C-01, C-02, C-10 |
-| Repository / environment | — | In Progress | Local git repo created (S-01); push blocked on owner creating empty private GitHub repo (AQ-018); Supabase project not provisioned (AQ-019, PR-016) |
+| Repository / environment | — | Implemented | Private GitHub repo + CI passing; Supabase dev project `pahzxpileudulljgaciw` (ap-south-1, Free) migrated; `ledger-personal` paused by owner decision to free the slot (S-02) |
 | Product vision and scope | Drafted | n/a | Validate with CRUX management; MVP baseline conflict C-01 |
 | Architecture and free-first AI | Drafted (Proposed) | Not Started | Free Gemini tier unsuitable for confidential data (C-10, PR-017) |
 | Data model/schema | Implemented | Tested (local) | 49 tables, 2 views; `docs/ENTITY_RELATIONSHIP_DIAGRAM.md`, `docs/DATABASE_SCHEMA_REFERENCE.md` (generated); C-04/C-05/C-06 applied |
@@ -36,6 +36,7 @@
 |---|---|---|---|---|---|---|
 | S-00 | 2026-11-11 | Phase 0 repository audit and requirements coverage | Audit, RTM, SOW, document index, change log; register updates | Created: `REPOSITORY_AUDIT.md`, `REQUIREMENTS_TRACEABILITY_MATRIX.md`, `STATEMENT_OF_WORK.md`, `DOCUMENT_INDEX.md`, `CHANGE_LOG.md`. Changed: this log, `RISK_AND_DEPENDENCY_REGISTER.md`, `ASSUMPTIONS_AND_OPEN_QUESTIONS.md` | No application tests (no code). Verification commands only: pack extraction, prompt `diff` (identical), repo/project listings, coverage-count reconciliation (42 docs) | Drafted; awaiting owner acceptance |
 | S-01 | 2026-11-11 | Phases 1–2 database foundation + MVP domain schema with enforced governance invariants | Local repo; 12 migrations; seed; 8 pgTAP files; ERD; generated schema reference; dashboard metrics; CI workflow | `supabase/migrations/20261111100000…101100_ppi_001…012_*.sql`, `supabase/seed/01_synthetic_two_companies.sql`, `supabase/tests/0[1-8]_*.test.sql`, `supabase/tests/_harness/*`, `scripts/test-db.sh`, `scripts/gen-schema-ref.sql`, `docs/*.md`, `.github/workflows/db-tests.yml` | `scripts/test-db.sh` → 8/8 files PASS, 131 assertions, 0 failures (PG 16.15, pgTAP). Mutation check (2 safeguards removed) → suite FAILED as expected. Defects found by tests and fixed: respondent could add revisions after submission (policy tightened to `interview.review`) | Implemented + Tested (local); not accepted |
+| S-02 | 2026-11-11 | Host the build: GitHub + Supabase dev | Private repo pushed; CI green; Supabase project created (Mumbai) and migrated; advisor fix PPI-013; migration files renamed to hosted versions | `supabase/migrations/*` (renamed + `…121618_ppi_013_split_process_write_policies.sql`), README, registers | Local: 131/131 after PPI-013. GitHub Actions db-tests #1: success (23 s). Supabase PG 17.11: schema fingerprints equal (columns 528, constraints 355, functions 62, indexes 219, policies 116 after 013, triggers 73, RLS 49/49, views 2); hosted pgTAP 66/66 (files 01,02,03,07) with rollback — 0 rows/0 extensions left. Advisors: security = 1 INFO (background_jobs has no policy — intentional, service-only); performance = WARN fixed by PPI-013, 86 INFO unused-index (empty DB) | Implemented + Tested; not accepted |
 
 ## 3. Current architecture proposals
 
@@ -54,8 +55,8 @@ These are proposed engineering decisions, not confirmed company policy or deploy
 
 S-00 and S-01 done. Revised dependency order:
 
-1. **Owner: create empty private GitHub repo** `crux-process-policy-intelligence` → Claude attaches and pushes the local repo (all history kept); CI runs the suite there.
-2. **Owner: choose Supabase home for dev** (AQ-019): pause an unused project, or a separate org/account. Then: `supabase db push` of PPI-001…012 to a **dev** project, run the suite against PG 17, run Supabase security/performance advisors.
+1. ~~GitHub repo + CI~~ and ~~Supabase dev project + PG 17 verification~~ — done in S-02.
+2. **Run remaining hosted tests** (files 04, 05, 06, 08) on Supabase the same way (only 01/02/03/07 were run hosted; all 8 pass locally and in CI).
 3. **Phase 2 completion:** Supabase Auth sign-in + invitation → membership activation; private storage bucket `evidence-private` with RLS mirroring `can_read_evidence`.
 4. **App shell (ADR-002 decision first):** Next.js + TypeScript server-side app using the user's JWT (never service_role for user actions); first screens: admin org/roles, my interview (resume), process owner review.
 5. **AI adapter v1:** one provider path (local Ollama) behind `ai_provider_policies`; extraction prompt v1 with JSON schema + source-ID validation; eval cases before use.
@@ -81,6 +82,8 @@ S-00 and S-01 done. Revised dependency order:
 | D-014 | 2026-11-11 | Human-only transitions (verify, approve, decide, publish, review) require a `human` membership AND a token not marked `actor_type=ai`; AI/service identities are refused even if over-permissioned | Implemented + Tested | Tests 03–07 |
 | D-015 | 2026-11-11 | Document approvals bind to the SHA-256 of content at submission; any edit voids earlier approvals | Implemented + Tested | Test 08 |
 | D-016 | 2026-11-11 | UUID primary keys + composite `(company_id, id)` tenant FKs on all tenant tables | Implemented + Tested | Test 02 |
+| D-018 | 2026-11-11 | Pause `ledger-personal` to free a Free-plan slot; create PPI dev project in ap-south-1 (Mumbai) in org `cruxindia's Org` | Done | Shantanu (instruction 17:25 IST) |
+| D-019 | 2026-11-11 | Repo `cruxindia/crux-process-policy-intelligence` private; migration file versions = Supabase history versions | Done | Shantanu (instruction) / Claude |
 | D-017 | 2026-11-11 | Working defaults applied while owner decisions pending: MVP = Master §13 (D-009), DNA/VOC/CTQ deferred (D-010), provider data cap (D-011). All reversible | Applied (reversible) | Pending Shantanu/CRUX approval |
 
 ## 6. How to update this log

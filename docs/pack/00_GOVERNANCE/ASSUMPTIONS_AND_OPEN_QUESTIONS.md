@@ -21,8 +21,8 @@ This register prevents assumptions from being mistaken for approved CRUX decisio
 | AQ-015 | Reporting metrics | KPI definitions need owner/source | Approve definitions for discovery, process, risk and document metrics |
 | AQ-016 | Language | Initial interface assumed English | Confirm need for multilingual interviews/documents |
 | AQ-017 | Availability/recovery | No RTO/RPO set | Management/IT to define acceptable downtime and data loss |
-| AQ-018 | Repository | None exists; propose private `cruxindia/crux-process-policy-intelligence` | Owner yes to create; confirm org/account and who else gets access |
-| AQ-019 | Database account | Phase 1 runs on local disposable Postgres; current Supabase org has no free active slot | Choose: pause an existing project, separate Supabase org/account, or paid plan |
+| AQ-018 | Repository | None exists; propose private `cruxindia/crux-process-policy-intelligence` | **Resolved S-02:** `cruxindia/crux-process-policy-intelligence` (private). Open: who else gets access |
+| AQ-019 | Database account | Phase 1 runs on local disposable Postgres; current Supabase org has no free active slot | **Resolved S-02 (dev):** owner paused `ledger-personal`; dev project `pahzxpileudulljgaciw` (Mumbai). Open: where prod/pilot will live |
 | AQ-020 | Inactive Supabase project `final_schema` | Unrelated to this platform (not inspected) | Owner to confirm purpose; do not reuse without inspection |
 | AQ-021 | MVP baseline and phase order | Master §13 MVP; DNA/VOC/CTQ after MVP (C-01, C-02) — applied as working default (D-017) | Owner approval |
 | AQ-022 | Process approval separation of duties | Process owner may approve own process version (not blocked) | Should process approval require someone other than the editor? |

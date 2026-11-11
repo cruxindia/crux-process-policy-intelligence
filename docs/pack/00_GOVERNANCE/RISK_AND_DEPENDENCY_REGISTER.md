@@ -17,10 +17,10 @@
 | PR-013 | Prompt injection in evidence | Data exfiltration/unsafe actions | Treat source content as untrusted; no privileged tool execution | Open |
 | PR-014 | Stale source documents | Wrong process/legal statement | Version/effective dates and stale-source warnings | Open |
 | PR-015 | Unclear retention/privacy obligations | Over-retention or unlawful handling | Qualified review and configurable retention controls | Open |
-| PR-016 | Supabase free organisation already at 2/2 active projects (verified 2026-11-11) | No hosted dev/pilot DB without pausing a live project or using another account | Local Postgres for Phase 1; decide account/org before Phase 2 (AQ-019) | Open |
+| PR-016 | Supabase free organisation already at 2/2 active projects (verified 2026-11-11) | No hosted dev/pilot DB without pausing a live project or using another account | Owner paused `ledger-personal`; dev project created (S-02). Org is again at 2/2 active — a separate prod/pilot project will need another slot or paid plan | Mitigated (dev) / Open (prod) |
 | PR-017 | Free/unpaid hosted AI tiers may use inputs to improve products and allow human review (Gemini API terms, fetched 2026-11-11) | Confidential employee/process data disclosed to provider | Proposed D-011: unpaid tiers for synthetic/public data only; provider-policy check in adapter (AC-10) | Open |
-| PR-018 | No code repository exists | No evidence home for migrations, tests, progress | Create private repo (owner yes needed) — AQ-018 | Open |
-| PR-020 | Tests ran on PostgreSQL 16.15; Supabase runs PostgreSQL 17 | Behaviour differences undetected | Run `supabase test db` on a dev project before Phase 2 sign-off | Open |
+| PR-018 | No code repository exists | No evidence home for migrations, tests, progress | Private repo created + CI green (S-02) | Closed |
+| PR-020 | Tests ran on PostgreSQL 16.15; Supabase runs PostgreSQL 17 | Behaviour differences undetected | Hosted PG 17.11: schema fingerprint identical; 66/66 hosted assertions pass (S-02); run remaining files 04/05/06/08 hosted | Mitigated |
 | PR-021 | DB-enforced rules can be bypassed by superuser/migration scripts | Silent governance breach by operators | Restrict owner credentials; audit migrations; triggers still fire for service_role | Open |
 | PR-022 | App layer not built — DB guarantees unproven through real UI/API | False sense of completion | RTM tracks DB and App status separately; no feature called complete until App tested | Open |
 | PR-019 | Supabase Free plan: no automatic backups, no PITR, pauses after 1 week inactivity (verified 2026-11-11) | Data loss / pilot downtime; fails backup-restore gate | Scheduled external `pg_dump` + restore drill, or approved paid plan, before pilot (C-11) | Open |
