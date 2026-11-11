@@ -7,7 +7,7 @@ Requirements baseline: [`docs/pack/README_START_HERE.md`](docs/pack/README_START
 
 | Layer | Status | Evidence |
 |---|---|---|
-| Database foundation (Phases 1–2) + MVP domain schema + invitations + private evidence storage + app RPCs/guards | Implemented, tested: 14 pgTAP files / 210 assertions pass locally (PG 16) and on Supabase (PG 17); CI runs them on every push | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
+| Database foundation (Phases 1–2) + MVP domain schema + invitations + private evidence storage + app RPCs/guards | Implemented, tested: 15 pgTAP files / 225 assertions pass locally (PG 16) and on Supabase (PG 17); CI runs them on every push | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
 | Hosted dev database | Provisioned: Supabase `crux-process-policy-intelligence` (`pahzxpileudulljgaciw`, ap-south-1 Mumbai, Free plan), migrations PPI-001…019 applied, private bucket `evidence-private`; tenants: live **CRUX** (pilot, D-030) and synthetic `E2E-SYNTH` (D-025). Auth: access-token hook on, public sign-ups off | `docs/pack/00_GOVERNANCE/PROGRESS_AND_DECISION_LOG.md` S-02 |
 | Web app | **Live: https://crux-ppi.netlify.app** (Netlify, auto-deploys `main`). Implemented, tested end-to-end on the live site: administration (departments, processes, invitations, roles), sign-in (magic link, invitation-only), accept invitation, discovery setup, respondent interview with autosave/revisions/submit, process-status table. | `web/`, `web/e2e/interview-flow.cjs` |
 | AI provider adapter | Not Started (DB-level provider policy guard only) | `ai_provider_policies` |

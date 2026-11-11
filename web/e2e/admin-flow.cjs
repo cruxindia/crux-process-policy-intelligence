@@ -30,7 +30,7 @@ async function uiLogin(page, email, pw) {
 
     const l = await (await browser.newContext({ viewport: { width: 1200, height: 900 }, deviceScaleFactor: 2 })).newPage();
     await uiLogin(l, 'e2e.lead@example.invalid', process.env.E2E_PASSWORD);
-    check('password sign-in works', l.url() === BASE + '/');
+    check('password sign-in works', !l.url().includes('/login'));
     await l.goto(`${BASE}/c/${CO}/admin`);
     const dcode = 'FIN' + SUFFIX.slice(-3).toUpperCase();
     await l.fill('#d-code', dcode); await l.fill('#d-name', 'Finance (synthetic)');

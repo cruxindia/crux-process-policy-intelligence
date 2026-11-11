@@ -21,12 +21,12 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 | FR-07 | Process discovery | Tested | Not Started | PPI-007; test 06 | RACI table, metrics/SLA tables, exceptions table not yet separate entities |
 | FR-08 | Policy discovery | Implemented (partial) | Not Started | `knowledge_records.record_type='policy_rule'`, `state_kind='policy'` | Dedicated policy entities + deviation analysis not built |
 | FR-09 | Shared knowledge & provenance | Tested | Not Started | PPI-006, PPI-014; tests 04, 09 (private bucket on Supabase Storage) | Server-side SHA-256 check of uploaded bytes not built (app layer) |
-| FR-10 | Clarification & disputes | Tested | Not Started | PPI-008; test 05 | Reminder/escalation jobs not scheduled |
+| FR-10 | Clarification & disputes | Tested | Tested (E2E, live) | PPI-008, PPI-021; tests 05, 15; `web/app/c/[companyId]/{requests,disputes}`; E2E S-07 | Reminder/escalation scheduling and email/WhatsApp alerts not built |
 | FR-11 | Process mapping | Tested (validation) | Not Started | `process_map_issues()`; test 06 | Renderer/editor not built; BPMN not claimed |
 | FR-12 | Risk & control | Not Started | Not Started | — | Phase 9 |
 | FR-13 | Legal applicability support | Not Started | Not Started | — | Phase 9; qualified-review gate (AC-09) pending |
 | FR-14 | Documents & governance | Tested | Not Started | PPI-009; tests 07, 08 | Templates, drafting assistant, export not built |
-| FR-15 | Notifications & reminders | Tested (in-app, idempotent) | Not Started | PPI-010; tests 05, 08 | Email deferred (AQ-014); reminder scheduler not built |
+| FR-15 | Notifications & reminders | Tested (in-app, idempotent) | Implemented (in-app list on home; E2E-checked for replies/disputes) | PPI-010, PPI-021; tests 05, 08, 15 | Email/WhatsApp (AQ-014) and scheduled reminders not built |
 | FR-16 | Dashboards | Tested (MVP view) | Implemented (company home table; not E2E-asserted) | `dashboard_process_status`; test 08; docs/DASHBOARD_METRICS.md | Other metrics need definitions (AQ-015) |
 | FR-17 | Search | Implemented (index only) | Not Started | GIN FTS index on knowledge | Search function/API not built |
 | FR-18 | Continuous improvement | Implemented (partial) | Not Started | `document_change_requests`, `state_kind='to_be'` | Trials/before-after metrics not built |
