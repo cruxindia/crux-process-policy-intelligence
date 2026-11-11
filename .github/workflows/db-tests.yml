@@ -9,7 +9,7 @@ permissions:
 jobs:
   clean-install-and-test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       # Since 11-Nov-2026 14:37 UTC the runners cannot resolve any Ubuntu archive host (GitHub and npm resolve).
@@ -17,8 +17,9 @@ jobs:
       # using the same substitutions as pgTAP's Makefile. Infrastructure DNS must not mask test results.
       - name: Install PostgreSQL 16 + pgTAP
         run: |
-          if getent hosts azure.archive.ubuntu.com >/dev/null && sudo apt-get update -q \
-             && sudo apt-get install -y -q postgresql-16 postgresql-16-pgtap; then exit 0; fi
+          apt_opts="-o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::Retries=1"
+          if timeout 240 sudo apt-get update -q $apt_opts \
+             && timeout 240 sudo apt-get install -y -q $apt_opts postgresql-16 postgresql-16-pgtap; then exit 0; fi
           echo "::warning::Ubuntu archive unreachable; using preinstalled PostgreSQL 16 and pgTAP v1.3.3 from GitHub"
           test -x /usr/lib/postgresql/16/bin/initdb
           git clone -q --depth 1 --branch v1.3.3 https://github.com/theory/pgtap.git /tmp/pgtap
