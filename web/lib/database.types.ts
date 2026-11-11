@@ -1472,6 +1472,68 @@ export type Database = {
           },
         ]
       }
+      interview_answer_analyses: {
+        Row: {
+          ai_run_id: string
+          analysis: Json
+          answer_id: string
+          company_id: string
+          created_at: string
+          id: string
+          session_id: string
+          understood_answer: string
+        }
+        Insert: {
+          ai_run_id: string
+          analysis: Json
+          answer_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          session_id: string
+          understood_answer: string
+        }
+        Update: {
+          ai_run_id?: string
+          analysis?: Json
+          answer_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          session_id?: string
+          understood_answer?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_answer_analyses_company_id_ai_run_id_fkey"
+            columns: ["company_id", "ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_runs"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_answer_analyses_company_id_answer_id_fkey"
+            columns: ["company_id", "answer_id"]
+            isOneToOne: false
+            referencedRelation: "interview_answers"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_answer_analyses_company_id_answer_id_fkey"
+            columns: ["company_id", "answer_id"]
+            isOneToOne: false
+            referencedRelation: "interview_current_answers"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_answer_analyses_company_id_session_id_fkey"
+            columns: ["company_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
       interview_answer_drafts: {
         Row: {
           company_id: string
@@ -1662,12 +1724,15 @@ export type Database = {
       }
       interview_campaigns: {
         Row: {
+          ai_provider: string | null
           code: string
           company_id: string
           created_at: string
           department_id: string | null
           due_on: string | null
           id: string
+          interview_mode: string
+          max_ai_questions: number
           name: string
           owner_membership_id: string
           process_id: string | null
@@ -1678,12 +1743,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_provider?: string | null
           code: string
           company_id: string
           created_at?: string
           department_id?: string | null
           due_on?: string | null
           id?: string
+          interview_mode?: string
+          max_ai_questions?: number
           name: string
           owner_membership_id: string
           process_id?: string | null
@@ -1694,12 +1762,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_provider?: string | null
           code?: string
           company_id?: string
           created_at?: string
           department_id?: string | null
           due_on?: string | null
           id?: string
+          interview_mode?: string
+          max_ai_questions?: number
           name?: string
           owner_membership_id?: string
           process_id?: string | null
@@ -1743,6 +1814,156 @@ export type Database = {
             columns: ["company_id", "process_id"]
             isOneToOne: false
             referencedRelation: "processes"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      interview_clarifications: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string
+          earlier_answer_id: string
+          id: string
+          later_answer_id: string
+          question_id: string | null
+          raised_by_ai_run_id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by_ai_run_id: string | null
+          session_id: string
+          status: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description: string
+          earlier_answer_id: string
+          id?: string
+          later_answer_id: string
+          question_id?: string | null
+          raised_by_ai_run_id: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_ai_run_id?: string | null
+          session_id: string
+          status?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string
+          earlier_answer_id?: string
+          id?: string
+          later_answer_id?: string
+          question_id?: string | null
+          raised_by_ai_run_id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_ai_run_id?: string | null
+          session_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_clarifications_company_id_earlier_answer_id_fkey"
+            columns: ["company_id", "earlier_answer_id"]
+            isOneToOne: false
+            referencedRelation: "interview_answers"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_clarifications_company_id_earlier_answer_id_fkey"
+            columns: ["company_id", "earlier_answer_id"]
+            isOneToOne: false
+            referencedRelation: "interview_current_answers"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_clarifications_company_id_later_answer_id_fkey"
+            columns: ["company_id", "later_answer_id"]
+            isOneToOne: false
+            referencedRelation: "interview_answers"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_clarifications_company_id_later_answer_id_fkey"
+            columns: ["company_id", "later_answer_id"]
+            isOneToOne: false
+            referencedRelation: "interview_current_answers"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_clarifications_company_id_question_id_fkey"
+            columns: ["company_id", "question_id"]
+            isOneToOne: false
+            referencedRelation: "interview_questions"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_clarifications_company_id_raised_by_ai_run_id_fkey"
+            columns: ["company_id", "raised_by_ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_runs"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_clarifications_company_id_resolved_by_ai_run_id_fkey"
+            columns: ["company_id", "resolved_by_ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_runs"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_clarifications_company_id_session_id_fkey"
+            columns: ["company_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      interview_dimension_coverage: {
+        Row: {
+          ai_run_id: string | null
+          company_id: string
+          dimension: string
+          note: string | null
+          session_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_run_id?: string | null
+          company_id: string
+          dimension: string
+          note?: string | null
+          session_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_run_id?: string | null
+          company_id?: string
+          dimension?: string
+          note?: string | null
+          session_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_dimension_coverage_company_id_ai_run_id_fkey"
+            columns: ["company_id", "ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_runs"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "interview_dimension_coverage_company_id_session_id_fkey"
+            columns: ["company_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
             referencedColumns: ["company_id", "id"]
           },
         ]

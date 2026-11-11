@@ -7,10 +7,10 @@ Requirements baseline: [`docs/pack/README_START_HERE.md`](docs/pack/README_START
 
 | Layer | Status | Evidence |
 |---|---|---|
-| Database foundation (Phases 1–2) + MVP domain schema + invitations + private evidence storage + app RPCs/guards | Implemented, tested: 15 pgTAP files / 225 assertions pass locally (PG 16) and on Supabase (PG 17); CI runs them on every push | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
-| Hosted dev database | Provisioned: Supabase `crux-process-policy-intelligence` (`pahzxpileudulljgaciw`, ap-south-1 Mumbai, Free plan), migrations PPI-001…019 applied, private bucket `evidence-private`; tenants: live **CRUX** (pilot, D-030) and synthetic `E2E-SYNTH` (D-025). Auth: access-token hook on, public sign-ups off | `docs/pack/00_GOVERNANCE/PROGRESS_AND_DECISION_LOG.md` S-02 |
+| Database foundation (Phases 1–2) + MVP domain schema + invitations + private evidence storage + app RPCs/guards | Implemented, tested: 16 pgTAP files / 237 assertions pass locally (PG 16) and on Supabase (PG 17); CI runs them on every push | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
+| Hosted dev database | Provisioned: Supabase `crux-process-policy-intelligence` (`pahzxpileudulljgaciw`, ap-south-1 Mumbai, Free plan), migrations PPI-001…022 applied, private bucket `evidence-private`; tenants: live **CRUX** (pilot, D-030) and synthetic `E2E-SYNTH` (D-025). Auth: access-token hook on, public sign-ups off | `docs/pack/00_GOVERNANCE/PROGRESS_AND_DECISION_LOG.md` S-02 |
 | Web app | **Live: https://crux-ppi.netlify.app** (Netlify, auto-deploys `main`). Implemented, tested end-to-end on the live site: administration (departments, processes, invitations, roles), sign-in (magic link, invitation-only), accept invitation, discovery setup, respondent interview with autosave/revisions/submit, process-status table. | `web/`, `web/e2e/interview-flow.cjs` |
-| AI provider adapter | Not Started (DB-level provider policy guard only) | `ai_provider_policies` |
+| AI adaptive interview | Implemented + deployed (Supabase Edge Function `interview-ai`, Gemini via server-side key; Ollama optional). Verified live **without a key** (honest error, nothing invented). **Real Gemini not yet tested: `GEMINI_API_KEY` not set in Supabase secrets.** CRUX link still uses the fixed interview until a live test passes | [`AI_INTEGRATION.md`](AI_INTEGRATION.md), [`TEST_RESULTS.md`](TEST_RESULTS.md), [`PROJECT_GAP_AUDIT.md`](PROJECT_GAP_AUDIT.md) |
 
 Nothing here is approved CRUX policy. Seed data is synthetic.
 
@@ -33,6 +33,7 @@ docs/ENTITY_RELATIONSHIP_DIAGRAM.md
 docs/DATABASE_SCHEMA_REFERENCE.md   (generated from the live test DB)
 supabase/migrations/       ordered migrations: <timestamp>_ppi_<nnn>_<name>.sql
 supabase/seed/             SYNTHETIC data only (2 companies)
+supabase/functions/        Edge Function interview-ai + shared AI adapter/engine (+ mocked unit tests)
 supabase/tests/            pgTAP tests; _harness/ = local Supabase stubs (never deployed)
 scripts/test-db.sh         clean-install + full test run on a throwaway Postgres
 web/                       Next.js app (user JWT only; never service_role)

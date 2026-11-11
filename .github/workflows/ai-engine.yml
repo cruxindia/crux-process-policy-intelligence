@@ -1,0 +1,28 @@
+name: ai-engine
+on:
+  push:
+    paths: ["supabase/functions/**", "scripts/prompt-hash.mts", "supabase/bootstrap/adaptive_ai_setup.sql", ".github/workflows/ai-engine.yml"]
+  pull_request:
+    paths: ["supabase/functions/**", "scripts/prompt-hash.mts", "supabase/bootstrap/adaptive_ai_setup.sql", ".github/workflows/ai-engine.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Mocked unit tests: provider adapter + engine (no network, no keys).
+      - run: node --experimental-strip-types --test supabase/functions/tests/engine.test.ts
+      # The registered prompt hash must match the code, or the deployed function refuses to run.
+      - name: prompt provenance hash matches bootstrap SQL
+        run: |
+          h=$(node --experimental-strip-types scripts/prompt-hash.mts 2>/dev/null | sed -E 's/.*"template_sha256":"([0-9a-f]{64})".*/\1/')
+          echo "computed $h"
+          grep -q "$h" supabase/bootstrap/adaptive_ai_setup.sql
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check supabase/functions/interview-ai/index.ts

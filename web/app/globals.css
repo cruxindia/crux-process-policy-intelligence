@@ -61,3 +61,16 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { padding: 6px 12px; border-radius: 999px; font-size: .9rem; }
 .chip.ghost { background: transparent; color: var(--accent); }
+
+/* Sprint 04 — adaptive AI interview */
+.bubble.thinking { color: var(--muted); font-style: italic; }
+.bubble.thinking::after { content: "…"; display: inline-block; animation: dots 1.2s steps(4) infinite; width: 1.2em; overflow: hidden; vertical-align: bottom; }
+@keyframes dots { from { width: 0; } to { width: 1.2em; } }
+.why { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+.clar { border-left: 3px solid var(--warn); }
+.clar-tag { display: inline-block; font-size: .75rem; color: var(--warn); font-weight: 600; margin-bottom: 4px; }
+.dims { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.dims .badge { font-size: .72rem; }
+.badge.part { color: var(--accent); border-color: currentColor; }
+.ai-line { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+@media (prefers-reduced-motion: reduce) { .bubble.thinking::after { animation: none; content: "…"; } }

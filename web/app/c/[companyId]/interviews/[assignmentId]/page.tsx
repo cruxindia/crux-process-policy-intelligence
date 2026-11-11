@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { AutoStart } from "./auto-start";
-import { Chat, type ChatAnswer, type ChatQuestion } from "./chat";
+import { Chat, type ChatAnswer, type ChatQuestion, type Clarification } from "./chat";
 
 export default async function InterviewPage({ params, searchParams }: {
   params: Promise<{ companyId: string; assignmentId: string }>;
@@ -14,7 +14,7 @@ export default async function InterviewPage({ params, searchParams }: {
 
   const { data: assignment } = await supabase
     .from("interview_assignments")
-    .select("id, status, respondent_membership_id, interview_campaigns(name)")
+    .select("id, status, respondent_membership_id, interview_campaigns(name, interview_mode)")
     .eq("company_id", companyId).eq("id", assignmentId).maybeSingle();
   if (!assignment) notFound();
   const isRespondent = assignment.respondent_membership_id === membership.id;
@@ -34,7 +34,7 @@ export default async function InterviewPage({ params, searchParams }: {
   }
 
   const { data: qs } = await supabase.from("interview_questions")
-    .select("id, seq, question_text, question_templates(help_text, scope_type, answer_type, choices)")
+    .select("id, seq, question_text, generated_by, rationale, field_key, question_templates(help_text, scope_type, answer_type, choices)")
     .eq("company_id", companyId).eq("session_id", session.id).order("seq");
   const ids = (qs ?? []).map((q) => q.id);
   const [{ data: ans }, { data: drafts }, { data: me }] = await Promise.all([
@@ -45,10 +45,17 @@ export default async function InterviewPage({ params, searchParams }: {
       .eq("company_id", companyId).in("question_id", ids) : Promise.resolve({ data: [] as { question_id: string; draft_text: string | null }[] }),
     supabase.from("user_profiles").select("display_name").eq("id", userId).maybeSingle(),
   ]);
+  const adaptive = assignment.interview_campaigns?.interview_mode === "adaptive";
+  const [{ data: cov }, { data: clar }] = adaptive ? await Promise.all([
+    supabase.from("interview_dimension_coverage").select("dimension, status").eq("company_id", companyId).eq("session_id", session.id),
+    supabase.from("interview_clarifications").select("id, description, status, question_id").eq("company_id", companyId).eq("session_id", session.id).order("created_at"),
+  ]) : [{ data: [] as { dimension: string; status: string }[] }, { data: [] as Clarification[] }];
   const draftBy = new Map((drafts ?? []).map((d) => [d.question_id, d.draft_text]));
   const questions: ChatQuestion[] = (qs ?? []).map((q) => ({
     id: q.id, seq: q.seq, text: q.question_text, help: q.question_templates?.help_text ?? null,
-    scope: q.question_templates?.scope_type ?? "general", answerType: q.question_templates?.answer_type ?? "text",
+    scope: q.generated_by === "ai" ? "ai" : q.question_templates?.scope_type ?? "general", answerType: q.question_templates?.answer_type ?? "text",
+    generatedBy: q.generated_by, reason: q.generated_by === "ai" ? q.rationale : null,
+    dimension: q.field_key.startsWith("ai.") ? q.field_key.slice(3) : null,
     choices: Array.isArray(q.question_templates?.choices) ? (q.question_templates!.choices as string[]) : null,
     draft: draftBy.get(q.id) ?? null,
   }));
@@ -64,7 +71,8 @@ export default async function InterviewPage({ params, searchParams }: {
       {sp.e && <div className="notice error">{sp.e}</div>}
       <Chat companyId={companyId} assignmentId={assignmentId} sessionId={session.id}
         firstName={(me?.display_name ?? "there").split(" ")[0] ?? "there"}
-        questions={questions} answers={answers} open={open} canAnswer={isRespondent} submittedAt={session.submitted_at} />
+        questions={questions} answers={answers} open={open} canAnswer={isRespondent} submittedAt={session.submitted_at}
+        adaptive={adaptive} coverage={Object.fromEntries((cov ?? []).map((c) => [c.dimension, c.status]))} clarifications={(clar ?? []) as Clarification[]} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { createAssignment, createCampaign, loadTemplates } from "./actions";
+import { AiStatus } from "./ai-status";
 
 export default async function DiscoveryPage({ params, searchParams }: {
   params: Promise<{ companyId: string }>; searchParams: Promise<Record<string, string | undefined>>;
@@ -15,7 +16,7 @@ export default async function DiscoveryPage({ params, searchParams }: {
     supabase.from("departments").select("id, code, name").eq("company_id", companyId).eq("status", "active").order("code"),
     supabase.from("processes").select("id, code, name, owner_department_id").eq("company_id", companyId).order("code"),
     supabase.from("memberships").select("id, user_id, job_title").eq("company_id", companyId).eq("status", "active").eq("member_kind", "human"),
-    supabase.from("interview_campaigns").select("id, code, name, status, due_on, department_id, process_id").eq("company_id", companyId).order("created_at", { ascending: false }),
+    supabase.from("interview_campaigns").select("id, code, name, status, due_on, department_id, process_id, interview_mode, ai_provider, max_ai_questions").eq("company_id", companyId).order("created_at", { ascending: false }),
     supabase.from("interview_assignments").select("id, campaign_id, status, respondent_membership_id").eq("company_id", companyId),
     supabase.from("question_templates").select("scope_type", { count: "exact", head: false }).eq("company_id", companyId).eq("status", "active"),
   ]);
@@ -36,6 +37,7 @@ export default async function DiscoveryPage({ params, searchParams }: {
       <p className="muted">Create interview campaigns and assign them. You can only create or see campaigns within your own scope.</p>
       {sp.e && <div className="notice error">{sp.e}</div>}
       {sp.ok && <div className="notice ok">{sp.ok}</div>}
+      <AiStatus companyId={companyId} />
 
       <h2>Question set</h2>
       <div className="card row">
@@ -73,7 +75,7 @@ export default async function DiscoveryPage({ params, searchParams }: {
         const mine = (assignments.data ?? []).filter((a) => a.campaign_id === c.id);
         return (
           <div key={c.id} className="card">
-            <div className="row"><strong className="grow">{c.code} · {c.name}</strong><span className="badge">{c.status}</span></div>
+            <div className="row"><strong className="grow">{c.code} · {c.name}</strong>{c.interview_mode === "adaptive" && <span className="badge ok" title={`AI provider policy: ${c.ai_provider ?? "default"} · up to ${c.max_ai_questions} AI questions`}>AI interview</span>}<span className="badge">{c.status}</span></div>
             <div className="muted small">{c.department_id ? depName.get(c.department_id) : ""}{c.due_on ? ` · due ${c.due_on}` : ""}</div>
             {mine.length > 0 && (
               <ul className="small">

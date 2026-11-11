@@ -55,7 +55,7 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 |---|---|---|---|
 | 1 | Admin creates department, members, scoped roles | Tested | Not Started |
 | 2 | Department head receives and completes interview | Tested | Not Started |
-| 3 | Interview adapts and can resume | Resume tested; adaptation data-only | Not Started |
+| 3 | Interview adapts and can resume | Tested (PPI-022, test 16) | Adaptive engine deployed; mocked + unconfigured-live tested; **real-model test pending key** |
 | 4 | Process details and evidence stored | Tested | Not Started |
 | 5 | AI extracts steps with exact source refs | Guards tested; extractor not built | Not Started |
 | 6 | Process owner reviews/corrects facts | Tested | Not Started |
@@ -80,6 +80,6 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 | AC-07 | No publish before all required approvals | Tested (DB) | 07 |
 | AC-08 | Published version cannot be overwritten | Tested (DB) | 07 |
 | AC-09 | Legal applicability needs qualified review | Not Started | Phase 9 |
-| AC-10 | Hosted AI receives no unapproved confidential data | Tested (DB guard) | 04 — adapter must also enforce before sending |
+| AC-10 | Hosted AI receives no unapproved confidential data | Tested (DB guard + Edge Function) | 04, 16; `ai_runs` inserted (guarded) before any provider call; hosted refusal of gemini_free verified |
 | AC-11 | Retries create no duplicates | Tested (DB) | 04, 05, 07, 08 |
 | AC-12 | Backup restore demonstrated before production | Not Started | C-11 |

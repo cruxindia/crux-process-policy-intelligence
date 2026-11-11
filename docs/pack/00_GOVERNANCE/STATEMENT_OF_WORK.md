@@ -81,8 +81,18 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 - **Scope out:** UI/API, Supabase provisioning, GitHub push (CLI token invalid; owner must create repo), AI adapter, risk/legal, DNA/VOC/CTQ.
 - **Acceptance (this sprint):** [x] clean install from zero; [x] RLS on all tables; [x] AC-01/02/03/04/05/06/07/08/10/11 tested at DB layer; [x] runner fails when safeguards removed (mutation check); [x] registers updated with evidence; [ ] pushed to GitHub; [ ] run on Supabase PG 17; [ ] owner acceptance.
 
+## 12B. Sprint S-08 (Sprint 04 brief, 2026-11-11) — adaptive AI interview
+- **Objective:** replace the fixed question list with a real AI interviewer that asks one question at a time, builds on answers, detects contradictions and completes by coverage.
+- **Scope in:** gap audit; provider-independent adapter (Gemini preferred, Ollama optional); server-side engine; validated structured output; contradiction handling; resume; coverage-based completion; UI states; security; tests 1–8; required docs.
+- **Scope out (per brief):** risk analysis, document generation, legal, dashboards.
+- **Inputs:** Sprint 04 brief (attachment); pack D-011 (AI data policy); Gemini API docs/terms (fetched 11-Nov-2026).
+- **Assumptions:** CRUX key will be on a paid (billing-enabled) Google Cloud project — **unverified**.
+- **Acceptance:** [x] audit; [x] adapter + engine + function deployed; [x] honest failure (test 6) live; [x] keys never in browser/repo (verified in build output); [x] DB tests; [ ] real Gemini call (test 1); [ ] live adaptive/contradiction/resume/completion (2–5, 8); [ ] owner confirms tier + DPDP position; [ ] CRUX activation; [ ] owner acceptance.
+- **Status:** Implemented + Deployed; blocked on GEMINI_API_KEY (PR-031).
+
 ## 13. Decision / change log
 | Date | Change | By |
 |---|---|---|
 | 2026-11-11 | SOW created; Phase 0 audit executed | Claude |
 | 2026-11-11 | S-01 build executed; working defaults D-017 applied pending owner decisions | Claude |
+| 2026-11-11 | S-08 adaptive AI interview: implemented, deployed, blocked on key; D-039…D-044 | Claude |
