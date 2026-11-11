@@ -12,8 +12,8 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 
 | Req | Title | DB status | App status | Evidence (DB) | Gaps / next |
 |---|---|---|---|---|---|
-| FR-01 | Identity & organisation | Tested | Tested (E2E, dev) | PPI-002, PPI-014, PPI-016; tests 02, 09, 11; `web/app/login`, `web/app/page.tsx`; E2E S-04 | Sending invitations (server-only Auth invite route) and org/entity/location admin UI not built; Auth settings + hook activation pending (D-023, D-024) |
-| FR-02 | Roles, permissions, scope, delegation | Tested | Not Started | PPI-003; tests 01, 02 | Delegation only by `role.manage` holders; authority matrix is candidate (AQ-005) |
+| FR-01 | Identity & organisation | Tested | Tested (E2E, Supabase) | PPI-002, PPI-014, PPI-016, PPI-019; tests 02, 09, 11, 13; `web/app/login`, `web/app/account`, `web/app/c/[companyId]/admin`; E2E S-04/S-05 | Legal entities/locations admin UI not built; custom SMTP pending (PR-024) |
+| FR-02 | Roles, permissions, scope, delegation | Tested | Implemented (grant/revoke UI; E2E covers grant via invitation) | PPI-003; tests 01, 02, 13 | Role/permission editing UI and delegation UI not built; authority matrix is candidate (AQ-005) |
 | FR-03 | Department discovery | Tested (question set) | Tested (E2E, dev) | PPI-015 starter set (12 department questions, generic); test 10; E2E S-04 | Structured department profile built from reviewed answers not built; wording not yet reviewed by CRUX |
 | FR-04 | Company DNA, VOC, CTQ | Not Started | Not Started | — | Deferred after MVP (C-02, pending approval) |
 | FR-05 | Interview campaigns & sessions | Tested | Tested (E2E, dev) | PPI-005, PPI-015, PPI-017, PPI-018; tests 03, 10, 12; `web/app/c/[companyId]/discovery`, `…/interviews/[assignmentId]`; E2E S-04 | Reviewer workspace (review/reopen) and reminders not built |

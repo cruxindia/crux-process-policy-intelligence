@@ -23,9 +23,11 @@
 | PR-020 | Tests ran on PostgreSQL 16.15; Supabase runs PostgreSQL 17 | Behaviour differences undetected | Hosted PG 17.11: schema fingerprint identical; 66/66 hosted assertions pass (S-02); all files 01–09 pass hosted (S-03) | Closed |
 | PR-021 | DB-enforced rules can be bypassed by superuser/migration scripts | Silent governance breach by operators | Restrict owner credentials; audit migrations; triggers still fire for service_role | Open |
 | PR-022 | App layer only partly built — DB guarantees unproven through real UI/API beyond the interview slice | False sense of completion | RTM tracks DB and App status separately; interview slice proven E2E on Supabase dev (S-04); other features stay "Not Started" until app-tested | Open (reduced) |
-| PR-023 | Access-token hook not activated → human-only actions refused in the app | Reviewers/approvers blocked once those screens exist | Fails closed (safe); activate in Supabase Auth → Hooks (D-024) before reviewer UI goes live | Open |
-| PR-024 | Supabase built-in email is rate-limited and for development only | Sign-in links not delivered at pilot scale | Configure custom SMTP from a CRUX domain before pilot (D-023) | Open |
-| PR-025 | No hosting chosen; Vercel Hobby forbids commercial use | Pilot cannot start; or licence breach if Hobby used | Owner decision D-026 | Open |
+| PR-023 | Access-token hook not activated | (Corrected) human-only checks were not blocked without it; claim now explicit | Hook enabled and verified with a real token (S-05) | Closed |
+| PR-024 | Supabase built-in email delivers only to the Supabase org team (2/hour) | Colleagues cannot receive sign-in links | Onboarding by one-time temporary password (D-029); configure custom SMTP from a CRUX domain for email links | Open (mitigated) |
+| PR-025 | Hosting not yet live | Pilot cannot start | Netlify chosen (D-028); needs Shantanu's sign-in | Open |
+| PR-026 | PPI-019 and the bootstrap write directly to `auth.users`/`auth.identities` (Supabase Auth's own schema) | A Supabase Auth upgrade could change required columns → invitations fail | Admin E2E re-run after Auth upgrades; fallback = Supabase Admin invite API from a server-only route | Open |
+| PR-027 | Supabase organisation over free quota ("cruxindia's Project" DB 551 MB > 0.5 GB; grace period ended 08-Aug-2026) | Supabase may restrict all projects in the org (HTTP 402), taking the platform down | Shantanu: trim/move that project or upgrade; or move PPI to a separate org/account | Open — high |
 | PR-019 | Supabase Free plan: no automatic backups, no PITR, pauses after 1 week inactivity (verified 2026-11-11) | Data loss / pilot downtime; fails backup-restore gate | Scheduled external `pg_dump` + restore drill, or approved paid plan, before pilot (C-11) | Open |
 
 Update owner, likelihood, impact, mitigation, due date and status during project execution. Do not invent residual ratings before an approved assessment method exists.
