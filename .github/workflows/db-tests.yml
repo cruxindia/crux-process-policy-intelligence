@@ -1,0 +1,20 @@
+name: db-tests
+on:
+  push:
+    paths: ['supabase/**', 'scripts/test-db.sh', '.github/workflows/db-tests.yml']
+  pull_request:
+    paths: ['supabase/**', 'scripts/test-db.sh', '.github/workflows/db-tests.yml']
+permissions:
+  contents: read
+jobs:
+  clean-install-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL 16 + pgTAP
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-16 postgresql-16-pgtap
+      - name: Clean install, seed, run pgTAP suite
+        run: PGBIN=/usr/lib/postgresql/16/bin ./scripts/test-db.sh
