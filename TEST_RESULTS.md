@@ -13,6 +13,7 @@
 | Test 16 (adaptive storage) | Supabase PG 17 (hosted, rolled back, cleanup verified) | n/a | **12 / 12 pass** |
 | Provider-policy guard on hosted DB | Supabase | n/a | `gemini_free` + internal data → refused (`PPI_AI_POLICY … max public`) |
 | Adaptive E2E, unconfigured (`web/e2e/adaptive-flow.cjs`, `EXPECT=unconfigured`) | Local Next.js build → **deployed** Edge Function v5 → Supabase dev, synthetic tenant | **Real function, no key** | **10 / 10 pass** |
+| Same adaptive E2E on the **live site** https://crux-ppi.netlify.app (commit `f768844`, CORS from production origin) | Netlify → deployed Edge Function | **Real function, no key** | **10 / 10 pass** |
 | Edge Function authorisation (`web/e2e/adaptive-authz.cjs`) | Deployed function | Real function, no key | **4 / 4 pass** |
 | Regression: fixed-mode join & chat (`web/e2e/join-chat-flow.cjs`) | Local build → Supabase dev | none | **18 / 18 pass** |
 | Web type check / lint / production build | Local | n/a | 0 errors / 0 problems / build OK |

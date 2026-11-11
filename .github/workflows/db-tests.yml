@@ -12,9 +12,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # Since 11-Nov-2026 14:37 UTC the runners' default mirror (azure.archive.ubuntu.com) has not resolved.
+      # Fall back to the main Ubuntu archive when that happens, so infrastructure DNS does not mask test results.
+      - name: Use a reachable Ubuntu mirror
+        run: |
+          if ! getent hosts azure.archive.ubuntu.com >/dev/null; then
+            echo "::warning::azure.archive.ubuntu.com does not resolve; using archive.ubuntu.com"
+            printf 'http://archive.ubuntu.com/ubuntu/\tpriority:1\n' | sudo tee /etc/apt/apt-mirrors.txt
+            sudo sed -i 's#azure.archive.ubuntu.com#archive.ubuntu.com#g' /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
+          fi
       - name: Install PostgreSQL 16 + pgTAP
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q postgresql-16 postgresql-16-pgtap
+          for i in 1 2 3; do sudo apt-get update -q && break; sleep 10; done
+          sudo apt-get install -y -q -o Acquire::Retries=3 postgresql-16 postgresql-16-pgtap
       - name: Clean install, seed, run pgTAP suite
         run: PGBIN=/usr/lib/postgresql/16/bin ./scripts/test-db.sh
