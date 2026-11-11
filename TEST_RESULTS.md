@@ -10,6 +10,8 @@
 | Engine + provider unit tests (`supabase/functions/tests/engine.test.ts`) | Node 22, local | **Mocked** (injected fetch) | **19 / 19 pass** |
 | Type check of the Edge Function (`deno check`) | Deno 2.9.6 | n/a | **pass** |
 | Database (pgTAP, 16 files) | Local PG 16 | n/a | **237 / 237 pass** |
+| Database suite in GitHub CI (`db-tests`, clean install) | GitHub runner, PG 16 | n/a | **237 / 237 pass** (run 43065622882, commit `f63fb77`). Earlier red runs on 76b1b15 / 8b54180 / f768844 were the runner failing to reach Ubuntu package mirrors (0 test failures); workflow now falls back to pgTAP from GitHub |
+| `ai-engine` CI (unit tests, prompt-hash check, `deno check`) | GitHub runner | Mocked | **pass** (commit `f768844`) |
 | Test 16 (adaptive storage) | Supabase PG 17 (hosted, rolled back, cleanup verified) | n/a | **12 / 12 pass** |
 | Provider-policy guard on hosted DB | Supabase | n/a | `gemini_free` + internal data → refused (`PPI_AI_POLICY … max public`) |
 | Adaptive E2E, unconfigured (`web/e2e/adaptive-flow.cjs`, `EXPECT=unconfigured`) | Local Next.js build → **deployed** Edge Function v5 → Supabase dev, synthetic tenant | **Real function, no key** | **10 / 10 pass** |
