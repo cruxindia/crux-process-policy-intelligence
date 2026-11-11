@@ -8,6 +8,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const { supabase, userId } = await requireUser();
   const { data: mustChange } = await supabase.rpc("password_change_required");
   if (mustChange) redirect("/account/password");
+  // Straight into an open interview: nothing to choose for respondents.
+  const { data: open } = await supabase.from("interview_assignments")
+    .select("id, company_id, memberships!inner(user_id)")
+    .eq("memberships.user_id", userId).in("status", ["invited", "accepted", "in_progress"]).limit(1);
+  if (open?.[0]) redirect(`/c/${open[0].company_id}/interviews/${open[0].id}`);
   const { data: memberships, error } = await supabase
     .from("memberships")
     .select("id, status, job_title, company_id, companies(name, code)")

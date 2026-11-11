@@ -11,7 +11,10 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  const email = typeof data?.claims?.email === "string" ? data.claims.email : null;
+  const rawEmail = typeof data?.claims?.email === "string" ? data.claims.email : null;
+  // Mobile-number accounts use an internal login address; show the number instead.
+  const m = rawEmail ? /^91(\d{10})@mobile\.crux-ppi\.invalid$/.exec(rawEmail) : null;
+  const email = m ? `+91 ${m[1]}` : rawEmail;
 
   return (
     <html lang="en">

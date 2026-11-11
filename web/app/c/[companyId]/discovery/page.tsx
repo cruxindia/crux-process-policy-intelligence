@@ -77,7 +77,8 @@ export default async function DiscoveryPage({ params, searchParams }: {
             <div className="muted small">{c.department_id ? depName.get(c.department_id) : ""}{c.due_on ? ` · due ${c.due_on}` : ""}</div>
             {mine.length > 0 && (
               <ul className="small">
-                {mine.map((a) => <li key={a.id}>{memberLabel.get(a.respondent_membership_id) ?? "Member"} — {a.status.replace("_", " ")}</li>)}
+                {mine.map((a) => <li key={a.id}>{memberLabel.get(a.respondent_membership_id) ?? "Member"} — {a.status.replace("_", " ")}
+                  {a.status !== "invited" && <> · <Link href={`/c/${companyId}/interviews/${a.id}`}>view answers</Link></>}</li>)}
               </ul>
             )}
             <form action={createAssignment.bind(null, companyId)} className="grid2" style={{ marginTop: 8 }}>

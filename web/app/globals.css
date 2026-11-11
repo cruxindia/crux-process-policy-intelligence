@@ -41,3 +41,23 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .q-head { display: flex; justify-content: space-between; gap: 8px; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* Chat interview */
+.chat-page { max-width: 720px; margin: 0 auto; }
+.chat-wrap { display: flex; flex-direction: column; gap: 10px; }
+.chat-progress { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 8px 0; }
+.bar { height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; margin: 6px 0; }
+.bar > div { height: 100%; background: var(--ok); transition: width .3s; }
+.sections { display: flex; gap: 6px; flex-wrap: wrap; }
+.chat { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; }
+.bubble { max-width: 85%; padding: 10px 12px; border-radius: 14px; line-height: 1.45; }
+.bubble.bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.bubble.me { align-self: flex-end; margin-left: auto; background: var(--accent); color: var(--accent-text); border-bottom-right-radius: 4px; }
+.bubble.me .meta { font-size: .75rem; opacity: .85; margin-top: 4px; }
+.linkish { background: none; border: none; padding: 0; color: inherit; text-decoration: underline; font: inherit; cursor: pointer; }
+.section-divider { text-align: center; font-weight: 600; margin: 14px 0 4px; }
+.composer { position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--border); padding: 10px 0 14px; }
+.composer textarea { min-height: 52px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { padding: 6px 12px; border-radius: 999px; font-size: .9rem; }
+.chip.ghost { background: transparent; color: var(--accent); }

@@ -614,6 +614,74 @@ export type Database = {
         }
         Relationships: []
       }
+      company_join_links: {
+        Row: {
+          campaign_id: string
+          company_id: string
+          created_at: string
+          created_by_membership_id: string | null
+          department_id: string
+          id: string
+          label: string
+          max_per_day: number
+          status: string
+          token_sha256: string
+        }
+        Insert: {
+          campaign_id: string
+          company_id: string
+          created_at?: string
+          created_by_membership_id?: string | null
+          department_id: string
+          id?: string
+          label: string
+          max_per_day?: number
+          status?: string
+          token_sha256: string
+        }
+        Update: {
+          campaign_id?: string
+          company_id?: string
+          created_at?: string
+          created_by_membership_id?: string | null
+          department_id?: string
+          id?: string
+          label?: string
+          max_per_day?: number
+          status?: string
+          token_sha256?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_join_links_company_id_campaign_id_fkey"
+            columns: ["company_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "interview_campaigns"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "company_join_links_company_id_created_by_membership_id_fkey"
+            columns: ["company_id", "created_by_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "company_join_links_company_id_department_id_fkey"
+            columns: ["company_id", "department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "company_join_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           code: string
@@ -1604,6 +1672,7 @@ export type Database = {
           owner_membership_id: string
           process_id: string | null
           purpose: string | null
+          question_scopes: string[] | null
           starts_on: string | null
           status: string
           updated_at: string
@@ -1619,6 +1688,7 @@ export type Database = {
           owner_membership_id: string
           process_id?: string | null
           purpose?: string | null
+          question_scopes?: string[] | null
           starts_on?: string | null
           status?: string
           updated_at?: string
@@ -1634,6 +1704,7 @@ export type Database = {
           owner_membership_id?: string
           process_id?: string | null
           purpose?: string | null
+          question_scopes?: string[] | null
           starts_on?: string | null
           status?: string
           updated_at?: string
@@ -3120,8 +3191,12 @@ export type Database = {
         }
         Returns: Json
       }
+      join_link_info: { Args: { p_token: string }; Returns: Json }
       load_starter_templates: { Args: { p_company: string }; Returns: number }
+      mobile_login_id: { Args: { p_mobile: string }; Returns: string }
+      my_contact: { Args: never; Returns: Json }
       my_permissions: { Args: { p_company: string }; Returns: string[] }
+      normalise_mobile: { Args: { p: string }; Returns: string }
       password_change_required: { Args: never; Returns: boolean }
       process_map_issues: {
         Args: { p_version: string }
@@ -3131,6 +3206,16 @@ export type Database = {
           step_code: string
           step_id: string
         }[]
+      }
+      register_with_join_link: {
+        Args: {
+          p_email?: string
+          p_full_name: string
+          p_mobile: string
+          p_password: string
+          p_token: string
+        }
+        Returns: Json
       }
       reissue_temporary_password: {
         Args: { p_company: string; p_membership: string }

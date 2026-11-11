@@ -24,10 +24,10 @@ export async function saveAnswer(input: {
   const { supabase, membership } = await requireMembership(input.companyId);
   if (!KINDS.includes(input.kind as Kind) || !BASES.includes(input.basis as Basis)) return { ok: false, error: "Invalid choice." };
   const text = input.text.trim();
-  if (input.kind === "answer" && !text) return { ok: false, error: "Write an answer, or choose another option such as “I don't know”." };
+  if (input.kind === "answer" && !text) return { ok: false, error: "Type your answer, or tap “I don't know”." };
   if (input.kind === "depends" && !text) return { ok: false, error: "Explain what it depends on." };
   if (input.kind === "refer_to_owner" && !input.referredNote.trim())
-    return { ok: false, error: "Say who should answer this (name or role)." };
+    return { ok: false, error: "Tell us who knows (name or role)." };
 
   // Answers are append-only: a change is a new revision that supersedes the latest one and needs a reason.
   const { data: current } = await supabase
@@ -36,7 +36,7 @@ export async function saveAnswer(input: {
     .eq("company_id", input.companyId)
     .eq("question_id", input.questionId)
     .maybeSingle();
-  if (current?.id && !input.revisionReason.trim()) return { ok: false, error: "Give a short reason for changing your answer." };
+  const reason = input.revisionReason.trim() || "Changed by the respondent during the interview";
 
   const { error } = await supabase.from("interview_answers").insert({
     company_id: input.companyId,
@@ -47,7 +47,7 @@ export async function saveAnswer(input: {
     referred_note: input.kind === "refer_to_owner" ? input.referredNote.trim() : null,
     answered_by_membership_id: membership.id,
     supersedes_answer_id: current?.id ?? null,
-    revision_reason: current?.id ? input.revisionReason.trim() : null,
+    revision_reason: current?.id ? reason : null,
   });
   if (error) return { ok: false, error: explain(error) };
 
