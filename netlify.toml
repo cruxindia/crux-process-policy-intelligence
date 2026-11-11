@@ -7,3 +7,8 @@
 [build.environment]
   NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
+
+# Netlify's Next.js runtime (server rendering, server actions, proxy). Declared explicitly because auto-detection
+# did not apply it for the web/ base directory (first deploy published static files only → 404s).
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
