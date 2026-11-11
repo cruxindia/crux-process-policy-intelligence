@@ -3107,8 +3107,22 @@ export type Database = {
     }
     Functions: {
       accept_membership: { Args: { p_company: string }; Returns: string }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      invite_member: {
+        Args: {
+          p_company: string
+          p_department?: string
+          p_display_name: string
+          p_email: string
+          p_job_title?: string
+          p_role_code?: string
+          p_scope_department?: string
+        }
+        Returns: Json
+      }
       load_starter_templates: { Args: { p_company: string }; Returns: number }
       my_permissions: { Args: { p_company: string }; Returns: string[] }
+      password_change_required: { Args: never; Returns: boolean }
       process_map_issues: {
         Args: { p_version: string }
         Returns: {
@@ -3117,6 +3131,10 @@ export type Database = {
           step_code: string
           step_id: string
         }[]
+      }
+      reissue_temporary_password: {
+        Args: { p_company: string; p_membership: string }
+        Returns: string
       }
       start_interview_session: {
         Args: { p_assignment: string }

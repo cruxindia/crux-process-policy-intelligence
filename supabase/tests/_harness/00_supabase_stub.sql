@@ -14,6 +14,18 @@ create table if not exists auth.users (
   id uuid primary key,
   email text unique
 );
+-- Columns written by PPI-019 (subset of Supabase Auth's auth.users / auth.identities).
+alter table auth.users
+  add column if not exists instance_id uuid, add column if not exists aud text, add column if not exists role text,
+  add column if not exists encrypted_password text, add column if not exists email_confirmed_at timestamptz,
+  add column if not exists raw_app_meta_data jsonb, add column if not exists raw_user_meta_data jsonb,
+  add column if not exists created_at timestamptz, add column if not exists updated_at timestamptz,
+  add column if not exists confirmation_token text, add column if not exists recovery_token text,
+  add column if not exists email_change_token_new text, add column if not exists email_change text;
+create table if not exists auth.identities (
+  id uuid primary key, user_id uuid not null references auth.users(id) on delete cascade, provider_id text not null,
+  identity_data jsonb not null, provider text not null, last_sign_in_at timestamptz, created_at timestamptz, updated_at timestamptz,
+  unique (provider_id, provider));
 
 create or replace function auth.jwt() returns jsonb language sql stable as $$
   select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb

@@ -23,14 +23,18 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
   ]);
 
   const canManage = permissions.has("interview.manage");
+  const canAdmin = ["org.manage", "membership.manage", "role.manage", "process.edit"].some((x) => permissions.has(x));
 
   return (
     <>
       <h1>{membership.companies?.name}</h1>
       <p className="muted">{membership.job_title ?? "Member"}</p>
 
-      {canManage && (
-        <div className="row"><Link className="button secondary" href={`/c/${companyId}/discovery`}>Discovery setup</Link></div>
+      {(canManage || canAdmin) && (
+        <div className="row">
+          {canManage && <Link className="button secondary" href={`/c/${companyId}/discovery`}>Discovery setup</Link>}
+          {canAdmin && <Link className="button secondary" href={`/c/${companyId}/admin`}>Administration</Link>}
+        </div>
       )}
 
       <h2>My interviews</h2>

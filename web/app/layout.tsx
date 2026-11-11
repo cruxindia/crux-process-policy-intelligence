@@ -21,6 +21,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {email && (
             <form action="/auth/signout" method="post" className="row">
               <span className="muted small">{email}</span>
+              <Link href="/account/password" className="small">Password</Link>
               <button className="secondary" type="submit">Sign out</button>
             </form>
           )}

@@ -1,0 +1,9 @@
+# Netlify: build the Next.js app in web/ (Netlify's Next.js runtime is applied automatically).
+[build]
+  base = "web"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
