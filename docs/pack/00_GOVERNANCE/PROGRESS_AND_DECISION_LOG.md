@@ -1,7 +1,7 @@
 # Progress and Decision Log
 
 **Last consolidated:** 2026-11-11  
-**Current baseline version:** 1.3 (S-02 hosted dev database + GitHub)  
+**Current baseline version:** 1.4 (S-03 Phase 2 DB completion)  
 **Rule:** A status may be changed to Implemented, Tested or Accepted only when a file, working feature, test result or explicit human decision can be identified. Use only the Master §15 vocabulary: Not Started / Planned / In Progress / Drafted / Implemented / Tested / Accepted / Blocked / Deferred / Superseded.
 
 ## 1. Current overall status
@@ -37,6 +37,7 @@
 | S-00 | 2026-11-11 | Phase 0 repository audit and requirements coverage | Audit, RTM, SOW, document index, change log; register updates | Created: `REPOSITORY_AUDIT.md`, `REQUIREMENTS_TRACEABILITY_MATRIX.md`, `STATEMENT_OF_WORK.md`, `DOCUMENT_INDEX.md`, `CHANGE_LOG.md`. Changed: this log, `RISK_AND_DEPENDENCY_REGISTER.md`, `ASSUMPTIONS_AND_OPEN_QUESTIONS.md` | No application tests (no code). Verification commands only: pack extraction, prompt `diff` (identical), repo/project listings, coverage-count reconciliation (42 docs) | Drafted; awaiting owner acceptance |
 | S-01 | 2026-11-11 | Phases 1–2 database foundation + MVP domain schema with enforced governance invariants | Local repo; 12 migrations; seed; 8 pgTAP files; ERD; generated schema reference; dashboard metrics; CI workflow | `supabase/migrations/20261111100000…101100_ppi_001…012_*.sql`, `supabase/seed/01_synthetic_two_companies.sql`, `supabase/tests/0[1-8]_*.test.sql`, `supabase/tests/_harness/*`, `scripts/test-db.sh`, `scripts/gen-schema-ref.sql`, `docs/*.md`, `.github/workflows/db-tests.yml` | `scripts/test-db.sh` → 8/8 files PASS, 131 assertions, 0 failures (PG 16.15, pgTAP). Mutation check (2 safeguards removed) → suite FAILED as expected. Defects found by tests and fixed: respondent could add revisions after submission (policy tightened to `interview.review`) | Implemented + Tested (local); not accepted |
 | S-02 | 2026-11-11 | Host the build: GitHub + Supabase dev | Private repo pushed; CI green; Supabase project created (Mumbai) and migrated; advisor fix PPI-013; migration files renamed to hosted versions | `supabase/migrations/*` (renamed + `…121618_ppi_013_split_process_write_policies.sql`), README, registers | Local: 131/131 after PPI-013. GitHub Actions db-tests #1: success (23 s). Supabase PG 17.11: schema fingerprints equal (columns 528, constraints 355, functions 62, indexes 219, policies 116 after 013, triggers 73, RLS 49/49, views 2); hosted pgTAP 66/66 (files 01,02,03,07) with rollback — 0 rows/0 extensions left. Advisors: security = 1 INFO (background_jobs has no policy — intentional, service-only); performance = WARN fixed by PPI-013, 86 INFO unused-index (empty DB) | Implemented + Tested; not accepted |
+| S-03 | 2026-11-11 | Finish hosted verification; Phase 2 DB completion | Hosted run of files 04/05/06/08; PPI-014 invitation acceptance (`accept_membership` RPC, self/invited read policies) + private `evidence-private` bucket with storage.objects policies bound to `evidence_files`; test 09; local Storage stub | `supabase/migrations/20261111122325_ppi_014_invites_and_evidence_storage.sql`, `supabase/tests/09_invites_storage.test.sql`, `supabase/tests/_harness/00_supabase_stub.sql` | Hosted 04/05/06/08 = 65/65 → **all 8 original files pass on Supabase (131)**. Local 149/149 (9 files). Mutation check on PPI-014 (2 safeguards removed) → 2 failures as expected. Hosted 09 = 18/18 on real Supabase Storage; finding: Supabase Storage blocks direct SQL deletes on storage.objects (extra layer). Cleanup verified (0 rows/objects/users, pgTAP removed). Advisors: 1 INFO (background_jobs, intentional), 1 WARN accept_membership is SECURITY DEFINER callable by authenticated (intentional — D-020) | Implemented + Tested; not accepted |
 
 ## 3. Current architecture proposals
 
@@ -56,8 +57,7 @@ These are proposed engineering decisions, not confirmed company policy or deploy
 S-00 and S-01 done. Revised dependency order:
 
 1. ~~GitHub repo + CI~~ and ~~Supabase dev project + PG 17 verification~~ — done in S-02.
-2. **Run remaining hosted tests** (files 04, 05, 06, 08) on Supabase the same way (only 01/02/03/07 were run hosted; all 8 pass locally and in CI).
-3. **Phase 2 completion:** Supabase Auth sign-in + invitation → membership activation; private storage bucket `evidence-private` with RLS mirroring `can_read_evidence`.
+2. ~~Remaining hosted tests~~ and ~~Phase 2 DB completion (invitations, private evidence storage)~~ — done in S-03. Still open for Phase 2: Supabase Auth settings (email provider, redirect URLs, disable open sign-up) — configured with the app shell.
 4. **App shell (ADR-002 decision first):** Next.js + TypeScript server-side app using the user's JWT (never service_role for user actions); first screens: admin org/roles, my interview (resume), process owner review.
 5. **AI adapter v1:** one provider path (local Ollama) behind `ai_provider_policies`; extraction prompt v1 with JSON schema + source-ID validation; eval cases before use.
 6. Owner decisions still open: C-01, C-02, C-10/D-011, AQ-001, AQ-003 (pilot — CRUX to choose).
@@ -84,6 +84,8 @@ S-00 and S-01 done. Revised dependency order:
 | D-016 | 2026-11-11 | UUID primary keys + composite `(company_id, id)` tenant FKs on all tenant tables | Implemented + Tested | Test 02 |
 | D-018 | 2026-11-11 | Pause `ledger-personal` to free a Free-plan slot; create PPI dev project in ap-south-1 (Mumbai) in org `cruxindia's Org` | Done | Shantanu (instruction 17:25 IST) |
 | D-019 | 2026-11-11 | Repo `cruxindia/crux-process-policy-intelligence` private; migration file versions = Supabase history versions | Done | Shantanu (instruction) / Claude |
+| D-020 | 2026-11-11 | `public.accept_membership` stays SECURITY DEFINER and callable by signed-in users: it only flips the caller's own `invited` membership to `active` (advisor WARN accepted) | Implemented + Tested (test 09) | Claude; owner review |
+| D-021 | 2026-11-11 | Evidence object path convention `<company_id>/<evidence_file_id>/<file>`; metadata row first, upload second; no update/delete of stored evidence | Implemented + Tested | Claude; owner review |
 | D-017 | 2026-11-11 | Working defaults applied while owner decisions pending: MVP = Master §13 (D-009), DNA/VOC/CTQ deferred (D-010), provider data cap (D-011). All reversible | Applied (reversible) | Pending Shantanu/CRUX approval |
 
 ## 6. How to update this log

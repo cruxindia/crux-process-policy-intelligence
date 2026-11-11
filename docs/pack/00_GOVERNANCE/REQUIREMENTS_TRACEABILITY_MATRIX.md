@@ -2,7 +2,7 @@
 
 **Document status:** Drafted · **Version:** 0.2 · **Date:** 2026-11-11 · **Owner:** to be assigned
 **Basis:** MASTER_PRD v1.0 (FR-01–FR-19, §5 NFRs), MASTER_CLAUDE_BUILD_PROMPT §13 (MVP) and §14 (critical acceptance scenarios).
-**Evidence base:** repository `crux-process-policy-intelligence` (local, not yet pushed). Test evidence = `scripts/test-db.sh` clean install on PostgreSQL 16.15 + pgTAP: **8 files, 131 assertions, 0 failures** (2026-11-11). Mutation check: removing two safeguards made the suite fail (exit 1). **S-02:** GitHub Actions run #1 green; Supabase dev (PG 17.11) migrated with identical schema fingerprint; hosted run of files 01/02/03/07 = 66/66 pass (AC-01, 04, 05, 06, 07, 08, 11 re-verified on the hosted engine).
+**Evidence base:** repository `crux-process-policy-intelligence` (local, not yet pushed). Test evidence = `scripts/test-db.sh` clean install on PostgreSQL 16.15 + pgTAP: **8 files, 131 assertions, 0 failures** (2026-11-11). Mutation check: removing two safeguards made the suite fail (exit 1). **S-03:** all 9 files (149 assertions) pass on Supabase PG 17 as well. **S-02:** GitHub Actions run #1 green; Supabase dev (PG 17.11) migrated with identical schema fingerprint; hosted run of files 01/02/03/07 = 66/66 pass (AC-01, 04, 05, 06, 07, 08, 11 re-verified on the hosted engine).
 
 Status vocabulary (Master §15). Two layers are tracked separately because the database layer enforces governance but no user-facing application exists yet:
 - **DB** = schema, RLS, triggers, functions. **App** = UI/API/worker/AI adapter.
@@ -12,7 +12,7 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 
 | Req | Title | DB status | App status | Evidence (DB) | Gaps / next |
 |---|---|---|---|---|---|
-| FR-01 | Identity & organisation | Tested | Not Started | PPI-002; test 02 | Invitations/sign-in flow (Supabase Auth) not built; entities/locations have no admin UI |
+| FR-01 | Identity & organisation | Tested | Not Started | PPI-002, PPI-014; tests 02, 09 (invite → accept, hosted) | Supabase Auth invite call + sign-in UI not built; entities/locations have no admin UI |
 | FR-02 | Roles, permissions, scope, delegation | Tested | Not Started | PPI-003; tests 01, 02 | Delegation only by `role.manage` holders; authority matrix is candidate (AQ-005) |
 | FR-03 | Department discovery | Drafted | Not Started | departments.mandate; templates exist | Department profile fields + interview templates not loaded |
 | FR-04 | Company DNA, VOC, CTQ | Not Started | Not Started | — | Deferred after MVP (C-02, pending approval) |
@@ -20,7 +20,7 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 | FR-06 | Adaptive question engine | Implemented (data only) | Not Started | `question_templates.branch_rules`, `interview_questions.rationale/generated_by` | Branch-rule evaluator + AI follow-up generator not built |
 | FR-07 | Process discovery | Tested | Not Started | PPI-007; test 06 | RACI table, metrics/SLA tables, exceptions table not yet separate entities |
 | FR-08 | Policy discovery | Implemented (partial) | Not Started | `knowledge_records.record_type='policy_rule'`, `state_kind='policy'` | Dedicated policy entities + deviation analysis not built |
-| FR-09 | Shared knowledge & provenance | Tested | Not Started | PPI-006; test 04 | Storage bucket policies for evidence files not written (no Supabase project) |
+| FR-09 | Shared knowledge & provenance | Tested | Not Started | PPI-006, PPI-014; tests 04, 09 (private bucket on Supabase Storage) | Server-side SHA-256 check of uploaded bytes not built (app layer) |
 | FR-10 | Clarification & disputes | Tested | Not Started | PPI-008; test 05 | Reminder/escalation jobs not scheduled |
 | FR-11 | Process mapping | Tested (validation) | Not Started | `process_map_issues()`; test 06 | Renderer/editor not built; BPMN not claimed |
 | FR-12 | Risk & control | Not Started | Not Started | — | Phase 9 |

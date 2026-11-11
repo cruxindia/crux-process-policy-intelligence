@@ -7,8 +7,8 @@ Requirements baseline: [`docs/pack/README_START_HERE.md`](docs/pack/README_START
 
 | Layer | Status | Evidence |
 |---|---|---|
-| Database foundation (Phases 1–2) + MVP domain schema | Implemented, tested (local PG 16 + GitHub Actions + Supabase PG 17) | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
-| Hosted dev database | Provisioned: Supabase `crux-process-policy-intelligence` (`pahzxpileudulljgaciw`, ap-south-1 Mumbai, Free plan), migrations PPI-001…013 applied, empty (no seed) | `docs/pack/00_GOVERNANCE/PROGRESS_AND_DECISION_LOG.md` S-02 |
+| Database foundation (Phases 1–2) + MVP domain schema + invitations + private evidence storage | Implemented, tested: 9 pgTAP files / 149 assertions pass locally (PG 16), in GitHub Actions, and on Supabase (PG 17) | `supabase/migrations/`, `supabase/tests/`, `scripts/test-db.sh` |
+| Hosted dev database | Provisioned: Supabase `crux-process-policy-intelligence` (`pahzxpileudulljgaciw`, ap-south-1 Mumbai, Free plan), migrations PPI-001…014 applied, private bucket `evidence-private`, empty (no seed) | `docs/pack/00_GOVERNANCE/PROGRESS_AND_DECISION_LOG.md` S-02 |
 | Application UI / API | Not Started | — |
 | AI provider adapter | Not Started (DB-level provider policy guard only) | `ai_provider_policies` |
 
