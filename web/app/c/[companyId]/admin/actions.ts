@@ -80,3 +80,10 @@ export async function reissue(companyId: string, membershipId: string, who: stri
   if (error) return { error: explain(error) };
   return { who, password: data ?? undefined };
 }
+
+export async function resetPassword(companyId: string, membershipId: string, who: string, _prev: InviteState): Promise<InviteState> {
+  const { supabase } = await requireMembership(companyId);
+  const { data, error } = await supabase.rpc("admin_reset_password", { p_company: companyId, p_membership: membershipId });
+  if (error) return { error: explain(error) };
+  return { who, password: data ?? undefined };
+}

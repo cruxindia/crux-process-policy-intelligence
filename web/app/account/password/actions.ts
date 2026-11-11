@@ -10,5 +10,6 @@ export async function setPassword(formData: FormData) {
   const { supabase } = await requireUser();
   const { error } = await supabase.auth.updateUser({ password: pw });
   if (error) redirect("/account/password?e=" + encodeURIComponent(error.message));
+  await supabase.rpc("clear_password_marker");
   redirect("/?pw=1");
 }

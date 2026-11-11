@@ -23,6 +23,9 @@ export async function requireMembership(companyId: string) {
     .eq("status", "active")
     .maybeSingle();
   if (!membership) notFound();
+  // A reset (temporary) password must be replaced before anything else.
+  const { data: mustChange } = await supabase.rpc("password_change_required");
+  if (mustChange) redirect("/account/password");
   const { data: perms } = await supabase.rpc("my_permissions", { p_company: companyId });
   return { supabase, userId, membership, permissions: new Set<string>(perms ?? []) };
 }

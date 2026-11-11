@@ -59,3 +59,11 @@ begin
   values (v_co, 'All-staff discovery link (round 1)', encode(extensions.digest(current_setting('ppi.join_token'), 'sha256'), 'hex'), v_camp, v_dept, v_owner);
 end $$;
 select current_setting('ppi.join_token') as join_token;
+
+-- 2026-11-11 (S-07): reviewer permissions for the Discovery lead role (review → knowledge → follow-up → dispute).
+-- dispute.decide deliberately NOT added: the person raising a dispute should not also judge it.
+insert into public.role_permissions (company_id, role_id, permission_code)
+select r.company_id, r.id, p from public.roles r
+ cross join unnest(array['knowledge.edit','knowledge.verify','clarification.create','clarification.manage','dispute.raise']) p
+ where r.code = 'DISCOVERY_LEAD' and r.company_id = (select id from public.companies where code = 'CRUX')
+on conflict do nothing;

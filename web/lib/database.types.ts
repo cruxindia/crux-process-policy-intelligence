@@ -3178,6 +3178,11 @@ export type Database = {
     }
     Functions: {
       accept_membership: { Args: { p_company: string }; Returns: string }
+      admin_reset_password: {
+        Args: { p_company: string; p_membership: string }
+        Returns: string
+      }
+      clear_password_marker: { Args: never; Returns: undefined }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       invite_member: {
         Args: {
@@ -3193,6 +3198,14 @@ export type Database = {
       }
       join_link_info: { Args: { p_token: string }; Returns: Json }
       load_starter_templates: { Args: { p_company: string }; Returns: number }
+      member_contacts: {
+        Args: { p_company: string }
+        Returns: {
+          email: string
+          membership_id: string
+          mobile: string
+        }[]
+      }
       mobile_login_id: { Args: { p_mobile: string }; Returns: string }
       my_contact: { Args: never; Returns: Json }
       my_permissions: { Args: { p_company: string }; Returns: string[] }

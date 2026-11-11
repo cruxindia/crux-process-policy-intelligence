@@ -47,9 +47,10 @@ values ('44444444-0000-4000-8000-000000000002', tests.company('ALPHA'), 'Who app
 insert into public.dispute_positions (company_id, dispute_id, participant_membership_id, position_text)
 values (tests.company('ALPHA'), '44444444-0000-4000-8000-000000000002', tests.mid('a_ops_head'), 'Branch coordinator approves below the limit.');
 reset role;
-select tests.login('a_fin_head'); set local role authenticated;
+-- PPI-021 (D-036): the clarification's parties may take part; an outsider without dispute scope still may not.
+select tests.login('a_admin'); set local role authenticated;
 select throws_ok($$ insert into public.dispute_positions (company_id, dispute_id, participant_membership_id, position_text)
-                    values (tests.company('ALPHA'), '44444444-0000-4000-8000-000000000002', tests.mid('a_fin_head'), 'x') $$,
+                    values (tests.company('ALPHA'), '44444444-0000-4000-8000-000000000002', tests.mid('a_admin'), 'x') $$,
                  '42501', null, 'non-participant without dispute scope cannot add a position');
 reset role;
 -- FIN head is invited by giving dispute.raise via a process-scoped assignment (as admin would)

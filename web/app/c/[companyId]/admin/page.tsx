@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { addDepartment, addProcess, grantRole, revokeRole } from "./actions";
-import { InviteForm, ReissueButton } from "./invite-forms";
+import { InviteForm, ReissueButton, ResetButton } from "./invite-forms";
 
 export default async function AdminPage({ params, searchParams }: {
   params: Promise<{ companyId: string }>; searchParams: Promise<Record<string, string | undefined>>;
@@ -21,6 +21,8 @@ export default async function AdminPage({ params, searchParams }: {
     can.roles ? supabase.from("role_assignments").select("id, membership_id, role_id, scope_type, scope_department_id, status").eq("company_id", companyId).eq("status", "active")
               : Promise.resolve({ data: [] as { id: string; membership_id: string; role_id: string; scope_type: string; scope_department_id: string | null; status: string }[] }),
   ]);
+  const { data: contacts } = can.members ? await supabase.rpc("member_contacts", { p_company: companyId }) : { data: [] };
+  const contactOf = new Map((contacts ?? []).map((c) => [c.membership_id, [c.mobile ? `+91 ${c.mobile}` : null, c.email].filter(Boolean).join(" · ")]));
   const uids = (members.data ?? []).map((m) => m.user_id);
   const { data: profiles } = uids.length ? await supabase.from("user_profiles").select("id, display_name").in("id", uids) : { data: [] };
   const nameOf = new Map((profiles ?? []).map((x) => [x.id, x.display_name]));
@@ -78,10 +80,11 @@ export default async function AdminPage({ params, searchParams }: {
       )}
 
       <h2>Members</h2>
-      <div className="table-wrap"><table><thead><tr><th>Name</th><th>Job title</th><th>Status</th>{can.roles && <th>Roles</th>}<th></th></tr></thead><tbody>
+      <div className="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Job title</th><th>Status</th>{can.roles && <th>Roles</th>}<th></th></tr></thead><tbody>
         {(members.data ?? []).map((m) => (
           <tr key={m.id}>
             <td>{nameOf.get(m.user_id) ?? "—"}{m.id === membership.id ? " (you)" : ""}</td>
+            <td className="small">{contactOf.get(m.id) ?? ""}</td>
             <td>{m.job_title ?? ""}</td>
             <td><span className={`badge ${m.status === "active" ? "ok" : "warn"}`}>{m.status}</span></td>
             {can.roles && <td style={{ whiteSpace: "normal" }}>
@@ -92,7 +95,8 @@ export default async function AdminPage({ params, searchParams }: {
                 </form>
               ))}
             </td>}
-            <td>{can.members && m.status === "invited" && <ReissueButton companyId={companyId} membershipId={m.id} who={nameOf.get(m.user_id) ?? "member"} />}</td>
+            <td>{can.members && m.status === "invited" && <ReissueButton companyId={companyId} membershipId={m.id} who={nameOf.get(m.user_id) ?? "member"} />}
+                {can.members && m.status === "active" && m.id !== membership.id && <ResetButton companyId={companyId} membershipId={m.id} who={nameOf.get(m.user_id) ?? "member"} />}</td>
           </tr>
         ))}
       </tbody></table></div>

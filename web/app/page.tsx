@@ -13,6 +13,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     .select("id, company_id, memberships!inner(user_id)")
     .eq("memberships.user_id", userId).in("status", ["invited", "accepted", "in_progress"]).limit(1);
   if (open?.[0]) redirect(`/c/${open[0].company_id}/interviews/${open[0].id}`);
+  if (!sp.e && !sp.pw) {
+    const { data: act } = await supabase.from("memberships").select("company_id").eq("user_id", userId).eq("status", "active");
+    const { count: invited } = await supabase.from("memberships").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "invited");
+    if (act?.length === 1 && !invited) redirect(`/c/${act[0]!.company_id}`);
+  }
   const { data: memberships, error } = await supabase
     .from("memberships")
     .select("id, status, job_title, company_id, companies(name, code)")

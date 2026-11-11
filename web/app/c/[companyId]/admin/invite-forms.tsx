@@ -1,6 +1,6 @@
 "use client";
 import { useActionState } from "react";
-import { invite, reissue, type InviteState } from "./actions";
+import { invite, reissue, resetPassword, type InviteState } from "./actions";
 
 function Secret({ state }: { state: InviteState }) {
   if (!state) return null;
@@ -10,7 +10,7 @@ function Secret({ state }: { state: InviteState }) {
     <div className="notice ok">
       <strong>Temporary password for {state.who}</strong> — shown once, give it to them privately (not by group chat):
       <div style={{ fontFamily: "ui-monospace, monospace", fontSize: "1.05rem", margin: "6px 0", userSelect: "all" }}>{state.password}</div>
-      <span className="small">They sign in with their email and this password, then must set their own. It expires in 7 days.</span>
+      <span className="small">They sign in with their mobile number (or email) and this password, then must choose their own straight away.</span>
     </div>
   );
 }
@@ -54,6 +54,16 @@ export function ReissueButton(props: { companyId: string; membershipId: string; 
   return (
     <form action={action}>
       <button type="submit" className="secondary" disabled={pending}>New temporary password</button>
+      <Secret state={state} />
+    </form>
+  );
+}
+
+export function ResetButton(props: { companyId: string; membershipId: string; who: string }) {
+  const [state, action, pending] = useActionState(resetPassword.bind(null, props.companyId, props.membershipId, props.who), null);
+  return (
+    <form action={action}>
+      <button type="submit" className="secondary" disabled={pending}>Reset password</button>
       <Secret state={state} />
     </form>
   );
