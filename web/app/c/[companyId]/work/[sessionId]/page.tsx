@@ -7,6 +7,7 @@ import { requireMembership } from "@/lib/session";
 import { fmtDate, memberNames } from "@/lib/names";
 import { draftSop } from "@/lib/sop";
 import { ProcessMap, type ProcessFlow } from "@/components/process-map";
+import { promoteProcess } from "./actions";
 
 const PROFILE: [string, string][] = [
   ["name", "Name"], ["designation", "Designation"], ["department", "Department"], ["sub_department", "Team / function"], ["reporting_manager", "Reports to"],
@@ -20,16 +21,17 @@ const STATUS: Record<string, string> = { identified: "Identified", in_discovery:
 const DIMS: [string, string][] = [["purpose", "Purpose"], ["trigger", "Trigger"], ["roles", "Roles"], ["activities", "Steps"], ["systems", "Systems"], ["tat", "Turnaround"],
   ["controls", "Controls"], ["exceptions", "Exceptions"], ["dependencies", "Other teams"], ["performance", "Performance"]];
 
-export default async function WorkSummary({ params }: { params: Promise<{ companyId: string; sessionId: string }> }) {
+export default async function WorkSummary({ params, searchParams }: { params: Promise<{ companyId: string; sessionId: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
+  const sp = await searchParams;
   const { companyId, sessionId } = await params;
-  const { supabase, membership } = await requireMembership(companyId);
+  const { supabase, membership, permissions } = await requireMembership(companyId);
   const { data: s } = await supabase.from("interview_sessions")
     .select("id, status, submitted_at, assignment_id, interview_assignments(id, respondent_membership_id, interview_campaigns(name, interview_mode))")
     .eq("company_id", companyId).eq("id", sessionId).maybeSingle();
   if (!s?.interview_assignments) notFound();
   const [{ data: dp }, { data: procs }, { data: clar }, { names }] = await Promise.all([
     supabase.from("discovery_profiles").select("profile, responsibilities, inventory_confirmed, stage, updated_at").eq("company_id", companyId).eq("session_id", sessionId).maybeSingle(),
-    supabase.from("discovered_processes").select("id, process_key, name, purpose, involvement, owner_text, importance, frequency, volume, departments, status, completeness, coverage, flow, flow_version")
+    supabase.from("discovered_processes").select("id, process_key, name, purpose, involvement, owner_text, importance, frequency, volume, departments, status, completeness, coverage, flow, flow_version, linked_process_id")
       .eq("company_id", companyId).eq("session_id", sessionId).neq("status", "removed").order("created_at"),
     supabase.from("interview_clarifications").select("id, description, status, created_at").eq("company_id", companyId).eq("session_id", sessionId).order("created_at"),
     memberNames(supabase, companyId),
@@ -44,11 +46,20 @@ export default async function WorkSummary({ params }: { params: Promise<{ compan
   for (const r of resp) byKind.set(r.kind, [...(byKind.get(r.kind) ?? []), r]);
   const openClar = (clar ?? []).filter((c) => c.status === "open");
   const chat = `/c/${companyId}/interviews/${s.interview_assignments.id}`;
+  // Reviewers with process.edit can move a discovered process into the governed catalogue (PPI-028).
+  const canPromote = !mine && permissions.has("process.edit");
+  const [{ data: catalogue }, { data: depts }] = canPromote ? await Promise.all([
+    supabase.from("processes").select("id, code, name").eq("company_id", companyId).order("code"),
+    supabase.from("departments").select("id, code, name").eq("company_id", companyId).eq("status", "active").order("code"),
+  ]) : [{ data: [] as { id: string; code: string; name: string }[] }, { data: [] as { id: string; code: string; name: string }[] }];
+  const catName = new Map((catalogue ?? []).map((c) => [c.id, `${c.code} · ${c.name}`]));
 
   return (
     <div className="work">
       <p><Link href={mine ? `/c/${companyId}` : `/c/${companyId}/review/${sessionId}`}>← Back</Link></p>
       <h1>{mine ? "What we understood about your work" : `Work summary${profile.name?.value ? ` — ${profile.name.value}` : ""}`}</h1>
+      {sp.e && <div className="notice error">{sp.e}</div>}
+      {sp.ok && <div className="notice ok">{sp.ok}</div>}
       <div className="notice">
         <strong>Draft.</strong> Built automatically from {mine ? "your" : "the"} conversation{dp?.updated_at ? ` (last updated ${fmtDate(dp.updated_at)})` : ""}. Nothing here is
         approved yet — a reviewer checks it before it becomes company knowledge.
@@ -88,12 +99,28 @@ export default async function WorkSummary({ params }: { params: Promise<{ compan
           const sop = draftSop(flow);
           const cov = (p.coverage ?? {}) as Record<string, string>;
           return (
-            <article key={p.id} className="card proc" id={`p-${p.process_key}`}>
+            <article key={p.id} className="card proc" id={`p-${p.id}`}>
               <div className="row" style={{ justifyContent: "space-between" }}>
                 <h3 style={{ margin: 0 }}>{p.name}</h3>
                 <span className={`badge ${p.status === "sufficient" ? "ok" : p.status === "in_discovery" ? "part" : ""}`}>{STATUS[p.status] ?? p.status} · {p.completeness}%</span>
               </div>
               {p.purpose && <p>{p.purpose}</p>}
+              {p.linked_process_id ? (
+                <p className="small"><span className="badge ok">In process catalogue</span> {catName.get(p.linked_process_id) ?? ""}</p>
+              ) : canPromote && (
+                <details className="small" data-testid="promote">
+                  <summary>Add to the process catalogue</summary>
+                  <form action={promoteProcess.bind(null, companyId, sessionId, p.id)} className="row" style={{ gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                    <input name="code" placeholder="New code, e.g. OPS-P12" aria-label="Process code" style={{ maxWidth: 170 }} />
+                    <select name="owner_department_id" aria-label="Owner department"><option value="">Owner department…</option>{(depts ?? []).map((d) => <option key={d.id} value={d.id}>{d.code} · {d.name}</option>)}</select>
+                    <select name="classification" aria-label="Classification" defaultValue="internal"><option value="internal">Internal</option><option value="confidential">Confidential</option><option value="restricted">Restricted</option><option value="public">Public</option></select>
+                    <span className="muted">or link to</span>
+                    <select name="existing_process_id" aria-label="Existing process"><option value="">— new process —</option>{(catalogue ?? []).map((c) => <option key={c.id} value={c.id}>{c.code} · {c.name}</option>)}</select>
+                    <button type="submit" className="secondary">Save</button>
+                  </form>
+                  <div className="muted" style={{ marginTop: 4 }}>It enters the catalogue as a <em>candidate</em>; approval follows the normal review route.</div>
+                </details>
+              )}
               <p className="muted small">{[p.frequency && `Frequency: ${p.frequency}`, p.volume && `Volume: ${p.volume}`, p.involvement && `Role: ${p.involvement}`,
                 p.owner_text && `Owner: ${p.owner_text}`, p.importance && `Importance: ${p.importance}`, p.departments?.length && `Other departments: ${p.departments.join(", ")}`].filter(Boolean).join(" · ")}</p>
               <div className="dims small">{DIMS.map(([d, l]) => <span key={d} className={`badge ${cov[d] === "sufficient" ? "ok" : cov[d] === "partial" ? "part" : ""}`}>{l}</span>)}</div>

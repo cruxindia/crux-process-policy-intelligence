@@ -15,3 +15,4 @@
 | 2026-11-12 | 1.10 | S-09: free-tier decision (D-045…D-047), PPI-023, admin switch, PR-032…034 | repo-wide | Claude (AI), on Shantanu's decision | Pending — Shantanu |
 | 2026-11-12 | 1.11 | Real Gemini live (D-048…D-050), CRUX switched to AI interview, PR-031 closed, PR-035/036 | repo-wide | Claude (AI), on Shantanu's instruction | Pending — Shantanu |
 | 2026-11-12 | 1.12 | S-10 (prompt v2.0): AI-led discovery engine, live process map, Review Centre, AI connections/queue; PPI-024…026; D-051…D-058; PR-037…040; CRUX link → discovery | repo-wide | Claude (AI), on Shantanu's instruction | Pending — Shantanu |
+| 2026-11-12 | 1.13 | PPI-027 discovery for existing members + home card; PPI-028 reviewer promotion to catalogue; Netlify badge off; net-probe removed; D-059…D-061; PR-039 closed, PR-041 | repo-wide | Claude (AI), on Shantanu's request | Pending — Shantanu |

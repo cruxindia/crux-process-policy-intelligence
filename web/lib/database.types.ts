@@ -3964,6 +3964,10 @@ export type Database = {
       my_contact: { Args: never; Returns: Json }
       my_discovery_assignment: { Args: { p_company: string }; Returns: string }
       my_permissions: { Args: { p_company: string }; Returns: string[] }
+      promote_discovered_process: {
+        Args: { p_company: string; p_discovered: string; p_code: string | null; p_owner_department: string | null; p_classification?: string; p_existing_process?: string }
+        Returns: string
+      }
       normalise_mobile: { Args: { p: string }; Returns: string }
       password_change_required: { Args: never; Returns: boolean }
       process_map_issues: {

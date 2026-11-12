@@ -7,11 +7,13 @@ All live tests used the synthetic tenant `E2E-SYNTH` and real Gemini (gemini-3.5
 | Suite | Result | What it proves |
 |---|---|---|
 | Unit (`supabase/functions/tests/*.test.ts`, `web/lib/sop.test.ts`) | **43/43** (also in CI: ai-engine, db-tests, web all green on `be64070`) | adapter, adaptive + discovery engines, routing/queue/Pacific reset, inventory nudge, name masking, draft SOP |
-| DB local (`scripts/test-db.sh`, PG 16) | **271/271**, 18 files | incl. test 18: discovery RLS, append-only flow history, connections, Vault, limit, queue |
+| DB local (`scripts/test-db.sh`, PG 16) | **287/287**, 20 files | incl. test 18: discovery RLS, append-only flow history, connections, Vault, limit, queue |
 | DB hosted (Supabase PG 17, test 18, rolled back) | **21/21** | real Supabase Vault store/read; nothing left behind (checked) |
 | Live API (`web/e2e/discovery-api.cjs`) | **14/14** (3 runs: v3, v5, v6) | opener; profile, 5–6 processes found automatically; forgotten item added; correction + "not sure" handled; inventory confirmed; map versioned (up to 9 versions); employee cannot write AI tables |
 | Live UI (`web/e2e/discovery-flow.cjs`) | **19/19** | home "Let's understand the work you do" → Start; chips; "Can you explain?"; live React Flow map; activities + profile panel; resume after reload; Review Centre (profile, charter, library, SOP, clarifications); phone layout, no horizontal scroll |
 | Live UI on **https://crux-ppi.netlify.app** after deploy of `be64070` | **19/19** | same suite against production; map actors show roles, not the employee's name |
+| Existing member (`web/e2e/existing-member.cjs`) | **5/5** | member who joined earlier sees "Let's understand the work you do" on home; one click starts; no duplicates; admin lands on home |
+| Reviewer promotion (`web/e2e/promote-process.cjs`) | **4/4** | discovered process → catalogue as candidate, linked and shown |
 | Admin (`web/e2e/admin-ai.cjs`) | **11/11** | "Connected and tested" only after a real request (568–877 ms); keyless connection = "Not configured"; assignment add/switch-off; no key material on page; employee gets 404 |
 
 ### Defects found by the live tests and fixed
