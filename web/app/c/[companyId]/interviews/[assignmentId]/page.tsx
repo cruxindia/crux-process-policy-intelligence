@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { AutoStart } from "./auto-start";
+import { startInterview } from "./actions";
 import { Chat, type ChatAnswer, type ChatQuestion, type Clarification } from "./chat";
+import { DiscoveryChat, type DAnswer, type DProcess, type DQuestion, type DState } from "./discovery-chat";
 
 export default async function InterviewPage({ params, searchParams }: {
   params: Promise<{ companyId: string; assignmentId: string }>;
@@ -23,12 +25,66 @@ export default async function InterviewPage({ params, searchParams }: {
     .eq("company_id", companyId).eq("assignment_id", assignmentId).order("started_at", { ascending: false }).limit(1);
   const session = sessions?.[0];
 
+  if (!session && assignment.interview_campaigns?.interview_mode === "discovery") {
+    // Master Corrective Prompt v2.0 home: nothing to choose — one button starts the conversation.
+    return (
+      <div className="chat-page welcome">
+        {sp.e && <div className="notice error">{sp.e}</div>}
+        <h1>Let&rsquo;s understand the work you do.</h1>
+        <p>I&rsquo;ll guide you through a conversation about your role, your responsibilities and the work you handle every day. You don&rsquo;t need to
+          prepare documents or know how to describe a “process” — just explain your work naturally and I&rsquo;ll organise it for you.</p>
+        <p className="muted small">It usually takes 20–40 minutes. You can stop at any time and continue later exactly where you left off.</p>
+        {isRespondent ? (
+          <form action={startInterview.bind(null, companyId, assignmentId)}><button type="submit" className="big">Start conversation</button></form>
+        ) : <p className="muted">Not started yet.</p>}
+      </div>
+    );
+  }
   if (!session) {
     return (
       <div className="chat-page">
         <h1>{assignment.interview_campaigns?.name ?? "Interview"}</h1>
         {sp.e && <div className="notice error">{sp.e}</div>}
         {isRespondent && !sp.e ? <AutoStart companyId={companyId} assignmentId={assignmentId} /> : !isRespondent && <p className="muted">Not started yet.</p>}
+      </div>
+    );
+  }
+
+  const open = ["in_progress", "reopened"].includes(session.status);
+  if (assignment.interview_campaigns?.interview_mode === "discovery") {
+    const [{ data: dq }, { data: dp }, { data: procs }, { data: me }] = await Promise.all([
+      supabase.from("interview_questions").select("id, seq, question_text, generated_by, rationale, field_key").eq("company_id", companyId).eq("session_id", session.id).order("seq"),
+      supabase.from("discovery_profiles").select("stage, focus_process_key, inventory_confirmed, profile, responsibilities").eq("company_id", companyId).eq("session_id", session.id).maybeSingle(),
+      supabase.from("discovered_processes").select("id, process_key, name, status, completeness, coverage, flow, flow_version, involvement, frequency, departments, purpose")
+        .eq("company_id", companyId).eq("session_id", session.id).order("created_at"),
+      supabase.from("user_profiles").select("display_name").eq("id", userId).maybeSingle(),
+    ]);
+    const qids = (dq ?? []).map((q) => q.id);
+    const [{ data: dans }, { data: ddrafts }] = await Promise.all([
+      qids.length ? supabase.from("interview_current_answers").select("question_id, answer_kind, answer_text, referred_note").eq("company_id", companyId).in("question_id", qids)
+        : Promise.resolve({ data: [] as { question_id: string | null; answer_kind: string | null; answer_text: string | null; referred_note: string | null }[] }),
+      isRespondent && qids.length ? supabase.from("interview_answer_drafts").select("question_id, draft_text").eq("company_id", companyId).in("question_id", qids)
+        : Promise.resolve({ data: [] as { question_id: string; draft_text: string | null }[] }),
+    ]);
+    const dDraft = new Map((ddrafts ?? []).map((d) => [d.question_id, d.draft_text]));
+    const dQuestions: DQuestion[] = (dq ?? []).map((q) => ({ id: q.id, seq: q.seq, text: q.question_text, reason: q.rationale, generatedBy: q.generated_by,
+      processKey: q.field_key.startsWith("ai.process.") ? q.field_key.slice(11) : null, draft: dDraft.get(q.id) ?? null }));
+    const dAnswers: Record<string, DAnswer> = {};
+    for (const a of dans ?? []) if (a.question_id) dAnswers[a.question_id] = { kind: a.answer_kind ?? "answer", text: a.answer_text, referred: a.referred_note };
+    const profile: Record<string, string> = { ...(me?.display_name ? { name: me.display_name } : {}) };
+    for (const [k, v] of Object.entries((dp?.profile ?? {}) as Record<string, { value?: string }>)) if (v?.value) profile[k] = v.value;
+    const state: DState = {
+      stage: dp?.stage ?? "person", focus_process_key: dp?.focus_process_key ?? null, inventory_confirmed: !!dp?.inventory_confirmed, profile,
+      responsibilities: (Array.isArray(dp?.responsibilities) ? dp.responsibilities : []) as DState["responsibilities"],
+      processes: (procs ?? []).map((p) => ({ ...p, key: p.process_key, coverage: (p.coverage ?? {}) as Record<string, string>,
+        flow: (p.flow ?? null) as DProcess["flow"] })) as DProcess[],
+    };
+    return (
+      <div className="chat-page wide">
+        {!isRespondent && <p><Link href={`/c/${companyId}/discovery`}>← Back to discovery</Link></p>}
+        {sp.e && <div className="notice error">{sp.e}</div>}
+        <DiscoveryChat companyId={companyId} assignmentId={assignmentId} sessionId={session.id} questions={dQuestions} answers={dAnswers} state={state}
+          open={open} canAnswer={isRespondent} submittedAt={session.submitted_at} aiProvider={assignment.interview_campaigns?.ai_provider ?? "gemini_free"} />
       </div>
     );
   }
@@ -63,7 +119,6 @@ export default async function InterviewPage({ params, searchParams }: {
   for (const a of ans ?? []) if (a.question_id) answers[a.question_id] = {
     kind: a.answer_kind ?? "answer", text: a.answer_text, basis: a.knowledge_basis ?? "direct", referred: a.referred_note, rev: a.revision_no ?? 1,
   };
-  const open = ["in_progress", "reopened"].includes(session.status);
 
   return (
     <div className="chat-page">

@@ -35,6 +35,7 @@ export default async function AdminPage({ params, searchParams }: {
       <p><Link href={`/c/${companyId}`}>← Back</Link></p>
       <h1>Administration</h1>
       <p className="muted">Every change is checked by the database against your roles and recorded in the audit log.</p>
+      <p><Link className="button secondary" href={`/c/${companyId}/admin/ai`}>AI connections, queue &amp; usage</Link></p>
       {sp.e && <div className="notice error">{sp.e}</div>}
       {sp.ok && <div className="notice ok">{sp.ok}</div>}
 

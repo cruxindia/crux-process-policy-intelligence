@@ -1,4 +1,37 @@
-# Test Results — Sprint 04 (adaptive AI interview)
+# Test Results
+
+## S-10 — AI-led discovery (Master Corrective Prompt v2.0), 12-Nov-2026
+
+All live tests used the synthetic tenant `E2E-SYNTH` and real Gemini (gemini-3.5-flash-lite, free tier). No mocks.
+
+| Suite | Result | What it proves |
+|---|---|---|
+| Unit (`supabase/functions/tests/*.test.ts`, `web/lib/sop.test.ts`) | **43/43** | adapter, adaptive + discovery engines, routing/queue/Pacific reset, inventory nudge, name masking, draft SOP |
+| DB local (`scripts/test-db.sh`, PG 16) | **271/271**, 18 files | incl. test 18: discovery RLS, append-only flow history, connections, Vault, limit, queue |
+| DB hosted (Supabase PG 17, test 18, rolled back) | **21/21** | real Supabase Vault store/read; nothing left behind (checked) |
+| Live API (`web/e2e/discovery-api.cjs`) | **14/14** (3 runs: v3, v5, v6) | opener; profile, 5–6 processes found automatically; forgotten item added; correction + "not sure" handled; inventory confirmed; map versioned (up to 9 versions); employee cannot write AI tables |
+| Live UI (`web/e2e/discovery-flow.cjs`) | **19/19** | home "Let's understand the work you do" → Start; chips; "Can you explain?"; live React Flow map; activities + profile panel; resume after reload; Review Centre (profile, charter, library, SOP, clarifications); phone layout, no horizontal scroll |
+| Admin (`web/e2e/admin-ai.cjs`) | **11/11** | "Connected and tested" only after a real request (568–877 ms); keyless connection = "Not configured"; assignment add/switch-off; no key material on page; employee gets 404 |
+
+### Defects found by the live tests and fixed
+| # | Defect | Fix |
+|---|---|---|
+| 1 | Gemini HTTP 400 on the first discovery schema; error text not logged | provider detail logged (sanitised); size bounds moved to the validator (prompt v2); any 400 falls back once to JSON mode **with the schema in the prompt** (D-052) |
+| 2 | UI test: no activities and no map after 7 answers — the model waited for inventory confirmation | prompt v3 "inventory is built continuously" + one-time nudge (D-053) |
+| 3 | Turn failed when an off-topic answer made the model re-ask twice | up to 3 attempts; a schema-valid output that only fails the repeat/nudge check is used instead of an error (D-053) |
+| 4 | "Why I'm asking" leaked internal planning ("…to complete the person") | prompt v3 rule: reason addressed to the employee, never stages/fields |
+| 5 | Employee's own name was sent to Gemini and used as an actor on maps | name masked before sending (`[known — not shared]`); unit test |
+| 6 | Map unreadable for long flows; tag ran into question text; phone panel opened off-screen | readable zoom anchored at the trigger; block tag; scroll into view |
+
+### Not yet proven live (honest gaps)
+- Saved-work queue: unit-tested (cooldown, Pacific midnight, message never mentions quota) but a real rate-limit was not provoked.
+- Auth-failed / model-unavailable labels and Ollama fallback: unit-tested only.
+- Off-topic scripted answers still produce some re-asking in new words (PR-035); review the first real CRUX conversations.
+- `interview-ai` (S-08 engine) was not redeployed with the updated shared adapter; it is no longer used by the CRUX link.
+
+---
+
+# Earlier: Sprint 04 (adaptive AI interview)
 
 ## ✅ Real Gemini — 12-Nov-2026 (key set by owner in Supabase secrets)
 

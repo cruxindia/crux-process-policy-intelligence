@@ -3,8 +3,10 @@
 // Never logs prompts or outputs — only provider, model, status and error class.
 
 export type AiErrorClass = "config" | "auth" | "rate_limit" | "timeout" | "provider" | "invalid_response" | "blocked";
-export type AiSuccess = { ok: true; text: string; model: string; latencyMs: number; usage?: { input?: number; output?: number } };
-export type AiFailure = { ok: false; errorClass: AiErrorClass; status?: number; message: string; model?: string; latencyMs?: number };
+export type AiSuccess = { ok: true; text: string; model: string; latencyMs: number; usage?: { input?: number; output?: number };
+  schemaFallback?: string };  // set when the provider rejected the JSON schema and plain JSON mode was used (provider text, for logs)
+export type AiFailure = { ok: false; errorClass: AiErrorClass; status?: number; message: string; model?: string; latencyMs?: number;
+  detail?: string };   // provider's own error text (server logs only; never contains prompts or keys)
 export type AiResult = AiSuccess | AiFailure;
 
 export interface AiProvider {
@@ -41,7 +43,8 @@ export class GeminiProvider implements AiProvider {
     if (!this.apiKey) return { ok: false, errorClass: "config", message: "GEMINI_API_KEY is not configured on the server", model: this.model };
     const url = `${this.baseUrl}/models/${encodeURIComponent(this.model)}:generateContent`;
     const body = (withSchema: boolean) => JSON.stringify({
-      systemInstruction: { parts: [{ text: req.system }] },
+      // Without a server-enforced schema the model must still see the expected shape.
+      systemInstruction: { parts: [{ text: withSchema ? req.system : `${req.system}\n\nOutput JSON Schema:\n${JSON.stringify(req.schema)}` }] },
       contents: [{ role: "user", parts: [{ text: req.user }] }],
       generationConfig: {
         temperature: req.temperature ?? 0.3,
@@ -50,7 +53,7 @@ export class GeminiProvider implements AiProvider {
       },
     });
     const started = Date.now();
-    let useSchema = true;
+    let useSchema = true; let schemaNote: string | undefined;
     for (let attempt = 0; ; attempt++) {
       let res: Response;
       try {
@@ -75,7 +78,7 @@ export class GeminiProvider implements AiProvider {
         const text = (cand.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("");
         if (!text) return { ok: false, errorClass: cand.finishReason === "SAFETY" ? "blocked" : "invalid_response", message: `Provider returned no text (finish: ${cand.finishReason ?? "unknown"})`, model: this.model, latencyMs: Date.now() - started };
         return { ok: true, text, model: json.modelVersion ?? this.model, latencyMs: Date.now() - started,
-                 usage: { input: json.usageMetadata?.promptTokenCount, output: json.usageMetadata?.candidatesTokenCount } };
+                 usage: { input: json.usageMetadata?.promptTokenCount, output: json.usageMetadata?.candidatesTokenCount }, ...(schemaNote ? { schemaFallback: schemaNote } : {}) };
       }
       const status = res.status;
       let msg = ""; let retrySec = NaN;
@@ -87,8 +90,8 @@ export class GeminiProvider implements AiProvider {
         retrySec = parseFloat(String(ri?.retryDelay ?? ""));
       } catch { /* ignore */ }
       if (!Number.isFinite(retrySec)) retrySec = Number(res.headers.get("retry-after"));
-      // Some model versions reject responseJsonSchema; fall back once to JSON mode + our own validation.
-      if (status === 400 && useSchema && /responseJsonSchema|response_json_schema|schema/i.test(msg)) { useSchema = false; continue; }
+      // Any 400 while a schema is attached: retry once in plain JSON mode (our own validator still checks the output).
+      if (status === 400 && useSchema && !/API key/i.test(msg)) { useSchema = false; schemaNote = msg.slice(0, 300); continue; }
       const daily = status === 429 && /per ?day|PerDay|daily/i.test(msg);
       // Retry only short waits; long waits are reported to the person instead of holding the request open.
       if ((status === 429 || status >= 500) && !daily && attempt < this.maxRetries && !(Number.isFinite(retrySec) && retrySec > 10)) {
@@ -102,7 +105,8 @@ export class GeminiProvider implements AiProvider {
             : `The AI is busy (free-tier limit); please try again in ${Number.isFinite(retrySec) && retrySec > 0 ? `about ${Math.ceil(retrySec)} seconds` : "a minute"}`)
         : errorClass === "config" ? `Model "${this.model}" was not found for this API key`
         : `AI provider error (HTTP ${status})`;
-      return { ok: false, errorClass, status, message: safe, model: this.model, latencyMs: Date.now() - started };
+      return { ok: false, errorClass, status, message: safe, model: this.model, latencyMs: Date.now() - started,
+        detail: (schemaNote ? `schema rejected: ${schemaNote} | then: ` : "") + msg.replace(/AIza[0-9A-Za-z_-]{20,}|AQ\.[0-9A-Za-z_-]{20,}/g, "[key]").slice(0, 300) };
     }
   }
 }

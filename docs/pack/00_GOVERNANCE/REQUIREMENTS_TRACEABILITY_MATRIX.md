@@ -83,3 +83,19 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 | AC-10 | Hosted AI receives no unapproved confidential data | Tested (DB guard + Edge Function) | 04, 16; `ai_runs` inserted (guarded) before any provider call; hosted refusal of gemini_free verified |
 | AC-11 | Retries create no duplicates | Tested (DB) | 04, 05, 07, 08 |
 | AC-12 | Backup restore demonstrated before production | Not Started | C-11 |
+
+## Master Corrective Prompt v2.0 (12-Nov-2026; Parts 1–8 only — rest not received)
+| Req | Title | Status | Evidence | Gaps |
+|---|---|---|---|---|
+| V2-P1 | Employee never creates campaigns/chooses templates; one "Start conversation" | Tested (E2E) | `interviews/[assignmentId]/page.tsx` welcome; discovery-flow.cjs | — |
+| V2-P2 | AI discovers person (14 fields) | Tested (live) | `discovery.ts` PROFILE_FIELDS; Review Centre profile | Fields not volunteered stay "not discussed" |
+| V2-P3 | Actual work incl. informal/unowned/automatable | Implemented | RESP_KINDS; responsibility charter | Live coverage of all kinds not separately tested |
+| V2-P4 | Automatic process inventory + "anything else?" confirmation | Tested (live) | discovery-api.cjs (6 processes, inventory confirmed, forgotten item added) | — |
+| V2-P4b | Per-process A–J deep dive, completeness | Tested (live, partial) | coverage + completeness; server-capped | Full completion of all processes not reached in tests (budget) |
+| V2-P4c | Intents: unsure / explain / forgot / changed / correct | Tested (live) | intents observed: adds_responsibility, corrects_earlier, unsure, asks_explanation | "That process has changed" not separately scripted |
+| V2-P5 | Gemini diagnostic statuses; never "Connected" on key presence | Tested (E2E) | admin-ai.cjs (Not configured / Connected and tested) | Auth-failed / model-unavailable paths unit-tested only |
+| V2-P6 | Up to 10 project connections, Vault keys, routing, fallback, no rotation | Tested (DB 18 hosted + unit + E2E) | PPI-025; routing.test.ts; admin-ai.cjs | Ollama fallback not exercised live |
+| V2-P7 | Queue, honest employee message, Pacific reset, admin usage | Implemented (unit-tested) | routing.test.ts; ai_jobs; admin usage/queue tables | Not exercised live (PR-038) |
+| V2-P8 | Live interactive process map (not image/Mermaid) | Tested (E2E) | React Flow nodes + zoom controls in chat and Review Centre | — |
+| V2-RC | Review Centre: profile, charter, process library + maps, draft SOPs, clarifications; correct via chat | Tested (E2E) | `work/[sessionId]/page.tsx`; sop.test.ts | Reviewer promotion to catalogue (PR-039) |
+

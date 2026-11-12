@@ -1,4 +1,27 @@
-# Implementation Progress — Sprint 04 (S-08): adaptive AI interview
+# Implementation Progress — S-10: AI-led discovery (Master Corrective Prompt v2.0)
+
+**Status (12-Nov-2026): Live; CRUX join link uses it.** Prompt v2.0 arrived truncated in Part 8 — Parts 9+ still needed (PR-037).
+
+| Part | What | State |
+|---|---|---|
+| 1–4 | Employee talks / AI drives: home → Start conversation; person, work, automatic inventory, per-process deep dive; intents | Live — `discovery-ai` v6, prompt v3 |
+| 5 | Gemini connection traced; admin test with honest statuses; provider adapter, model configurable | Live |
+| 6 | Up to 10 project connections, Vault keys, routing, fallback, no rotation | Live (PPI-025, Admin → AI connections) |
+| 7 | Queue with honest employee message, Pacific reset, admin queue + usage | Built; live path not provoked (PR-038) |
+| 8 | Live interactive process map (React Flow) | Live in chat and Review Centre |
+| — | Review Centre: profile, responsibility charter, process library + maps, draft SOPs, clarifications | Live (`/c/{company}/work/{session}`) |
+
+## What CRUX employees see today
+Join link → "Let's understand the work you do." → **Start conversation** → one question at a time, with a side panel (phone: "Show what I've understood") showing their process map, activity list and profile as they talk → Submit → "What we understood" summary.
+
+## Next
+1. Shantanu: send Parts 9+ of the prompt; review the first 3–5 real conversations (PR-035).
+2. Reviewer workflow to approve discovered processes into the governed catalogue (PR-039).
+3. Background queue worker (PR-038) and per-department Gemini projects as volume grows (PR-040).
+
+---
+
+# Earlier: Sprint 04 (S-08) adaptive AI interview
 
 **Status (12-Nov-2026): Live.** Real Gemini (gemini-3.5-flash-lite, free tier) verified end-to-end 15/15; CRUX join link switched to the AI interview.
 

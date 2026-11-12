@@ -15,7 +15,7 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
   const [{ data: assignments }, { data: processes }, { data: notes }, { data: forMe }] = await Promise.all([
     supabase
       .from("interview_assignments")
-      .select("id, status, due_on, department_id, process_id, interview_campaigns(name, purpose, due_on), departments(name), processes(code, name)")
+      .select("id, status, due_on, department_id, process_id, interview_campaigns(name, purpose, due_on, interview_mode), departments(name), processes(code, name), interview_sessions(id)")
       .eq("company_id", companyId)
       .eq("respondent_membership_id", membership.id)
       .order("created_at", { ascending: false }),
@@ -83,6 +83,9 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
             </Link>
           )}
           {a.status === "completed" && <Link href={`/c/${companyId}/interviews/${a.id}`}>View</Link>}
+          {a.interview_campaigns?.interview_mode === "discovery" && a.interview_sessions?.[0] && (
+            <Link href={`/c/${companyId}/work/${a.interview_sessions[0].id}`}>What we understood</Link>
+          )}
         </div>
       ))}
 

@@ -1,4 +1,3 @@
-// Generated from Supabase project pahzxpileudulljgaciw (dev). Regenerate after every migration.
 export type Json =
   | string
   | number
@@ -15,6 +14,255 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_connection_assignments: {
+        Row: {
+          active: boolean
+          company_id: string
+          connection_id: string
+          created_at: string
+          department_id: string | null
+          id: string
+          interview_category: string | null
+          process_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          company_id: string
+          connection_id: string
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          interview_category?: string | null
+          process_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          company_id?: string
+          connection_id?: string
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          interview_category?: string | null
+          process_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_connection_assignments_company_id_connection_id_fkey"
+            columns: ["company_id", "connection_id"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_connections"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_connection_assignments_company_id_department_id_fkey"
+            columns: ["company_id", "department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_connection_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_connection_assignments_company_id_process_id_fkey"
+            columns: ["company_id", "process_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_process_status"
+            referencedColumns: ["company_id", "process_id"]
+          },
+          {
+            foreignKeyName: "ai_connection_assignments_company_id_process_id_fkey"
+            columns: ["company_id", "process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      ai_jobs: {
+        Row: {
+          company_id: string
+          completed_at: string | null
+          connection_id: string | null
+          created_at: string
+          error_class: string | null
+          id: string
+          idempotency_key: string
+          membership_id: string | null
+          payload_ref: Json
+          priority: number
+          process_id: string | null
+          retry_count: number
+          run_after: string
+          session_id: string | null
+          started_at: string | null
+          status: string
+          task_type: string
+        }
+        Insert: {
+          company_id: string
+          completed_at?: string | null
+          connection_id?: string | null
+          created_at?: string
+          error_class?: string | null
+          id?: string
+          idempotency_key: string
+          membership_id?: string | null
+          payload_ref?: Json
+          priority?: number
+          process_id?: string | null
+          retry_count?: number
+          run_after?: string
+          session_id?: string | null
+          started_at?: string | null
+          status?: string
+          task_type: string
+        }
+        Update: {
+          company_id?: string
+          completed_at?: string | null
+          connection_id?: string | null
+          created_at?: string
+          error_class?: string | null
+          id?: string
+          idempotency_key?: string
+          membership_id?: string | null
+          payload_ref?: Json
+          priority?: number
+          process_id?: string | null
+          retry_count?: number
+          run_after?: string
+          session_id?: string | null
+          started_at?: string | null
+          status?: string
+          task_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_jobs_company_id_connection_id_fkey"
+            columns: ["company_id", "connection_id"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_connections"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_company_id_membership_id_fkey"
+            columns: ["company_id", "membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_company_id_process_id_fkey"
+            columns: ["company_id", "process_id"]
+            isOneToOne: false
+            referencedRelation: "discovered_processes"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_company_id_session_id_fkey"
+            columns: ["company_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      ai_provider_connections: {
+        Row: {
+          base_url: string | null
+          company_id: string
+          cooldown_until: string | null
+          created_at: string
+          gcp_project_id: string | null
+          health: string
+          id: string
+          key_set_at: string | null
+          last_error_at: string | null
+          last_error_class: string | null
+          last_success_at: string | null
+          last_tested_at: string | null
+          model: string
+          name: string
+          policy_provider: string
+          priority: number
+          provider: string
+          status: string
+          updated_at: string
+          vault_secret_id: string | null
+        }
+        Insert: {
+          base_url?: string | null
+          company_id: string
+          cooldown_until?: string | null
+          created_at?: string
+          gcp_project_id?: string | null
+          health?: string
+          id?: string
+          key_set_at?: string | null
+          last_error_at?: string | null
+          last_error_class?: string | null
+          last_success_at?: string | null
+          last_tested_at?: string | null
+          model?: string
+          name: string
+          policy_provider: string
+          priority?: number
+          provider: string
+          status?: string
+          updated_at?: string
+          vault_secret_id?: string | null
+        }
+        Update: {
+          base_url?: string | null
+          company_id?: string
+          cooldown_until?: string | null
+          created_at?: string
+          gcp_project_id?: string | null
+          health?: string
+          id?: string
+          key_set_at?: string | null
+          last_error_at?: string | null
+          last_error_class?: string | null
+          last_success_at?: string | null
+          last_tested_at?: string | null
+          model?: string
+          name?: string
+          policy_provider?: string
+          priority?: number
+          provider?: string
+          status?: string
+          updated_at?: string
+          vault_secret_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_provider_connections_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_provider_connections_company_id_policy_provider_fkey"
+            columns: ["company_id", "policy_provider"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_policies"
+            referencedColumns: ["company_id", "provider"]
+          },
+        ]
+      }
       ai_provider_policies: {
         Row: {
           company_id: string
@@ -79,6 +327,7 @@ export type Database = {
         Row: {
           capability: string
           company_id: string
+          connection_id: string | null
           context_source_ids: string[]
           created_at: string
           data_classification: string
@@ -100,6 +349,7 @@ export type Database = {
         Insert: {
           capability: string
           company_id: string
+          connection_id?: string | null
           context_source_ids?: string[]
           created_at?: string
           data_classification: string
@@ -121,6 +371,7 @@ export type Database = {
         Update: {
           capability?: string
           company_id?: string
+          connection_id?: string | null
           context_source_ids?: string[]
           created_at?: string
           data_classification?: string
@@ -159,6 +410,13 @@ export type Database = {
             columns: ["company_id", "requested_by_membership_id"]
             isOneToOne: false
             referencedRelation: "memberships"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "ai_runs_connection_fkey"
+            columns: ["company_id", "connection_id"]
+            isOneToOne: false
+            referencedRelation: "ai_provider_connections"
             referencedColumns: ["company_id", "id"]
           },
         ]
@@ -602,6 +860,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          ai_connection_limit: number
           code: string
           created_at: string
           id: string
@@ -611,6 +870,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_connection_limit?: number
           code: string
           created_at?: string
           id?: string
@@ -620,6 +880,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_connection_limit?: number
           code?: string
           created_at?: string
           id?: string
@@ -745,6 +1006,254 @@ export type Database = {
             columns: ["company_id", "parent_department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      discovered_process_flows: {
+        Row: {
+          ai_run_id: string
+          company_id: string
+          created_at: string
+          flow: Json
+          id: string
+          process_id: string
+          version: number
+        }
+        Insert: {
+          ai_run_id: string
+          company_id: string
+          created_at?: string
+          flow: Json
+          id?: string
+          process_id: string
+          version: number
+        }
+        Update: {
+          ai_run_id?: string
+          company_id?: string
+          created_at?: string
+          flow?: Json
+          id?: string
+          process_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovered_process_flows_company_id_ai_run_id_fkey"
+            columns: ["company_id", "ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_runs"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "discovered_process_flows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovered_process_flows_company_id_process_id_fkey"
+            columns: ["company_id", "process_id"]
+            isOneToOne: false
+            referencedRelation: "discovered_processes"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      discovered_processes: {
+        Row: {
+          company_id: string
+          completeness: number
+          coverage: Json
+          created_at: string
+          departments: string[]
+          first_ai_run_id: string | null
+          flow: Json
+          flow_version: number
+          frequency: string | null
+          id: string
+          importance: string | null
+          involvement: string | null
+          last_ai_run_id: string | null
+          linked_process_id: string | null
+          membership_id: string
+          name: string
+          owner_text: string | null
+          process_key: string
+          purpose: string | null
+          session_id: string
+          status: string
+          updated_at: string
+          volume: string | null
+        }
+        Insert: {
+          company_id: string
+          completeness?: number
+          coverage?: Json
+          created_at?: string
+          departments?: string[]
+          first_ai_run_id?: string | null
+          flow?: Json
+          flow_version?: number
+          frequency?: string | null
+          id?: string
+          importance?: string | null
+          involvement?: string | null
+          last_ai_run_id?: string | null
+          linked_process_id?: string | null
+          membership_id: string
+          name: string
+          owner_text?: string | null
+          process_key: string
+          purpose?: string | null
+          session_id: string
+          status?: string
+          updated_at?: string
+          volume?: string | null
+        }
+        Update: {
+          company_id?: string
+          completeness?: number
+          coverage?: Json
+          created_at?: string
+          departments?: string[]
+          first_ai_run_id?: string | null
+          flow?: Json
+          flow_version?: number
+          frequency?: string | null
+          id?: string
+          importance?: string | null
+          involvement?: string | null
+          last_ai_run_id?: string | null
+          linked_process_id?: string | null
+          membership_id?: string
+          name?: string
+          owner_text?: string | null
+          process_key?: string
+          purpose?: string | null
+          session_id?: string
+          status?: string
+          updated_at?: string
+          volume?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovered_processes_company_id_first_ai_run_id_fkey"
+            columns: ["company_id", "first_ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_runs"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "discovered_processes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovered_processes_company_id_last_ai_run_id_fkey"
+            columns: ["company_id", "last_ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_runs"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "discovered_processes_company_id_linked_process_id_fkey"
+            columns: ["company_id", "linked_process_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_process_status"
+            referencedColumns: ["company_id", "process_id"]
+          },
+          {
+            foreignKeyName: "discovered_processes_company_id_linked_process_id_fkey"
+            columns: ["company_id", "linked_process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "discovered_processes_company_id_membership_id_fkey"
+            columns: ["company_id", "membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "discovered_processes_company_id_session_id_fkey"
+            columns: ["company_id", "session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["company_id", "id"]
+          },
+        ]
+      }
+      discovery_profiles: {
+        Row: {
+          company_id: string
+          focus_process_key: string | null
+          inventory_confirmed: boolean
+          last_ai_run_id: string | null
+          membership_id: string
+          profile: Json
+          responsibilities: Json
+          session_id: string
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          focus_process_key?: string | null
+          inventory_confirmed?: boolean
+          last_ai_run_id?: string | null
+          membership_id: string
+          profile?: Json
+          responsibilities?: Json
+          session_id: string
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          focus_process_key?: string | null
+          inventory_confirmed?: boolean
+          last_ai_run_id?: string | null
+          membership_id?: string
+          profile?: Json
+          responsibilities?: Json
+          session_id?: string
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovery_profiles_company_id_last_ai_run_id_fkey"
+            columns: ["company_id", "last_ai_run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_runs"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "discovery_profiles_company_id_membership_id_fkey"
+            columns: ["company_id", "membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["company_id", "id"]
+          },
+          {
+            foreignKeyName: "discovery_profiles_company_id_session_id_fkey"
+            columns: ["company_id", "session_id"]
+            isOneToOne: true
+            referencedRelation: "interview_sessions"
             referencedColumns: ["company_id", "id"]
           },
         ]
@@ -3418,6 +3927,14 @@ export type Database = {
       admin_reset_password: {
         Args: { p_company: string; p_membership: string }
         Returns: string
+      }
+      ai_connection_get_key: {
+        Args: { p_company: string; p_connection: string }
+        Returns: string
+      }
+      ai_connection_set_key: {
+        Args: { p_company: string; p_connection: string; p_key: string }
+        Returns: undefined
       }
       clear_password_marker: { Args: never; Returns: undefined }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }

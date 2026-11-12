@@ -89,3 +89,24 @@ Changing `SYSTEM_PROMPT` or `TURN_SCHEMA` changes the hash. The function will th
 - `POST interview-ai {action:"diagnose", company_id}` (admins / discovery leads): tries several Gemini models with a trivial
   prompt and reports which answer and how fast. Use it if the connection test times out.
 - `net-probe` function: checks the Edge runtime can reach Google **without** any key (temporary; safe to delete in the Dashboard).
+
+## 8. AI-led discovery engine (`discovery-ai`, S-10)
+
+```
+Browser ──JWT──▶ discovery-ai ── turn ──▶ connections ranked (process > department > interview type > shared > server default)
+                     │                       │ key read from Supabase Vault by the service role only
+                     │                       ▼
+                     │                 Gemini generateContent (schema enforced; on HTTP 400 → JSON mode with schema in prompt)
+                     ▼
+   discovery_profiles · discovered_processes (+ versioned discovered_process_flows) · interview_questions · interview_clarifications · ai_runs
+                     │ nothing could run → ai_jobs (queued, run_after = provider reset) → employee: "Your answers are safely saved…"
+```
+
+- Stages: person (14 fields) → responsibilities → inventory (built continuously; "anything else?" confirmation) → per-process deep dive (10 dimensions A–J, completeness computed server-side) → wrap-up.
+- Prompt: `interview.discovery` **v3**, hash `bab7cd42…` (`scripts/prompt-hash-v2.mts`; CI checks it against `supabase/bootstrap/discovery_setup.sql`). Changing the prompt or schema = new version row.
+- Sent to Gemini: company name, campaign purpose, department, known/discovered profile **with the employee's own name masked**, inventory, focused map, transcript. Never: mobile, e-mail, keys.
+- Map: the AI returns the whole current flow each turn; the server sanitises it (unique ids, valid edges, ≤40 nodes) and stores a new version only when it changes.
+- Multiple projects: Admin → AI connections. Add a connection (one Google Cloud project each), paste its key once (stored in Vault, never shown again), press Test (real request; "Connected and tested" only on success), assign departments/processes/interview types. A rate-limited connection rests until the provider's reset — keys are never rotated to get around limits.
+- Logs: event names, connection id, model, timings, error class and Google's error text for 4xx (no prompts, answers or keys).
+- Queue gap: a saved step runs when the employee comes back (no background worker yet — PR-038).
+

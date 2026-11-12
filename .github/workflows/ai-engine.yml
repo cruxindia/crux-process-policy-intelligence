@@ -1,9 +1,9 @@
 name: ai-engine
 on:
   push:
-    paths: ["supabase/functions/**", "scripts/prompt-hash.mts", "supabase/bootstrap/adaptive_ai_setup.sql", ".github/workflows/ai-engine.yml"]
+    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "supabase/bootstrap/*.sql", "web/lib/sop*.ts", ".github/workflows/ai-engine.yml"]
   pull_request:
-    paths: ["supabase/functions/**", "scripts/prompt-hash.mts", "supabase/bootstrap/adaptive_ai_setup.sql", ".github/workflows/ai-engine.yml"]
+    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "supabase/bootstrap/*.sql", "web/lib/sop*.ts", ".github/workflows/ai-engine.yml"]
 permissions:
   contents: read
 jobs:
@@ -14,15 +14,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Mocked unit tests: provider adapter + engine (no network, no keys).
-      - run: node --experimental-strip-types --test supabase/functions/tests/engine.test.ts
-      # The registered prompt hash must match the code, or the deployed function refuses to run.
-      - name: prompt provenance hash matches bootstrap SQL
+      # Mocked unit tests: provider adapter, adaptive engine, discovery engine, routing/queue, draft SOP (no network, no keys).
+      - run: node --experimental-strip-types --test supabase/functions/tests/*.test.ts web/lib/sop.test.ts
+      # The registered prompt hashes must match the code, or the deployed functions refuse to run.
+      - name: prompt provenance hashes match bootstrap SQL
         run: |
           h=$(node --experimental-strip-types scripts/prompt-hash.mts 2>/dev/null | sed -E 's/.*"template_sha256":"([0-9a-f]{64})".*/\1/')
-          echo "computed $h"
-          grep -q "$h" supabase/bootstrap/adaptive_ai_setup.sql
+          echo "adaptive $h"; grep -q "$h" supabase/bootstrap/adaptive_ai_setup.sql
+          h2=$(node --experimental-strip-types scripts/prompt-hash-v2.mts 2>/dev/null | sed -E 's/.*"template_sha256":"([0-9a-f]{64})".*/\1/')
+          echo "discovery $h2"; grep -q "$h2" supabase/bootstrap/discovery_setup.sql
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check supabase/functions/interview-ai/index.ts
+      - run: deno check supabase/functions/interview-ai/index.ts supabase/functions/discovery-ai/index.ts

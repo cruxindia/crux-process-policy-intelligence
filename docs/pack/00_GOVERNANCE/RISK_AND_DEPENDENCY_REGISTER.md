@@ -37,6 +37,10 @@
 | PR-034 | Gemini API key was posted in chat on 12-Nov-2026 | Key could be misused if the chat is exposed | Owner to create a fresh key, put it only in Supabase secrets, delete the exposed one | Open — owner |
 | PR-035 | AI may re-ask a topic in new words when answers are off-topic (seen with synthetic persona); flash-lite is a small model | Some repetitive questions | Review the first 3–5 real interviews; tighten similarity rule or switch model if seen | Open |
 | PR-036 | `gemini-flash-lite-latest` is an alias: Google may change the model behind it | Behaviour drift | Actual model version is shown in the app and logs per call; pin a version via `GEMINI_MODEL` if needed | Open |
+| PR-037 | Master Corrective Prompt v2.0 received truncated mid-Part 8; Parts 9+ unknown | Unbuilt requirements | Requested from Shantanu; SOW 12C lists what was built | Open — waiting on owner |
+| PR-038 | Saved-work queue only resumes when the employee reopens the page (no background worker) | Delayed step if the person never returns | Admin "Waiting work" list; add pg_cron + secured worker when approved | Open |
+| PR-039 | Discovered processes are not yet promoted into the governed process catalogue | Manual reviewer step | Review Centre shows drafts; reviewer workflow to link/approve is next | Open |
+| PR-040 | Free-tier daily request limits across a whole company | Conversations pause until Pacific midnight | Add more connections (one per Google project/department) in Admin → AI connections; usage table shows daily counts | Open |
 | PR-019 | Supabase Free plan: no automatic backups, no PITR, pauses after 1 week inactivity (verified 2026-11-11) | Data loss / pilot downtime; fails backup-restore gate | Scheduled external `pg_dump` + restore drill, or approved paid plan, before pilot (C-11) | Open |
 
 Update owner, likelihood, impact, mitigation, due date and status during project execution. Do not invent residual ratings before an approved assessment method exists.

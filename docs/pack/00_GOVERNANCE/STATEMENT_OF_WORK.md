@@ -90,6 +90,15 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 - **Acceptance:** [x] audit; [x] adapter + engine + function deployed; [x] honest failure (test 6) live; [x] keys never in browser/repo (verified in build output); [x] DB tests; [ ] real Gemini call (test 1); [ ] live adaptive/contradiction/resume/completion (2–5, 8); [x] owner confirmed tier (free, D-045); [x] CRUX activation built as admin switch (D-046); [x] key set by owner; [x] real Gemini E2E 15/15; [x] switch turned on (D-049); [ ] owner acceptance.
 - **Status:** Live (12-Nov-2026). Remaining: owner acceptance; review first real interviews (PR-035).
 
+## 12C. Sprint S-10 (Master Corrective Prompt v2.0, 12-Nov-2026) — AI-led discovery
+- **Objective:** "Employee talks, AI drives, system builds, employee corrects, management approves." One conversation discovers the person (14 profile fields), what they actually do, an automatic process inventory, and each process in depth (A–J) with a live interactive map; Gemini connection made reliable and multi-project; honest saved-work queue.
+- **Inputs:** `4fc2832d-attachment.txt` (prompt v2.0, **truncated mid-Part 8**), `cfd6bdde-attachment.txt` (explanation). Parts 9+ not received — requested from Shantanu.
+- **Scope in:** P1 discovery engine (PPI-024, `discovery-ai`); P2 chat + live React Flow map; P3 home "Let's understand the work you do" + Review Centre (profile, responsibility charter, process library + maps, draft SOPs, clarifications); P4 admin AI connections (≤10, Vault keys, routing, health, test); P5 queue + usage view; CRUX link switch.
+- **Scope out / not done:** anything in Parts 9+; autonomous background queue worker (runs when the employee returns — PR-038); reviewer approval workflow for discovered processes into the governed catalogue (`linked_process_id` exists, UI not built); editing the map by drag-and-drop (corrections go through chat by design).
+- **Assumptions:** "Process" granularity is decided by the AI and reviewed by humans; draft SOPs are a deterministic re-ordering of the map (no AI text) until a document workflow is approved.
+- **Acceptance:** [x] PPI-024/025/026 applied + tests 18 (local 271/271; hosted 21/21 incl. real Vault); [x] unit tests 38 + SOP 4; [x] live API test 14/14; [x] live UI test 19/19 (desktop + phone); [x] admin connections E2E 11/11; [x] keys never reach the browser (column grants + service-only RPC; page scan); [x] "Connected" only after a real round-trip; [x] CRUX link on discovery (audited); [ ] queue exercised live (only unit-tested — needs a real rate-limit); [ ] owner acceptance.
+- **Status:** Live on Supabase; web pushed to Netlify with this commit.
+
 ## 13. Decision / change log
 | Date | Change | By |
 |---|---|---|
@@ -98,3 +107,4 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 | 2026-11-11 | S-08 adaptive AI interview: implemented, deployed, blocked on key; D-039…D-044 | Claude |
 | 2026-11-12 | S-09 free tier: PPI-023, admin switch, notice; waiting on key | Claude |
 | 2026-11-12 | Real Gemini live; CRUX link on AI interview | Claude |
+| 2026-11-12 | S-10 AI-led discovery (prompt v2.0): engine, live map, Review Centre, AI connections, queue; CRUX link switched; D-051…D-058 | Claude |

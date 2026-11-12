@@ -19,7 +19,7 @@ export default async function ReviewSession({ params, searchParams }: {
   if (!permissions.has("interview.review")) notFound();
 
   const { data: session } = await supabase.from("interview_sessions")
-    .select("id, status, submitted_at, reviewed_at, assignment_id, interview_assignments(id, respondent_membership_id, department_id, interview_campaigns(name))")
+    .select("id, status, submitted_at, reviewed_at, assignment_id, interview_assignments(id, respondent_membership_id, department_id, interview_campaigns(name, interview_mode))")
     .eq("company_id", companyId).eq("id", sessionId).maybeSingle();
   if (!session?.interview_assignments) notFound();
   const a = session.interview_assignments;
@@ -54,6 +54,9 @@ export default async function ReviewSession({ params, searchParams }: {
     <>
       <p id="top"><Link href={`/c/${companyId}/review`}>← Review answers</Link></p>
       <h1>{person}</h1>
+      {a.interview_campaigns?.interview_mode === "discovery" && (
+        <div className="notice">AI-led discovery conversation — <Link href={`/c/${companyId}/work/${sessionId}`}>open the work summary</Link> (profile, responsibility charter, process maps, draft SOPs).</div>
+      )}
       <p className="muted">{a.interview_campaigns?.name} · {open ? "still answering" : `submitted ${fmtDate(session.submitted_at)}`} · status: {session.status.replace("_", " ")}</p>
       {sp.e && <div className="notice error">{sp.e}</div>}
       {sp.ok && <div className="notice ok">{sp.ok}</div>}
