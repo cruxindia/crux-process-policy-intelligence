@@ -33,7 +33,7 @@ export class GeminiProvider implements AiProvider {
   constructor(apiKey: string | undefined, model: string | undefined, policyName = "gemini_free",
               fetchImpl: FetchLike = (u, i) => fetch(u, i), maxRetries = 2, baseUrl = "https://generativelanguage.googleapis.com/v1beta") {
     this.apiKey = apiKey; this.fetchImpl = fetchImpl; this.maxRetries = maxRetries; this.baseUrl = baseUrl;
-    this.model = (model || "gemini-flash-latest").trim();
+    this.model = (model || "gemini-flash-lite-latest").trim(); // 12-Nov-2026 diagnose: flash-lite answers in ~1 s; flash-latest timed out (>45 s)
     this.name = policyName;
   }
 

@@ -83,7 +83,7 @@ export type Context = {
   transcript: TranscriptItem[];                // oldest first; refs like "Q12"
   latestRef: string;
   coverage: Record<string, CoverageStatus>;
-  openClarifications: { id: string; description: string }[];
+  openClarifications: { id: string; description: string; already_asked?: boolean }[];
   aiQuestionsAsked: number; maxAiQuestions: number;
 };
 
@@ -167,6 +167,37 @@ export function validateTurn(raw: string, c: Pick<Context, "transcript" | "openC
 export function isRepeat(question: string, kind: string, asked: string[], threshold = 0.75) {
   if (kind === "clarification") return false;
   return asked.some((q) => similarity(q, question) >= threshold);
+}
+
+/**
+ * Drop newly reported contradictions that involve an answer already in an open clarification (the model tends to
+ * re-report the same conflict against each later answer). Both original answers stay preserved either way.
+ */
+export function dedupeContradictions(
+  found: Turn["contradictions"], refToAnswer: Map<string, string>,
+  open: { earlier_answer_id: string; later_answer_id: string }[],
+) {
+  const taken = new Set(open.flatMap((o) => [o.earlier_answer_id, o.later_answer_id]));
+  const out: Turn["contradictions"] = [];
+  for (const c of found) {
+    const e = refToAnswer.get(c.earlier_answer_ref), l = refToAnswer.get(c.later_answer_ref);
+    if (!e || !l || taken.has(e) || taken.has(l)) continue;
+    taken.add(e); taken.add(l); out.push(c);
+  }
+  return out;
+}
+
+/**
+ * A clarification is asked once. If it is still unresolved after the employee answered, a reviewer follows up;
+ * the interviewer must move on instead of asking it again.
+ */
+export function isRepeatedClarification(next: Turn["next_question"], open: { already_asked?: boolean }[], newContradictions: number) {
+  return next.kind === "clarification" && newContradictions === 0 && open.length > 0 && open.every((c) => c.already_asked);
+}
+
+/** Clarifications that still block completion: open and not yet put to the employee. Asked-but-unresolved go to a reviewer. */
+export function blockingClarifications(open: { id: string; already_asked?: boolean }[], resolvedIds: string[], newContradictions: number) {
+  return open.filter((c) => !c.already_asked && !resolvedIds.includes(c.id)).length + newContradictions;
 }
 
 /** Merge coverage updates (never downgrade sufficient → lower through a single turn). */

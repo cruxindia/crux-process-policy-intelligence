@@ -98,8 +98,8 @@ async function aiSettled(p, aiCountBefore) {
       check('retry hits the server again and still reports the real error', (await p.locator('[data-ai="1"]').count()) === 0);
     } else {
       const asked = [];
-      let sawClar = false, sawReason = false, edited = false, reloaded = false;
-      for (let k = 0; k < 12; k++) {
+      let sawClar = false, sawReason = false, edited = false, reloaded = false, clarAsked = 0;
+      for (let k = 0; k < 14; k++) {
         if (await p.getByRole('button', { name: 'Submit my answers' }).count()) break;
         if (await p.locator('[data-testid="ai-error"]').count()) { log.push('AI ERROR: ' + (await p.locator('[data-testid="ai-error"]').innerText())); break; }
         const last = p.locator('[data-ai="1"]').last();
@@ -112,7 +112,11 @@ async function aiSettled(p, aiCountBefore) {
           check('reload resumes at the same AI question', ((await p.locator('[data-ai="1"]').last().innerText()).replace(/\s+/g, ' ')) === qText);
         }
         const n = await p.locator('[data-ai="1"]').count();
-        await p.fill('textarea[aria-label="Your answer"]', SCRIPT[k % SCRIPT.length]); await p.getByRole('button', { name: 'Send' }).click();
+        if (/Needs clarification/.test(qText)) clarAsked++;
+        const reply = /Needs clarification/.test(qText)
+          ? 'Sorry, to correct myself: my team lead checks each report in the app before I submit it to the bank portal. The branch manager only reviews a monthly summary.'
+          : SCRIPT[(k - clarAsked) % SCRIPT.length];
+        await p.fill('textarea[aria-label="Your answer"]', reply); await p.getByRole('button', { name: 'Send' }).click();
         await aiSettled(p, n);
         if (k === 4 && !edited) { // edit an earlier AI answer (append-only revision)
           const bubbles = p.locator('.bubble.me', { hasText: 'bank emails us a case list' });
@@ -132,6 +136,7 @@ async function aiSettled(p, aiCountBefore) {
       check('each AI question shows a reason', sawReason);
       check('contradiction raised as a clarification (AI-dependent, observed)', sawClar, sawClar ? '' : 'model did not flag it in this run');
       check('earlier answer edited without a new question being forced', edited);
+      check('a clarification is asked once and not looped', clarAsked <= 2, `${clarAsked} clarification question(s)`);
       const dims = await p.locator('.dims .badge.ok, .dims .badge.part').count();
       check('dimension coverage updated from AI analysis', dims > 0, `${dims} of 11 topics touched`);
       check('AI line names the real model', /AI interviewer: gemini/i.test(await p.locator('[data-testid="ai-line"]').innerText()));

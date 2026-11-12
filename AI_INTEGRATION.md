@@ -42,10 +42,10 @@ You chose the **Gemini free tier** and accepted that Google may use the intervie
 1. **Create a fresh key** in Google AI Studio (the key posted in chat on 12-Nov should be deleted there — anything pasted in a chat
    should be treated as exposed).
 2. **Supabase Dashboard → project `pahzxpileudulljgaciw` → Edge Functions → Secrets → Add new secret:**
-   name `GEMINI_API_KEY`, value = the key. Nothing else is required (defaults: model `gemini-flash-latest`, policy `gemini_free`).
+   name `GEMINI_API_KEY`, value = the key. Nothing else is required (defaults: model `gemini-flash-lite-latest`, policy `gemini_free`). **Done 12-Nov.**
    Never put the key in Netlify, GitHub, chat or email.
 3. Open the app → **Discovery setup → Test AI connection**. It must show **Connected** and the model.
-4. Press **Turn on AI interview** (same box). New sign-ups on the existing join link now get the AI interview. Already-interviewed
+4. Press **Turn on AI interview** (same box) — **done for CRUX on 12-Nov by Claude on your instruction, after the live test passed**. New sign-ups on the existing join link now get the AI interview. Already-interviewed
    people keep their answers. **Switch back to fixed questions** undoes it. Both are audited.
 5. Optional: tell Claude so it can run the synthetic live test (`EXPECT=connected`) and review the first real AI questions.
 
@@ -60,7 +60,7 @@ plus activating the `gemini_paid` policy and campaign provider).
 | Secret (Edge Function) | Default | Notes |
 |---|---|---|
 | `GEMINI_API_KEY` | — | Required for Gemini |
-| `GEMINI_MODEL` | `gemini-flash-latest` | Any `generateContent` model your key can use (alias tracks Google's current Flash model) |
+| `GEMINI_MODEL` | `gemini-flash-lite-latest` | Any `generateContent` model your key can use. 12-Nov diagnostic: flash-lite (3.5) answers in ~1 s; `gemini-flash-latest` timed out (> 45 s); 2.5 models 404 |
 | `AI_PROVIDER` | `gemini` | `gemini` or `ollama` |
 | `AI_PROVIDER_POLICY` | `gemini_free` | Must equal an **active** `ai_provider_policies.provider` and the campaign's `ai_provider`. Free is assumed unless `gemini_paid` is declared |
 | `ALLOWED_ORIGINS` | `https://crux-ppi.netlify.app,http://localhost:3000` | CORS |
@@ -82,3 +82,10 @@ plus activating the `gemini_paid` policy and campaign provider).
 ## 6. Prompt changes
 
 Changing `SYSTEM_PROMPT` or `TURN_SCHEMA` changes the hash. The function will then refuse to run ("prompt version is not registered") until a new `prompt_versions` row (version 2) is inserted with the new hash and the old one retired. CI checks the hash in `adaptive_ai_setup.sql`.
+
+## 7. Diagnostics
+
+- **Discovery setup → Test AI connection**: one real request with the configured model.
+- `POST interview-ai {action:"diagnose", company_id}` (admins / discovery leads): tries several Gemini models with a trivial
+  prompt and reports which answer and how fast. Use it if the connection test times out.
+- `net-probe` function: checks the Edge runtime can reach Google **without** any key (temporary; safe to delete in the Dashboard).

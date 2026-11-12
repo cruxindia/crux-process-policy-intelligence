@@ -1,11 +1,20 @@
 # Test Results — Sprint 04 (adaptive AI interview)
 
-> **Update 12-Nov-2026 (S-09, free tier):** function v6 (`gemini_free`, `gemini-flash-latest`, quota-aware errors); PPI-023 + test 17.
-> Unit 20/20 (mocked) · pgTAP 250/250 local (17 files) · test 17 hosted 13/13 · adaptive E2E (no key) 11/11 incl. Google notice · authz 4/4 · fixed-chat regression 18/18.
-> **Still no real Gemini call: `GEMINI_API_KEY` not set in Supabase (deployed status check, 12-Nov 03:58 UTC).**
+## ✅ Real Gemini — 12-Nov-2026 (key set by owner in Supabase secrets)
 
-**Date:** 11 Nov 2026 · Every line says whether the AI was **mocked**, **real-but-unconfigured** (deployed function, no key) or **real Gemini**.
-**No real Gemini request has been made yet:** `GEMINI_API_KEY` is not set in Supabase (confirmed by the deployed function's own status check).
+| Check | Result |
+|---|---|
+| Network from Supabase Edge (us-east-2) to Google, no key (`net-probe`) | 403 in ~100 ms → network fine |
+| Model diagnostic (admin `diagnose` action, trivial prompt, no company data) | `gemini-flash-lite-latest` → **gemini-3.5-flash-lite, 1.0 s ✅** · `gemini-flash-latest` → timeout > 45 s ❌ · `gemini-2.5-flash` / `-lite` → 404 ❌ |
+| Decision | Default model = `gemini-flash-lite-latest` (D-048) |
+| Live E2E run 1 (`EXPECT=connected`, synthetic tenant, function v11) | 14/14 pass, **but defect found**: the AI asked the same clarification 4× and stored duplicate contradictions |
+| Fix (function v12) | duplicate contradictions dropped; an asked clarification is never asked again (reviewer follows up); asked-but-unresolved no longer blocks completion; clarification asked later is linked to its record; 2 new unit tests |
+| Live E2E run 2 | 13/15 — clarification asked **once** ✅; one request never reached the server (browser OPTIONS logged, no POST — client-side network drop); UI showed the honest error |
+| Fix (web) | chat retries once automatically on a dropped connection |
+| **Live E2E run 3 (final)** | **15/15 pass**: connected status (658 ms), opening questions, 7 adaptive AI questions with reasons, contradiction detected and asked once, follow-up built on the corrected answer, reload resume, edit, 8/11 topics covered, completion and submit |
+| Observed quality point | when the synthetic persona gave off-topic answers, the AI re-asked "what does the team lead check" in 3 wordings (not caught by the 0.75 similarity rule). Real answers should avoid this; review the first real interviews (PR-035) |
+
+Example real questions (run 3): *"What information or documents do you receive to start an address verification?"* · *"Just to be sure I understood correctly, do you submit the reports directly to the bank without any internal review, unlike what you mentioned earlier about branch manager approval?"* · *"What does your team lead check for when they review your report in the app?"*
 
 ## Summary
 

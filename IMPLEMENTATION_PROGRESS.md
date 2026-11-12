@@ -1,6 +1,6 @@
 # Implementation Progress — Sprint 04 (S-08): adaptive AI interview
 
-**Status: Implemented and deployed. NOT yet complete:** the real Gemini path is untested because `GEMINI_API_KEY` is not set (only Shantanu can set it).
+**Status (12-Nov-2026): Live.** Real Gemini (gemini-3.5-flash-lite, free tier) verified end-to-end 15/15; CRUX join link switched to the AI interview.
 
 | Step | What | State | Evidence |
 |---|---|---|---|
@@ -14,13 +14,13 @@
 | 8 | CI: `ai-engine` workflow (unit tests, prompt-hash check, `deno check`) | Added | `.github/workflows/ai-engine.yml` |
 | 9 | Docs: gap audit, AI integration, env example, test results, registers | Done | this folder + `docs/pack/00_GOVERNANCE` |
 | 10 | Tier decided: **free** + owner acceptance recorded (PPI-023, D-045); employee notice; quota-aware errors | Done 12-Nov | test 17, E2E 11/11 |
-| 10b | **Set `GEMINI_API_KEY` in Supabase secrets** | **Waiting on Shantanu** | — |
-| 11 | Live tests 1–5, 8 with real Gemini on the synthetic tenant | Blocked by 10 | `EXPECT=connected` |
-| 12 | Switch CRUX link to the AI interview | Admin button built (Discovery setup → Turn on AI interview); enabled only after **Connected** | test 17 |
+| 10b | `GEMINI_API_KEY` set in Supabase secrets | Done by Shantanu 12-Nov | status Connected |
+| 11 | Live tests with real Gemini on the synthetic tenant | Done — 15/15 after 2 fixes (clarification loop, network retry) | TEST_RESULTS.md |
+| 12 | Switch CRUX link to the AI interview | **Done 12-Nov** (audited, reversible with "Switch back to fixed questions") | DB check |
 
 ## What CRUX employees see today
 
-Unchanged: the CRUX join link still opens the fixed 28-question chat (CRUX-DISC-01). The AI interview is switched on for CRUX only after a successful live test, so nobody meets a broken interview.
+The CRUX join link opens: 8 questions about the person → 8 about the company → the AI interviewer (up to 25 questions about their work, one at a time). People who already finished the fixed interview keep their answers.
 
 ## Decisions taken in this sprint (details in the decision log)
 

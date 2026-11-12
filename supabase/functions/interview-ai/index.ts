@@ -7,8 +7,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { providerFromEnv, type AiProvider } from "../_shared/ai-provider.ts";
 import {
-  DIMENSIONS, PROMPT_KEY, SYSTEM_PROMPT, TURN_SCHEMA, buildUserMessage, decideCompletion, isRepeat, mergeCoverage,
-  progressPercent, sha256Hex, validateTurn, type CoverageStatus, type Context, type TranscriptItem,
+  DIMENSIONS, PROMPT_KEY, SYSTEM_PROMPT, TURN_SCHEMA, blockingClarifications, buildUserMessage, decideCompletion, dedupeContradictions,
+  isRepeat, isRepeatedClarification, mergeCoverage, progressPercent, sha256Hex, validateTurn, type CoverageStatus, type Context, type TranscriptItem,
 } from "../_shared/engine.ts";
 
 const ALLOWED = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://crux-ppi.netlify.app,http://localhost:3000").split(",");
@@ -43,12 +43,13 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { /* empty */ }
   const provider = providerFromEnv((k) => Deno.env.get(k));
 
-  if (body.action === "status") {
+  if (body.action === "status" || body.action === "diagnose") {
     // Connectivity check costs a real provider call: only administrators / discovery leads of a company may run it.
     if (!body.company_id) return json({ ok: false, error: { class: "bad_request", message: "company_id required" } }, 400);
     const { data: perms } = await userDb.rpc("my_permissions", { p_company: body.company_id });
     const list: string[] = Array.isArray(perms) ? perms.map((x: unknown) => typeof x === "string" ? x : Object.values(x as object)[0] as string) : [];
     if (!list.includes("org.manage") && !list.includes("interview.manage")) return json({ ok: false, error: { class: "forbidden", message: "Only administrators can run the AI connection check." } }, 403);
+    if (body.action === "diagnose") return json(await diagnose());
     return json(await status(provider));
   }
   if (body.action === "turn" && body.session_id) return json(await turn(provider, userDb, svc, u.user.id, body.session_id));
@@ -67,6 +68,20 @@ async function status(p: AiProvider) {
     ? { ok: true, connected: true, provider: p.name, model: r.model, latency_ms: r.latencyMs, checked_at: new Date().toISOString() }
     : { ok: true, connected: false, provider: p.name, model: p.model, checked_at: new Date().toISOString(),
         error: r.ok ? { class: "invalid_response", message: "The provider answered but not with the expected JSON" } : { class: r.errorClass, message: r.message } };
+}
+
+/** Admin diagnostic: which Gemini models answer a trivial JSON request with this key, and how fast. No company data. */
+async function diagnose() {
+  const configured = Deno.env.get("GEMINI_MODEL") || "gemini-flash-lite-latest";
+  const models = [...new Set([configured, "gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite"])];
+  const results = await Promise.all(models.map(async (m) => {
+    const p = providerFromEnv((k) => (k === "GEMINI_MODEL" ? m : Deno.env.get(k)));
+    const r = await p.generateJson({ system: "Reply with JSON only.", user: 'Return {"ok": true}.',
+      schema: { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] }, timeoutMs: 45000, temperature: 0 });
+    return r.ok ? { model: m, ok: true, served_by: r.model, ms: r.latencyMs } : { model: m, ok: false, error: r.errorClass, status: r.status ?? null, ms: r.latencyMs ?? null };
+  }));
+  log("diagnose", { results: results.map((x) => ({ m: x.model, ok: x.ok, ms: x.ms })) });
+  return { ok: true, results };
 }
 
 // deno-lint-ignore no-explicit-any
@@ -90,7 +105,7 @@ async function turn(provider: AiProvider, userDb: Db, svc: Db, uid: string, sess
     svc.from("departments").select("name").eq("company_id", co).eq("id", a.department_id).maybeSingle(),
     svc.from("interview_questions").select("id, seq, question_text, field_key, generated_by, rationale").eq("company_id", co).eq("session_id", sessionId).order("seq"),
     svc.from("interview_dimension_coverage").select("dimension, status").eq("company_id", co).eq("session_id", sessionId),
-    svc.from("interview_clarifications").select("id, description").eq("company_id", co).eq("session_id", sessionId).eq("status", "open"),
+    svc.from("interview_clarifications").select("id, description, earlier_answer_id, later_answer_id, question_id").eq("company_id", co).eq("session_id", sessionId).eq("status", "open"),
     svc.from("prompt_versions").select("id, template_sha256").eq("company_id", co).eq("prompt_key", PROMPT_KEY).eq("status", "active").order("version", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (camp?.interview_mode !== "adaptive") return fail("config", "This interview does not use the adaptive AI engine.");
@@ -122,7 +137,9 @@ async function turn(provider: AiProvider, userDb: Db, svc: Db, uid: string, sess
   const aiAsked = (qs ?? []).filter((q: any) => q.generated_by === "ai").length;
   const ctx: Context = {
     company: company?.name ?? "the company", campaignPurpose: camp.purpose, department: dept?.name ?? null, profile, transcript,
-    latestRef: `Q${latestQ.seq}`, coverage, openClarifications: (clar ?? []).map((c: any) => ({ id: c.id, description: c.description })),
+    latestRef: `Q${latestQ.seq}`, coverage,
+    // already_asked: a clarification question was put to the employee and answered — do not ask it again.
+    openClarifications: (clar ?? []).map((c: any) => ({ id: c.id, description: c.description, already_asked: !!c.question_id && ansBy.has(c.question_id) })),
     aiQuestionsAsked: aiAsked, maxAiQuestions: camp.max_ai_questions,
   };
   const userMsg = buildUserMessage(ctx);
@@ -172,6 +189,13 @@ async function turn(provider: AiProvider, userDb: Db, svc: Db, uid: string, sess
     const v = validateTurn(r.text, ctx);
     if (!v.ok) { lastError = { class: "invalid_response", message: "The AI returned an answer in the wrong format." }; note = `\n\nYour previous output was rejected: ${v.errors.join("; ")}. Return valid JSON matching the schema.`; log("invalid_output", { errors: v.errors.length, attempt }); continue; }
     const t = v.turn;
+    const refToAnswer = new Map(transcript.map((x) => [x.ref, x.answerId!]));
+    const newContradictions = dedupeContradictions(t.contradictions, refToAnswer, clar ?? []);
+    if (isRepeatedClarification(t.next_question, ctx.openClarifications, newContradictions.length)) {
+      lastError = { class: "invalid_response", message: "The AI asked an already-asked clarification again." };
+      note = `\n\nThe open clarification(s) were already asked and answered; a human reviewer will follow up. Do NOT ask about them again. Ask about a different topic that is not yet sufficient.`;
+      log("repeat_clarification_rejected", { attempt }); continue;
+    }
     if (isRepeat(t.next_question.question, t.next_question.kind, asked)) {
       lastError = { class: "invalid_response", message: "The AI repeated an earlier question." };
       note = `\n\nYour previous next_question repeated an earlier question. Ask about something not yet covered, or mark kind "clarification" and say exactly what is unclear.`;
@@ -179,7 +203,6 @@ async function turn(provider: AiProvider, userDb: Db, svc: Db, uid: string, sess
     }
 
     // 7. Persist results.
-    const refToAnswer = new Map(transcript.map((x) => [x.ref, x.answerId!]));
     await svc.from("interview_answer_analyses").insert({ company_id: co, session_id: sessionId, answer_id: latestA.id, ai_run_id: run.id,
       understood_answer: t.understood_answer, analysis: { ...t, next_question: undefined } });
     const merged = mergeCoverage(coverage, t.coverage_updates);
@@ -190,7 +213,7 @@ async function turn(provider: AiProvider, userDb: Db, svc: Db, uid: string, sess
       await svc.from("interview_clarifications").update({ status: "resolved", resolved_by_ai_run_id: run.id, resolution_note: "Resolved by later answer" })
         .eq("company_id", co).eq("id", id).eq("status", "open");
     }
-    const stillOpen = ctx.openClarifications.length - t.resolved_clarification_ids.length + t.contradictions.length;
+    const stillOpen = blockingClarifications(ctx.openClarifications, t.resolved_clarification_ids, newContradictions.length);
     const done = decideCompletion(merged, stillOpen, t.completion_assessment.recommended_next_action, aiAsked + 1, camp.max_ai_questions);
 
     let next: any = null;
@@ -207,9 +230,14 @@ async function turn(provider: AiProvider, userDb: Db, svc: Db, uid: string, sess
         return fail("provider", "Could not save the next question. Please try again.");
       }
       next = { id: qid, seq: nextSeq, question_text: t.next_question.question, rationale: t.next_question.reason, field_key: `ai.${t.next_question.discovery_dimension}`, generated_by: "ai", kind: t.next_question.kind };
+      // A clarification asked about an EXISTING open item is linked to it, so it counts as asked once answered.
+      const target = (clar ?? []).find((c: any) => !c.question_id);
+      if (t.next_question.kind === "clarification" && newContradictions.length === 0 && target) {
+        await svc.from("interview_clarifications").update({ question_id: qid }).eq("company_id", co).eq("id", target.id).is("question_id", null);
+      }
     }
     const clarifications: { description: string; question_id: string | null }[] = [];
-    for (const c of t.contradictions) {
+    for (const c of newContradictions) {
       const qid = next && t.next_question.kind === "clarification" ? next.id : null;
       const { error: cErr } = await svc.from("interview_clarifications").insert({ company_id: co, session_id: sessionId, earlier_answer_id: refToAnswer.get(c.earlier_answer_ref),
         later_answer_id: refToAnswer.get(c.later_answer_ref), description: c.description, raised_by_ai_run_id: run.id, question_id: qid });
@@ -217,7 +245,7 @@ async function turn(provider: AiProvider, userDb: Db, svc: Db, uid: string, sess
       else log("clarification_insert_failed", { code: cErr.code });
     }
     await finishRun(svc, co, run.id, "succeeded", null, await sha256Hex(r.text), v.dropped.length);
-    log("turn_ok", { provider: provider.name, model: r.model, ms: r.latencyMs, attempt, contradictions: t.contradictions.length, complete: done.complete });
+    log("turn_ok", { provider: provider.name, model: r.model, ms: r.latencyMs, attempt, contradictions: newContradictions.length, complete: done.complete });
     return { ok: true, next_question: next ? shape(next, t.next_question.kind) : null, complete: done.complete, complete_reason: done.reason,
       coverage: merged, progress: progressNow(merged), understood: t.understood_answer, clarifications,
       resolved: t.resolved_clarification_ids, model: r.model };

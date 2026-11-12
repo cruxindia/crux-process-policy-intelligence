@@ -77,6 +77,8 @@ export function Chat(props: {
       }
       // Another request is still analysing this answer: wait and ask again.
       if (r && !r.ok && r.error.class === "busy" && attempt < 5) { await new Promise((res) => setTimeout(res, 3000)); continue; }
+      // A dropped connection (common on mobile data): retry once automatically before showing an error.
+      if (r && !r.ok && r.error.class === "network" && attempt < 1) { await new Promise((res) => setTimeout(res, 2000)); continue; }
       break;
     }
     if (!r || !r.ok) {

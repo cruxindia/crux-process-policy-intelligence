@@ -121,6 +121,9 @@ S-00 and S-01 done. Revised dependency order:
 | D-045 | 2026-11-12 | Owner chose **Gemini free tier** and accepted Google using interview data ("Free Gemini, I am ok for Google to use my data"). Supersedes D-011 for interview data only: allowed up to `internal` with acceptance recorded (who/when/why, PPI-023); confidential/restricted still blocked; employees notified in the interview | Applied | **Shantanu** (decision); Claude (implementation) |
 | D-046 | 2026-11-12 | CRUX join link switch to the AI interview is done by an administrator in the app (button enabled only after a live **Connected** check), replacing the manual SQL script; reversible and audited | Implemented | Claude |
 | D-047 | 2026-11-12 | Claude did not enter or use the API key pasted in chat (safety rule: no entering API keys/credentials even on request); owner sets it in Supabase secrets and should replace the exposed key | Recorded | Claude |
+| D-048 | 2026-11-12 | Default model `gemini-flash-lite-latest` (served by gemini-3.5-flash-lite): only model that answered with this key (1 s); `gemini-flash-latest` timed out > 45 s; 2.5 models 404 | Applied (function v12) | Claude, from live diagnostic |
+| D-049 | 2026-11-12 | CRUX join link switched to the AI interview (CRUX-DISC-02) after the real-Gemini E2E passed 15/15; audited as system action "applied by Claude on owner instruction" | Applied | Shantanu (instruction "complete next and pending"); Claude |
+| D-050 | 2026-11-12 | An AI clarification is asked once; if still unresolved it goes to a human reviewer and no longer blocks completion; duplicate contradictions are not stored | Implemented + live-tested | Claude (defect found in live test) |
 | D-017 | 2026-11-11 | Working defaults applied while owner decisions pending: MVP = Master §13 (D-009), DNA/VOC/CTQ deferred (D-010), provider data cap (D-011). All reversible | Applied (reversible) | Pending Shantanu/CRUX approval |
 
 ## 6. How to update this log

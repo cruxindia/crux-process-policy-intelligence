@@ -136,7 +136,7 @@ test("Ollama without base URL → configuration error; env selects provider", as
   assert.equal(providerFromEnv((k) => ({ AI_PROVIDER: "ollama" } as Record<string, string>)[k]).name, "local_ollama");
   assert.equal(providerFromEnv((k) => ({ AI_PROVIDER_POLICY: "gemini_paid" } as Record<string, string>)[k]).name, "gemini_paid");
   assert.equal(providerFromEnv(() => undefined).name, "gemini_free", "free tier is assumed unless the paid tier is declared");
-  assert.equal(providerFromEnv(() => undefined).model, "gemini-flash-latest");
+  assert.equal(providerFromEnv(() => undefined).model, "gemini-flash-lite-latest");
 });
 
 test("free-tier quota: long RetryInfo delay is reported (not waited); daily quota says 'tomorrow'", async () => {
@@ -150,4 +150,22 @@ test("free-tier quota: long RetryInfo delay is reported (not waited); daily quot
   const p2 = new GeminiProvider("k", "m", "gemini_free", mockFetch([quota("Quota exceeded: GenerateRequestsPerDayPerProjectPerModel-FreeTier", "3s")]), 2);
   const r2 = await p2.generateJson({ system: "s", user: "u", schema: {} });
   assert.equal(r2.ok, false); if (!r2.ok) assert.match(r2.message, /tomorrow/);
+});
+
+test("clarification loop: duplicates dropped, an asked clarification is not asked again, asked ones stop blocking completion", async () => {
+  const { dedupeContradictions, isRepeatedClarification, blockingClarifications } = await import("../_shared/engine.ts");
+  const refs = new Map([["Q17", "a17"], ["Q19", "a19"], ["Q21", "a21"], ["Q5", "a5"], ["Q9", "a9"]]);
+  const open = [{ earlier_answer_id: "a17", later_answer_id: "a19" }];
+  const found = [
+    { earlier_answer_ref: "Q17", later_answer_ref: "Q21", description: "same conflict again" },
+    { earlier_answer_ref: "Q5", later_answer_ref: "Q9", description: "a new, different conflict" },
+  ];
+  const kept = dedupeContradictions(found, refs, open);
+  assert.deepEqual(kept.map((c) => c.description), ["a new, different conflict"]);
+  const clarQ = { question: "Does anyone check it?", reason: "", discovery_dimension: "controls" as const, priority: "high" as const, kind: "clarification" as const };
+  assert.equal(isRepeatedClarification(clarQ, [{ already_asked: true }], 0), true, "same clarification again is rejected");
+  assert.equal(isRepeatedClarification(clarQ, [{ already_asked: false }], 0), false, "first time is allowed");
+  assert.equal(isRepeatedClarification(clarQ, [{ already_asked: true }], 1), false, "a genuinely new conflict may be asked");
+  assert.equal(blockingClarifications([{ id: "c1", already_asked: true }, { id: "c2" }], [], 0), 1, "asked-but-unresolved goes to the reviewer");
+  assert.equal(blockingClarifications([{ id: "c2" }], ["c2"], 1), 1, "resolved ones stop blocking; new ones block");
 });
