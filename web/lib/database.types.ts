@@ -26,6 +26,9 @@ export type Database = {
           provider: string
           status: string
           terms_checked_on: string
+          training_acceptance_note: string | null
+          training_accepted_by_membership_id: string | null
+          training_accepted_on: string | null
         }
         Insert: {
           company_id: string
@@ -37,6 +40,9 @@ export type Database = {
           provider: string
           status?: string
           terms_checked_on: string
+          training_acceptance_note?: string | null
+          training_accepted_by_membership_id?: string | null
+          training_accepted_on?: string | null
         }
         Update: {
           company_id?: string
@@ -48,8 +54,18 @@ export type Database = {
           provider?: string
           status?: string
           terms_checked_on?: string
+          training_acceptance_note?: string | null
+          training_accepted_by_membership_id?: string | null
+          training_accepted_on?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_provider_policies_accepted_by_fkey"
+            columns: ["company_id", "training_accepted_by_membership_id"]
+            isOneToOne: false
+            referencedRelation: "memberships"
+            referencedColumns: ["company_id", "id"]
+          },
           {
             foreignKeyName: "ai_provider_policies_company_id_fkey"
             columns: ["company_id"]
@@ -3453,6 +3469,10 @@ export type Database = {
       }
       reissue_temporary_password: {
         Args: { p_company: string; p_membership: string }
+        Returns: string
+      }
+      set_join_interview_mode: {
+        Args: { p_adaptive: boolean; p_company: string }
         Returns: string
       }
       start_interview_session: {

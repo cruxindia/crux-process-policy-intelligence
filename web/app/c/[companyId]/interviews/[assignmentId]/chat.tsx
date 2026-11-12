@@ -43,7 +43,7 @@ type AiPhase = { phase: "idle" | "thinking" | "error" | "complete"; message?: st
 export function Chat(props: {
   companyId: string; assignmentId: string; sessionId: string; firstName: string;
   questions: ChatQuestion[]; answers: Record<string, ChatAnswer>; open: boolean; canAnswer: boolean; submittedAt: string | null;
-  adaptive?: boolean; coverage?: Record<string, string>; clarifications?: Clarification[];
+  adaptive?: boolean; aiProvider?: string | null; coverage?: Record<string, string>; clarifications?: Clarification[];
 }) {
   const adaptive = !!props.adaptive;
   const [questions, setQuestions] = useState(props.questions);
@@ -178,6 +178,13 @@ export function Chat(props: {
             ? <>Hi {props.firstName}! First {templates.length} short questions about you and the company. Then an AI interviewer asks about your work, one question at a time, building on your answers. Answer in your own words — “I don&rsquo;t know” is always OK.</>
             : <>Hi {props.firstName}! I&rsquo;ll ask {questions.length} short questions in 3 parts. Answer in your own words — short answers are fine, and “I don&rsquo;t know” is always OK.</>}
         </div>
+        {adaptive && props.aiProvider === "gemini_free" && (
+          <div className="bubble bot small" data-testid="ai-notice">
+            🔔 Please note: your answers are sent to Google&rsquo;s Gemini AI (free version) to choose the next question. Google may use them
+            to improve its services, and people at Google may read them. Please don&rsquo;t type customers&rsquo; names, phone or account
+            numbers, passwords or other private details — describe the work instead (for example “the customer’s address proof”).
+          </div>
+        )}
         {visible.map((q, i) => {
           const a = answers[q.id];
           const intro = i === 0 || visible[i - 1]!.scope !== q.scope ? SECTION[q.scope] : null;

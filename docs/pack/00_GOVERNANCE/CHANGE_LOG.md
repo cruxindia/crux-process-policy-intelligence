@@ -12,3 +12,4 @@
 | 2026-11-11 | 1.7 | S-06: self sign-up by mobile via join link; chat interview with completion %; PPI-020; CRUX round-1 configured; D-033…D-035 | repo-wide | Claude (AI), on Shantanu's direction | Pending — Shantanu |
 | 2026-11-11 | 1.8 | S-07: admin reset, reviewer workspace, questions & disputes, notifications; PPI-021; D-036…D-038 | repo-wide | Claude (AI), on Shantanu's approval | Pending — Shantanu |
 | 2026-11-11 | 1.9 | S-08 (Sprint 04 brief): adaptive AI interview engine — PPI-022, Edge Function `interview-ai`, provider adapter, engine, adaptive chat UI; D-039…D-044; PR-029…031; RTM FR-03/AC-10 | repo-wide | Claude (AI), on Shantanu's Sprint 04 brief | Pending — Shantanu |
+| 2026-11-12 | 1.10 | S-09: free-tier decision (D-045…D-047), PPI-023, admin switch, PR-032…034 | repo-wide | Claude (AI), on Shantanu's decision | Pending — Shantanu |

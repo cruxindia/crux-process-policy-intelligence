@@ -20,6 +20,11 @@ export default async function DiscoveryPage({ params, searchParams }: {
     supabase.from("interview_assignments").select("id, campaign_id, status, respondent_membership_id").eq("company_id", companyId),
     supabase.from("question_templates").select("scope_type", { count: "exact", head: false }).eq("company_id", companyId).eq("status", "active"),
   ]);
+  const canSwitch = permissions.has("org.manage");
+  const { data: link } = canSwitch
+    ? await supabase.from("company_join_links").select("interview_campaigns(code, interview_mode)").eq("company_id", companyId).eq("status", "active").limit(1).maybeSingle()
+    : { data: null };
+  const linkMode = (link?.interview_campaigns?.interview_mode ?? null) as "adaptive" | "fixed" | null;
   const userIds = (members.data ?? []).map((m) => m.user_id);
   const { data: profiles } = userIds.length
     ? await supabase.from("user_profiles").select("id, display_name").in("id", userIds)
@@ -37,7 +42,7 @@ export default async function DiscoveryPage({ params, searchParams }: {
       <p className="muted">Create interview campaigns and assign them. You can only create or see campaigns within your own scope.</p>
       {sp.e && <div className="notice error">{sp.e}</div>}
       {sp.ok && <div className="notice ok">{sp.ok}</div>}
-      <AiStatus companyId={companyId} />
+      <AiStatus companyId={companyId} canSwitch={canSwitch} linkMode={linkMode} />
 
       <h2>Question set</h2>
       <div className="card row">

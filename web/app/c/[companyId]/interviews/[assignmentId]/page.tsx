@@ -14,7 +14,7 @@ export default async function InterviewPage({ params, searchParams }: {
 
   const { data: assignment } = await supabase
     .from("interview_assignments")
-    .select("id, status, respondent_membership_id, interview_campaigns(name, interview_mode)")
+    .select("id, status, respondent_membership_id, interview_campaigns(name, interview_mode, ai_provider)")
     .eq("company_id", companyId).eq("id", assignmentId).maybeSingle();
   if (!assignment) notFound();
   const isRespondent = assignment.respondent_membership_id === membership.id;
@@ -72,7 +72,7 @@ export default async function InterviewPage({ params, searchParams }: {
       <Chat companyId={companyId} assignmentId={assignmentId} sessionId={session.id}
         firstName={(me?.display_name ?? "there").split(" ")[0] ?? "there"}
         questions={questions} answers={answers} open={open} canAnswer={isRespondent} submittedAt={session.submitted_at}
-        adaptive={adaptive} coverage={Object.fromEntries((cov ?? []).map((c) => [c.dimension, c.status]))} clarifications={(clar ?? []) as Clarification[]} />
+        adaptive={adaptive} aiProvider={assignment.interview_campaigns?.ai_provider ?? null} coverage={Object.fromEntries((cov ?? []).map((c) => [c.dimension, c.status]))} clarifications={(clar ?? []) as Clarification[]} />
     </div>
   );
 }

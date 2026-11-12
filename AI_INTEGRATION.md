@@ -28,30 +28,41 @@ Browser (chat)  ──JWT──▶  Supabase Edge Function `interview-ai`  ─�
 | `supabase/functions/tests/engine.test.ts` | 19 mocked unit tests (no network) |
 | `supabase/migrations/20261111154743_ppi_022_adaptive_interview.sql` | Tables, RLS, guards for analyses / coverage / clarifications; campaign `interview_mode`, `ai_provider`, `max_ai_questions` |
 | `supabase/bootstrap/adaptive_ai_setup.sql` | Prompt version hash, provider policies, adaptive campaigns (applied) |
-| `supabase/bootstrap/adaptive_ai_activate_crux.sql` | Switch CRUX's join link to the AI interview (**not applied** — run after §3) |
+| `supabase/bootstrap/adaptive_ai_free_tier.sql` | Records the owner's free-tier acceptance; campaigns use `gemini_free` (applied) |
+| `supabase/bootstrap/adaptive_ai_activate_crux.sql` | Superseded by the admin button (`set_join_interview_mode`, PPI-023) |
 | `scripts/prompt-hash.mts` | Prints the prompt hash that must match `prompt_versions` |
 | `web/app/c/[companyId]/interviews/[assignmentId]/chat.tsx` | Adaptive chat UI |
 | `web/app/c/[companyId]/discovery/ai-status.tsx` | "Test AI connection" (admins / discovery leads) |
 
-## 3. Turning it on (Shantanu)
+## 3. Turning it on (Shantanu) — free tier, decided 12-Nov-2026 (D-045)
 
-1. **Get a Gemini API key** from Google AI Studio for a Google Cloud project **with billing enabled** (paid tier). On the free tier Google may use prompts to improve products and humans may review them; our policy (D-011) then allows public data only, and the database will refuse interview data.
-2. **Supabase Dashboard → project `pahzxpileudulljgaciw` → Edge Functions → Secrets → Add:**
-   `GEMINI_API_KEY` = your key. Optional: `GEMINI_MODEL` (default `gemini-2.5-flash`).
-   Do not put the key in Netlify, GitHub, chat or email.
-3. Open **Discovery setup → Test AI connection**. It must say **Connected** with the model name.
-4. Tell Claude. Claude then runs the live tests on the synthetic tenant and, if they pass and you confirm billing, applies `adaptive_ai_activate_crux.sql` so new sign-ups on the existing CRUX link get the AI interview. People already interviewed keep their answers.
+You chose the **Gemini free tier** and accepted that Google may use the interview data. This is recorded in the database
+(`ai_provider_policies.training_accepted_*`), employees see a notice in the interview, and confidential data stays blocked.
 
-If you only have a free-tier key: set `AI_PROVIDER_POLICY=gemini_free`. The connection test will pass, but interviews will stop with an honest error (the campaigns require `gemini_paid`, and the database refuses internal data for `gemini_free`) — this is the safeguard working, not a bug.
+1. **Create a fresh key** in Google AI Studio (the key posted in chat on 12-Nov should be deleted there — anything pasted in a chat
+   should be treated as exposed).
+2. **Supabase Dashboard → project `pahzxpileudulljgaciw` → Edge Functions → Secrets → Add new secret:**
+   name `GEMINI_API_KEY`, value = the key. Nothing else is required (defaults: model `gemini-flash-latest`, policy `gemini_free`).
+   Never put the key in Netlify, GitHub, chat or email.
+3. Open the app → **Discovery setup → Test AI connection**. It must show **Connected** and the model.
+4. Press **Turn on AI interview** (same box). New sign-ups on the existing join link now get the AI interview. Already-interviewed
+   people keep their answers. **Switch back to fixed questions** undoes it. Both are audited.
+5. Optional: tell Claude so it can run the synthetic live test (`EXPECT=connected`) and review the first real AI questions.
+
+**Free-tier limits.** Google sets per-project limits (requests per minute / per day) and shows them at
+<https://aistudio.google.com/rate-limit>. Each AI question is one request. When a limit is hit, the employee sees
+"The AI is busy … try again in about N seconds" or "free daily limit used up; continue tomorrow" — answers are never lost.
+If the team is large, stagger the link (e.g. one department per day) or move to the paid tier (`AI_PROVIDER_POLICY=gemini_paid`
+plus activating the `gemini_paid` policy and campaign provider).
 
 ## 4. Configuration reference
 
 | Secret (Edge Function) | Default | Notes |
 |---|---|---|
 | `GEMINI_API_KEY` | — | Required for Gemini |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Any `generateContent` model your key can use |
+| `GEMINI_MODEL` | `gemini-flash-latest` | Any `generateContent` model your key can use (alias tracks Google's current Flash model) |
 | `AI_PROVIDER` | `gemini` | `gemini` or `ollama` |
-| `AI_PROVIDER_POLICY` | `gemini_paid` | Must equal an **active** `ai_provider_policies.provider` and the campaign's `ai_provider` |
+| `AI_PROVIDER_POLICY` | `gemini_free` | Must equal an **active** `ai_provider_policies.provider` and the campaign's `ai_provider`. Free is assumed unless `gemini_paid` is declared |
 | `ALLOWED_ORIGINS` | `https://crux-ppi.netlify.app,http://localhost:3000` | CORS |
 | `OLLAMA_BASE_URL`, `OLLAMA_MODEL` | —, `llama3.1` | Only useful if the Ollama server is reachable from the internet |
 
@@ -59,7 +70,7 @@ If you only have a free-tier key: set `AI_PROVIDER_POLICY=gemini_free`. The conn
 
 | Safeguard | Where |
 |---|---|
-| Provider must have an active policy; data class ≤ policy max; a training provider is capped at public | `private.ai_run_guard` trigger (tests 04, 16) |
+| Provider must have an active policy; data class ≤ policy max; a training provider is capped at public unless the owner's acceptance is recorded, and never above internal | `private.ai_run_guard` + PPI-023 check (tests 04, 16, 17) |
 | Prompt text + schema must match the registered, active prompt version (sha256) | Edge Function before any call |
 | Only the respondent can advance their interview; status check only for `org.manage` / `interview.manage` | Edge Function (verified live) |
 | Model output validated; invalid refs dropped; repeat questions rejected; one corrective retry | `engine.ts` (unit tests) |

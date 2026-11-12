@@ -13,9 +13,10 @@
 | 7 | Web UI: adaptive chat, analysing state, reasons, coverage chips, clarification tag, honest errors + retry, admin "Test AI connection" | Built; verified locally against the deployed function | adaptive E2E 10/10 (unconfigured) |
 | 8 | CI: `ai-engine` workflow (unit tests, prompt-hash check, `deno check`) | Added | `.github/workflows/ai-engine.yml` |
 | 9 | Docs: gap audit, AI integration, env example, test results, registers | Done | this folder + `docs/pack/00_GOVERNANCE` |
-| 10 | **Set `GEMINI_API_KEY` in Supabase secrets; confirm paid tier** | **Waiting on Shantanu** | — |
+| 10 | Tier decided: **free** + owner acceptance recorded (PPI-023, D-045); employee notice; quota-aware errors | Done 12-Nov | test 17, E2E 11/11 |
+| 10b | **Set `GEMINI_API_KEY` in Supabase secrets** | **Waiting on Shantanu** | — |
 | 11 | Live tests 1–5, 8 with real Gemini on the synthetic tenant | Blocked by 10 | `EXPECT=connected` |
-| 12 | Switch CRUX link to the AI interview | Blocked by 10–11 | `adaptive_ai_activate_crux.sql` |
+| 12 | Switch CRUX link to the AI interview | Admin button built (Discovery setup → Turn on AI interview); enabled only after **Connected** | test 17 |
 
 ## What CRUX employees see today
 

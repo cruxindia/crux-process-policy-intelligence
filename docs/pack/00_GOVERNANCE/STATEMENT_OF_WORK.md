@@ -86,8 +86,8 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 - **Scope in:** gap audit; provider-independent adapter (Gemini preferred, Ollama optional); server-side engine; validated structured output; contradiction handling; resume; coverage-based completion; UI states; security; tests 1–8; required docs.
 - **Scope out (per brief):** risk analysis, document generation, legal, dashboards.
 - **Inputs:** Sprint 04 brief (attachment); pack D-011 (AI data policy); Gemini API docs/terms (fetched 11-Nov-2026).
-- **Assumptions:** CRUX key will be on a paid (billing-enabled) Google Cloud project — **unverified**.
-- **Acceptance:** [x] audit; [x] adapter + engine + function deployed; [x] honest failure (test 6) live; [x] keys never in browser/repo (verified in build output); [x] DB tests; [ ] real Gemini call (test 1); [ ] live adaptive/contradiction/resume/completion (2–5, 8); [ ] owner confirms tier + DPDP position; [ ] CRUX activation; [ ] owner acceptance.
+- **Assumptions:** ~~paid tier~~ → owner chose the **free tier** on 12-Nov-2026 and accepted Google using the data (D-045).
+- **Acceptance:** [x] audit; [x] adapter + engine + function deployed; [x] honest failure (test 6) live; [x] keys never in browser/repo (verified in build output); [x] DB tests; [ ] real Gemini call (test 1); [ ] live adaptive/contradiction/resume/completion (2–5, 8); [x] owner confirmed tier (free, D-045); [x] CRUX activation built as admin switch (D-046); [ ] key set by owner; [ ] switch turned on; [ ] owner acceptance.
 - **Status:** Implemented + Deployed; blocked on GEMINI_API_KEY (PR-031).
 
 ## 13. Decision / change log
@@ -96,3 +96,4 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 | 2026-11-11 | SOW created; Phase 0 audit executed | Claude |
 | 2026-11-11 | S-01 build executed; working defaults D-017 applied pending owner decisions | Claude |
 | 2026-11-11 | S-08 adaptive AI interview: implemented, deployed, blocked on key; D-039…D-044 | Claude |
+| 2026-11-12 | S-09 free tier: PPI-023, admin switch, notice; waiting on key | Claude |

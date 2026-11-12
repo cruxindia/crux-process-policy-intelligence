@@ -30,10 +30,10 @@ export class GeminiProvider implements AiProvider {
   private fetchImpl: FetchLike;
   private maxRetries: number;
   private baseUrl: string;
-  constructor(apiKey: string | undefined, model: string | undefined, policyName = "gemini_paid",
+  constructor(apiKey: string | undefined, model: string | undefined, policyName = "gemini_free",
               fetchImpl: FetchLike = (u, i) => fetch(u, i), maxRetries = 2, baseUrl = "https://generativelanguage.googleapis.com/v1beta") {
     this.apiKey = apiKey; this.fetchImpl = fetchImpl; this.maxRetries = maxRetries; this.baseUrl = baseUrl;
-    this.model = (model || "gemini-2.5-flash").trim();
+    this.model = (model || "gemini-flash-latest").trim();
     this.name = policyName;
   }
 
@@ -78,19 +78,28 @@ export class GeminiProvider implements AiProvider {
                  usage: { input: json.usageMetadata?.promptTokenCount, output: json.usageMetadata?.candidatesTokenCount } };
       }
       const status = res.status;
-      let msg = "";
-      try { msg = (await res.json())?.error?.message ?? ""; } catch { /* ignore */ }
+      let msg = ""; let retrySec = NaN;
+      try {
+        const e = (await res.json())?.error;
+        msg = e?.message ?? "";
+        // Google returns google.rpc.RetryInfo { retryDelay: "37s" } on quota errors.
+        const ri = (e?.details ?? []).find((d: { "@type"?: string }) => String(d?.["@type"]).endsWith("RetryInfo"));
+        retrySec = parseFloat(String(ri?.retryDelay ?? ""));
+      } catch { /* ignore */ }
+      if (!Number.isFinite(retrySec)) retrySec = Number(res.headers.get("retry-after"));
       // Some model versions reject responseJsonSchema; fall back once to JSON mode + our own validation.
       if (status === 400 && useSchema && /responseJsonSchema|response_json_schema|schema/i.test(msg)) { useSchema = false; continue; }
-      if ((status === 429 || status >= 500) && attempt < this.maxRetries) {
-        const ra = Number(res.headers.get("retry-after"));
-        await sleep(Number.isFinite(ra) && ra > 0 ? Math.min(ra, 10) * 1000 : 800 * 2 ** attempt);
+      const daily = status === 429 && /per ?day|PerDay|daily/i.test(msg);
+      // Retry only short waits; long waits are reported to the person instead of holding the request open.
+      if ((status === 429 || status >= 500) && !daily && attempt < this.maxRetries && !(Number.isFinite(retrySec) && retrySec > 10)) {
+        await sleep(Number.isFinite(retrySec) && retrySec > 0 ? retrySec * 1000 : 800 * 2 ** attempt);
         continue;
       }
       const errorClass: AiErrorClass = status === 429 ? "rate_limit" : status === 401 || status === 403 ? "auth"
         : status === 400 && /API key/i.test(msg) ? "auth" : status === 404 ? "config" : "provider";
       const safe = errorClass === "auth" ? "The AI provider rejected the API key"
-        : errorClass === "rate_limit" ? "The AI provider's rate limit was reached; please try again shortly"
+        : errorClass === "rate_limit" ? (daily ? "The AI's free daily limit has been used up; please continue tomorrow (your answers are saved)"
+            : `The AI is busy (free-tier limit); please try again in ${Number.isFinite(retrySec) && retrySec > 0 ? `about ${Math.ceil(retrySec)} seconds` : "a minute"}`)
         : errorClass === "config" ? `Model "${this.model}" was not found for this API key`
         : `AI provider error (HTTP ${status})`;
       return { ok: false, errorClass, status, message: safe, model: this.model, latencyMs: Date.now() - started };
@@ -133,5 +142,5 @@ export class OllamaProvider implements AiProvider {
 export function providerFromEnv(get: (k: string) => string | undefined, fetchImpl?: FetchLike): AiProvider {
   const which = (get("AI_PROVIDER") || "gemini").toLowerCase();
   if (which === "ollama") return new OllamaProvider(get("OLLAMA_BASE_URL"), get("OLLAMA_MODEL"), fetchImpl);
-  return new GeminiProvider(get("GEMINI_API_KEY"), get("GEMINI_MODEL"), get("AI_PROVIDER_POLICY") || "gemini_paid", fetchImpl);
+  return new GeminiProvider(get("GEMINI_API_KEY"), get("GEMINI_MODEL"), get("AI_PROVIDER_POLICY") || "gemini_free", fetchImpl); // assume free tier unless declared paid
 }

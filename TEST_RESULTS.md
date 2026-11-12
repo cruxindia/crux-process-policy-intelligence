@@ -1,5 +1,9 @@
 # Test Results — Sprint 04 (adaptive AI interview)
 
+> **Update 12-Nov-2026 (S-09, free tier):** function v6 (`gemini_free`, `gemini-flash-latest`, quota-aware errors); PPI-023 + test 17.
+> Unit 20/20 (mocked) · pgTAP 250/250 local (17 files) · test 17 hosted 13/13 · adaptive E2E (no key) 11/11 incl. Google notice · authz 4/4 · fixed-chat regression 18/18.
+> **Still no real Gemini call: `GEMINI_API_KEY` not set in Supabase (deployed status check, 12-Nov 03:58 UTC).**
+
 **Date:** 11 Nov 2026 · Every line says whether the AI was **mocked**, **real-but-unconfigured** (deployed function, no key) or **real Gemini**.
 **No real Gemini request has been made yet:** `GEMINI_API_KEY` is not set in Supabase (confirmed by the deployed function's own status check).
 

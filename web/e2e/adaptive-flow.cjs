@@ -67,6 +67,8 @@ async function aiSettled(p, aiCountBefore) {
     await p.getByRole('button', { name: 'Sign up and start' }).click();
     await p.waitForSelector('.chat-progress', { timeout: 30000 }); await p.waitForLoadState('networkidle');
     check('greeting explains the AI interviewer', await p.getByText(/an AI interviewer asks about your work/).isVisible());
+    check('employee is told answers go to Google Gemini (free) and not to type private details',
+      /Google.s Gemini AI \(free version\)/.test(await p.locator('[data-testid="ai-notice"]').innerText().catch(() => '')));
     check('AI line says it starts after the opening questions', /starts after the opening questions/.test(await p.locator('[data-testid="ai-line"]').innerText()));
     let answered = 0;
     for (let i = 0; i < 40; i++) {

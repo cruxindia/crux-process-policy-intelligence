@@ -134,5 +134,20 @@ test("Ollama without base URL → configuration error; env selects provider", as
   const r = await new OllamaProvider(undefined, "m").generateJson({ system: "s", user: "u", schema: {} });
   assert.equal(r.ok, false); if (!r.ok) assert.equal(r.errorClass, "config");
   assert.equal(providerFromEnv((k) => ({ AI_PROVIDER: "ollama" } as Record<string, string>)[k]).name, "local_ollama");
-  assert.equal(providerFromEnv((k) => ({ AI_PROVIDER_POLICY: "gemini_free" } as Record<string, string>)[k]).name, "gemini_free");
+  assert.equal(providerFromEnv((k) => ({ AI_PROVIDER_POLICY: "gemini_paid" } as Record<string, string>)[k]).name, "gemini_paid");
+  assert.equal(providerFromEnv(() => undefined).name, "gemini_free", "free tier is assumed unless the paid tier is declared");
+  assert.equal(providerFromEnv(() => undefined).model, "gemini-flash-latest");
+});
+
+test("free-tier quota: long RetryInfo delay is reported (not waited); daily quota says 'tomorrow'", async () => {
+  const quota = (message: string, delay: string) => () => new Response(JSON.stringify({ error: { code: 429, message,
+    details: [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: delay }] } }), { status: 429 });
+  const calls: Call[] = [];
+  const p1 = new GeminiProvider("k", "m", "gemini_free", mockFetch([quota("Quota exceeded for metric generate_content_free_tier_requests, limit: 10", "37s")], calls), 2);
+  const r1 = await p1.generateJson({ system: "s", user: "u", schema: {} });
+  assert.equal(r1.ok, false); if (!r1.ok) { assert.equal(r1.errorClass, "rate_limit"); assert.match(r1.message, /about 37 seconds/); }
+  assert.equal(calls.length, 1, "no retry when Google asks for a long wait");
+  const p2 = new GeminiProvider("k", "m", "gemini_free", mockFetch([quota("Quota exceeded: GenerateRequestsPerDayPerProjectPerModel-FreeTier", "3s")]), 2);
+  const r2 = await p2.generateJson({ system: "s", user: "u", schema: {} });
+  assert.equal(r2.ok, false); if (!r2.ok) assert.match(r2.message, /tomorrow/);
 });
