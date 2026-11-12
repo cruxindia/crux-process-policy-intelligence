@@ -12,6 +12,7 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
   const { companyId } = await params;
   const { supabase, membership, permissions } = await requireMembership(companyId);
 
+  await supabase.rpc("my_discovery_assignment", { p_company: companyId }); // idempotent: existing members get the conversation too
   const [{ data: assignments }, { data: processes }, { data: notes }, { data: forMe }] = await Promise.all([
     supabase
       .from("interview_assignments")
@@ -62,6 +63,24 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
           </div>
         ))}
       </>)}
+
+      {(() => {
+        const d = assignments?.find((a) => a.interview_campaigns?.interview_mode === "discovery" && !["declined", "expired", "cancelled"].includes(a.status));
+        if (!d) return null;
+        const sid = d.interview_sessions?.[0]?.id;
+        const done = d.status === "completed";
+        return (
+          <div className="card hero" data-testid="discovery-card">
+            <h2 style={{ marginTop: 0 }}>Let&rsquo;s understand the work you do.</h2>
+            <p className="muted">A guided conversation about your role, your responsibilities and the work you handle. Just explain your work naturally — the AI organises it into your profile, activities and process maps.</p>
+            <div className="row">
+              {!done && <Link className="button" href={`/c/${companyId}/interviews/${d.id}`}>{sid ? "Continue conversation" : "Start conversation"}</Link>}
+              {sid && <Link className={done ? "button" : "button secondary"} href={`/c/${companyId}/work/${sid}`}>What we understood</Link>}
+              {done && <span className="badge ok">Submitted</span>}
+            </div>
+          </div>
+        );
+      })()}
 
       <h2>My interviews</h2>
       {!assignments?.length && <p className="muted">No interviews are assigned to you.</p>}

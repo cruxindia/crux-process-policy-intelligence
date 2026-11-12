@@ -134,3 +134,4 @@ button.big { font-size: 1.1rem; padding: 12px 22px; margin-top: 8px; }
 .sop-branch { padding-left: 1.4em !important; }
 .sop-decision { color: var(--warn); }
 .badge.danger { color: var(--danger); border-color: currentColor; }
+.card.hero { border-color: var(--accent); border-width: 2px; }

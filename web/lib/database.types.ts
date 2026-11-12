@@ -3962,6 +3962,7 @@ export type Database = {
       }
       mobile_login_id: { Args: { p_mobile: string }; Returns: string }
       my_contact: { Args: never; Returns: Json }
+      my_discovery_assignment: { Args: { p_company: string }; Returns: string }
       my_permissions: { Args: { p_company: string }; Returns: string[] }
       normalise_mobile: { Args: { p: string }; Returns: string }
       password_change_required: { Args: never; Returns: boolean }

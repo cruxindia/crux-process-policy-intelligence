@@ -8,8 +8,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const { supabase, userId } = await requireUser();
   const { data: mustChange } = await supabase.rpc("password_change_required");
   if (mustChange) redirect("/account/password");
-  // Straight into an open interview: nothing to choose for respondents.
-  const { data: open } = await supabase.from("interview_assignments")
+  // Every active member gets the company's AI-led discovery conversation (PPI-027) — also people who joined earlier.
+  const { data: active } = await supabase.from("memberships").select("company_id").eq("user_id", userId).eq("status", "active");
+  let staff = false;
+  for (const m of active ?? []) {
+    await supabase.rpc("my_discovery_assignment", { p_company: m.company_id });
+    const { data: perms } = await supabase.rpc("my_permissions", { p_company: m.company_id });
+    if ((perms ?? []).some((x: string) => ["org.manage", "interview.manage", "interview.review"].includes(x))) staff = true;
+  }
+  // Straight into an open interview: nothing to choose for respondents (administrators and reviewers land on the company home).
+  const { data: open } = staff ? { data: null } : await supabase.from("interview_assignments")
     .select("id, company_id, memberships!inner(user_id)")
     .eq("memberships.user_id", userId).in("status", ["invited", "accepted", "in_progress"]).limit(1);
   if (open?.[0]) redirect(`/c/${open[0].company_id}/interviews/${open[0].id}`);
