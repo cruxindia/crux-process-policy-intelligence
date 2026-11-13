@@ -110,3 +110,36 @@ Browser ──JWT──▶ discovery-ai ── turn ──▶ connections ranked
 - Logs: event names, connection id, model, timings, error class and Google's error text for 4xx (no prompts, answers or keys).
 - Queue gap: a saved step runs when the employee comes back (no background worker yet — PR-038).
 
+
+## 9. Expert review board (`board-ai`, S-11, 13-Nov-2026)
+
+**What it does.** A person opens a *case* — "Draft a new document" on the Expert board page (policy, SOP, agreement, board resolution, compliance checklist, charter) or "Ask the expert teams to improve this" on a discovered process in the Review Centre. The board then works in the background through a fixed plan: the lead expert drafts → the other disciplines critique (each addressed to the lead) → the lead consolidates → the document controller applies the house format → the independent quality auditor gives pass / revise / fail → at most one revision round → **a person approves or rejects**. Every turn and every document version is kept (append-only).
+
+**Who leads.** Improvement review → Lean Six Sigma Master Black Belt · Agreement → Corporate Counsel · Policy and compliance checklist → Chief Compliance Officer · SOP → Technical Writer · Board resolution → Company Secretary · Charter → PMP Programme Manager.
+
+**Why it does not drift or forget.** Roles live in `supabase/bootstrap/agent_charters.json` → `scripts/agent-charters-sql.mts` → `agent_board_setup.sql` (CI fails if they differ). A charter can never be edited in the database; a change is a new version. Before each turn the function re-checks the charter's SHA-256 and the prompt's registered fingerprint (`board.turn` v3, `d74e2038…`). Facts only come from numbered sources (the brief and the interview facts, no employee names); laws only from a 23-item reference library, without section numbers or rates unless marked "[to be confirmed]". Deterministic checks the AI audit cannot overrule: internal codes in text, headings, title block, revision history, items-to-complete list, unmarked statutory numbers, and content lost during formatting.
+
+### 9.1 Where each of your keys goes (paste them yourself — Admin → AI connections)
+Create **new** keys first (the ones posted in chat on 13-Nov are exposed — PR-044). Each slot below already exists with no key; click it, paste the key, and the page tests it with one real request.
+
+| Your key | Slot name in the app | Used by |
+|---|---|---|
+| Process Agent 1 … 9 | Process Agent 1 … 9 | AI discovery interviews — each employee stays on one slot; the others are fallback |
+| PDM Agent 1, 2 | PDM Agent 1, PDM Agent 2 | Process Excellence & PMO team (leads improvement reviews) |
+| PDM Agent 3, 4 | PDM Agent 3, PDM Agent 4 | Legal & Compliance team (leads agreements and policies) |
+| PDM Agent 5 | PDM Agent 5 | Company Secretarial |
+| PDM Agent 6 | PDM Agent 6 | Finance, Tax & Investment |
+| PDM Agent 7 | PDM Agent 7 | Document Standards & Control |
+| PDM Agent 8 | PDM Agent 8 | Independent Audit & Assurance |
+| **any one** PD Agent key | PD Agents (shared project) | Overflow for everything (all 9 PD keys share one Google project = one quota, so one key is enough) |
+
+Until a slot has a key, its work uses the shared pool and then the server key, so nothing stops.
+
+### 9.2 Data and terms (read before pasting keys)
+- Gemini **free tier**: Google may use what is sent to improve its products and human reviewers may read it. Google's terms also say: *"Do not submit sensitive, confidential, or personal information to the Unpaid Services"* (Gemini API Additional Terms, updated 28-Apr-2026). CRUX's owner accepted sending confidential company data on 13-Nov (D-065, PR-043). Customer/KYC personal data (*restricted*) is always refused by the database.
+- Google APIs Terms §2(d): *"You agree to, and will not attempt to circumvent, such limitations documented with each API."* Using many free projects for one app may be read as circumvention (PR-042). For company-wide use, the paid tier on one billed project is the documented way to get higher limits — and it also stops Google using the data for training.
+
+### 9.3 Operating it
+- A case takes about 1.5–6 minutes. Keep the case page open or come back later: it continues automatically. "Resting until …" means that team's keys reached their free limit.
+- Load: one case ≈ 8–14 AI calls; one discovery answer ≈ 1 call.
+- Diagnostics: `board_cases.last_error`, `ai_runs` (capability `board_turn`), Edge Function logs (`fn: board-ai`, events `turn_ok`, `lint_retry`, `preservation_retry`, `audit_overruled`, `timeout_retry`, `provider_error`). Logs never contain document text or keys.

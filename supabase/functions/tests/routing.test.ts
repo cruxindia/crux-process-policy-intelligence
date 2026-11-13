@@ -42,3 +42,14 @@ test("cooldown follows the provider's own retry info; health labels; employee me
   const msg = savedMessage(new Date("2026-11-12T05:20:00Z"), now);
   assert.match(msg, /safely saved/); assert.match(msg, /about 20 minutes/); assert.doesNotMatch(msg, /quota|limit|Gemini|API/i);
 });
+test("routing: equal connections are spread across people by a sticky hash (same person -> same project)", () => {
+  const pool = Array.from({ length: 9 }, (_, i) => conn({ id: `p${i}`, name: `Process Agent ${i + 1}`, priority: 10,
+    assignments: [{ department_id: null, process_id: null, interview_category: "discovery", active: true }] }));
+  const first = (k: string) => rankConnections(pool, { departmentId: null, processId: null, category: "discovery", stickyKey: k })[0]!.id;
+  const counts = new Map<string, number>();
+  for (let i = 0; i < 900; i++) { const f = first(`member-${i}`); counts.set(f, (counts.get(f) ?? 0) + 1); }
+  assert.equal(counts.size, 9, "all nine projects get people");
+  assert.ok(Math.max(...counts.values()) < 160 && Math.min(...counts.values()) > 40, `reasonably even: ${[...counts.values()]}`);
+  assert.equal(first("member-7"), first("member-7"), "stable for the same person");
+  assert.equal(rankConnections(pool, { departmentId: null, processId: null, category: "discovery", stickyKey: "m" }).length, 9, "others remain as fallback");
+});

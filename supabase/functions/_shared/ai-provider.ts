@@ -12,7 +12,7 @@ export type AiResult = AiSuccess | AiFailure;
 export interface AiProvider {
   readonly name: string;          // policy key, e.g. gemini_paid / gemini_free / local_ollama
   readonly model: string;
-  generateJson(req: { system: string; user: string; schema: Record<string, unknown>; timeoutMs?: number; temperature?: number }): Promise<AiResult>;
+  generateJson(req: { system: string; user: string; schema: Record<string, unknown>; timeoutMs?: number; temperature?: number; maxOutputTokens?: number }): Promise<AiResult>;
 }
 
 type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
@@ -39,7 +39,7 @@ export class GeminiProvider implements AiProvider {
     this.name = policyName;
   }
 
-  async generateJson(req: { system: string; user: string; schema: Record<string, unknown>; timeoutMs?: number; temperature?: number }): Promise<AiResult> {
+  async generateJson(req: { system: string; user: string; schema: Record<string, unknown>; timeoutMs?: number; temperature?: number; maxOutputTokens?: number }): Promise<AiResult> {
     if (!this.apiKey) return { ok: false, errorClass: "config", message: "GEMINI_API_KEY is not configured on the server", model: this.model };
     const url = `${this.baseUrl}/models/${encodeURIComponent(this.model)}:generateContent`;
     const body = (withSchema: boolean) => JSON.stringify({
@@ -48,6 +48,7 @@ export class GeminiProvider implements AiProvider {
       contents: [{ role: "user", parts: [{ text: req.user }] }],
       generationConfig: {
         temperature: req.temperature ?? 0.3,
+        ...(req.maxOutputTokens ? { maxOutputTokens: req.maxOutputTokens } : {}),   // bounds runaway generations
         responseMimeType: "application/json",
         ...(withSchema ? { responseJsonSchema: req.schema } : {}),
       },

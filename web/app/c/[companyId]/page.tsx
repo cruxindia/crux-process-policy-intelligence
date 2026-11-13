@@ -33,6 +33,7 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
   const canManage = permissions.has("interview.manage");
   const canAdmin = ["org.manage", "membership.manage", "role.manage", "process.edit"].some((x) => permissions.has(x));
   const canReview = permissions.has("interview.review");
+  const canBoard = ["document.draft", "document.read", "interview.review", "process.edit", "org.manage"].some((x) => permissions.has(x));
 
   return (
     <>
@@ -43,6 +44,7 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
         {canReview && <Link className="button" href={`/c/${companyId}/review`}>Review answers</Link>}
         <Link className="button secondary" href={`/c/${companyId}/requests`}>Questions &amp; disputes</Link>
         {canManage && <Link className="button secondary" href={`/c/${companyId}/discovery`}>Discovery setup</Link>}
+        {canBoard && <Link className="button secondary" href={`/c/${companyId}/board`}>Expert board</Link>}
         {canAdmin && <Link className="button secondary" href={`/c/${companyId}/admin`}>Administration</Link>}
       </div>
 

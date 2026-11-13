@@ -186,9 +186,9 @@ async function turn(userDb: Db, svc: Db, uid: string, sessionId: string) {
 
   // 3. Candidates: department/process-assigned connections, shared pool, then the server default key.
   const conns = await loadConnections(svc, co);
-  const ranked = rankConnections(conns, { departmentId: a.department_id ?? null, processId: a.process_id ?? null, category: "discovery" });
+  const ranked = rankConnections(conns, { departmentId: a.department_id ?? null, processId: a.process_id ?? null, category: "discovery", stickyKey: me.id });
   const cands: Candidate[] = [];
-  for (const c of ranked) { const p = await providerFor(svc, co, c); if (p) cands.push({ provider: p, connectionId: c.id, label: c.name }); }
+  for (const c of ranked) { if (cands.length >= 3) break; const p = await providerFor(svc, co, c); if (p) cands.push({ provider: p, connectionId: c.id, label: c.name }); }  // this person's slot + 2 fallbacks
   const def = envDefault(); if (def) cands.push(def);
   const cooling = conns.filter((c) => c.status === "active" && c.cooldown_until && Date.parse(c.cooldown_until) > Date.now()).map((c) => Date.parse(c.cooldown_until!));
 

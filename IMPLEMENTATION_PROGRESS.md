@@ -1,3 +1,22 @@
+# Implementation Progress — S-11: Expert review board (13-Nov-2026)
+
+**Status: Live on Supabase and the web app.** Keys: 18 named slots exist without keys — the owner pastes new keys (AI_INTEGRATION.md §9.1).
+
+| Request (13-Nov) | What was built | State |
+|---|---|---|
+| Agents with detailed roles, functions, tasks | 6 teams / 12 roles, charters in `supabase/bootstrap/agent_charters.json`, versioned + fingerprinted; Expert teams page | Live |
+| Agents talk and brainstorm | Lead drafts → disciplines critique → consolidate → house format → independent audit → 1 revision round → human approval | Live (live tests: 9 and 13 turns) |
+| Audit / document format / legal & compliance / PM (LSS BB, PMP, agile) / CS / CFA & CA teams | All present | Live |
+| Don't forget / hallucinate / drift, even years later | Charter + prompt fingerprints checked every turn; numbered sources only; reference library; deterministic checks incl. content preservation; append-only history | Live |
+| Correct practices and improvements | "Ask the expert teams to improve this" on each discovered process (Review Centre) | Live |
+| Agreements, policies drafted | Expert board → "Draft a new document" (7 types) | Live |
+| Interactive visual of teams talking | Boardroom graph (live, click an expert to follow them) + transcript + document versions | Live |
+| Optimum key use for many users | 18 slots; each person/case sticks to one slot, others fallback; 3 key unlocks max per turn | Built; real keys not yet pasted |
+
+**Not built yet:** employees seeing approved suggestions about their own process (D-071); Word export (Print → PDF and Markdown download exist).
+
+---
+
 # Implementation Progress — S-10: AI-led discovery (Master Corrective Prompt v2.0)
 
 **Status (12-Nov-2026): Live; CRUX join link uses it.** Prompt v2.0 arrived truncated in Part 8 — Parts 9+ still needed (PR-037).

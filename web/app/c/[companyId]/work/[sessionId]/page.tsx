@@ -8,6 +8,8 @@ import { fmtDate, memberNames } from "@/lib/names";
 import { draftSop } from "@/lib/sop";
 import { ProcessMap, type ProcessFlow } from "@/components/process-map";
 import { promoteProcess } from "./actions";
+import { openImprovementCase } from "../../board/actions";
+import { STATUS_LABEL as BOARD_STATUS } from "@/lib/board-ui";
 
 const PROFILE: [string, string][] = [
   ["name", "Name"], ["designation", "Designation"], ["department", "Department"], ["sub_department", "Team / function"], ["reporting_manager", "Reports to"],
@@ -53,6 +55,12 @@ export default async function WorkSummary({ params, searchParams }: { params: Pr
     supabase.from("departments").select("id, code, name").eq("company_id", companyId).eq("status", "active").order("code"),
   ]) : [{ data: [] as { id: string; code: string; name: string }[] }, { data: [] as { id: string; code: string; name: string }[] }];
   const catName = new Map((catalogue ?? []).map((c) => [c.id, `${c.code} · ${c.name}`]));
+  // Expert board (PPI-029): reviewers can ask the expert teams to improve a discovered process; earlier cases are listed per process.
+  const canExpert = !mine && ["interview.review", "process.edit", "org.manage"].some((x) => permissions.has(x));
+  const procIds = (procs ?? []).map((p) => p.id);
+  const { data: boardCases } = canExpert && procIds.length
+    ? await supabase.from("board_cases").select("id, title, status, source_process_ids, created_at").eq("company_id", companyId).overlaps("source_process_ids", procIds).order("created_at", { ascending: false })
+    : { data: [] as { id: string; title: string; status: string; source_process_ids: string[]; created_at: string }[] };
 
   return (
     <div className="work">
@@ -120,6 +128,16 @@ export default async function WorkSummary({ params, searchParams }: { params: Pr
                   </form>
                   <div className="muted" style={{ marginTop: 4 }}>It enters the catalogue as a <em>candidate</em>; approval follows the normal review route.</div>
                 </details>
+              )}
+              {canExpert && (
+                <div className="small row" style={{ gap: 8, flexWrap: "wrap" }} data-testid="expert-improve">
+                  <form action={openImprovementCase.bind(null, companyId, sessionId, p.id, p.name)}>
+                    <button type="submit" className="secondary">Ask the expert teams to improve this</button>
+                  </form>
+                  {(boardCases ?? []).filter((b) => b.source_process_ids.includes(p.id)).map((b) => (
+                    <Link key={b.id} href={`/c/${companyId}/board/${b.id}`}>{BOARD_STATUS[b.status] ?? b.status} · {fmtDate(b.created_at)}</Link>
+                  ))}
+                </div>
               )}
               <p className="muted small">{[p.frequency && `Frequency: ${p.frequency}`, p.volume && `Volume: ${p.volume}`, p.involvement && `Role: ${p.involvement}`,
                 p.owner_text && `Owner: ${p.owner_text}`, p.importance && `Importance: ${p.importance}`, p.departments?.length && `Other departments: ${p.departments.join(", ")}`].filter(Boolean).join(" · ")}</p>

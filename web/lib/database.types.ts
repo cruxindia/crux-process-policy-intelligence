@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      // PPI-029 (manual until the next full type generation): expert review board.
+      agent_teams: {
+        Row: { id: string; company_id: string; code: string; name: string; mission: string; sort_order: number; status: string; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      agent_roles: {
+        Row: { id: string; company_id: string; team_id: string; code: string; version: number; title: string; credentials: string; charter: string; charter_sha256: string; status: string; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: [
+          { foreignKeyName: "agent_roles_company_id_team_id_fkey"; columns: ["company_id", "team_id"]; isOneToOne: false; referencedRelation: "agent_teams"; referencedColumns: ["company_id", "id"] },
+        ]
+      }
+      board_cases: {
+        Row: { id: string; company_id: string; kind: string; doc_type: string | null; title: string; brief: string; source_process_ids: string[]; classification: string;
+          status: string; plan: Json | null; next_step: number; revision_rounds: number; last_error: string | null; run_lock_until: string | null;
+          created_by_membership_id: string; decided_by_membership_id: string | null; decided_at: string | null; decision_note: string | null; created_at: string; updated_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      board_turns: {
+        Row: { id: string; company_id: string; case_id: string; seq: number; step: number; role_id: string; role_code: string; team_code: string; kind: string;
+          addressed_to: string[]; summary: string; content: string; key_points: string[]; citations: string[]; verdict: string | null; ai_run_id: string | null; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      board_outputs: {
+        Row: { id: string; company_id: string; case_id: string; version: number; title: string; body_md: string; dissent: string | null; audit_verdict: string | null; audit_notes: string | null; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       ai_connection_assignments: {
         Row: {
           active: boolean
@@ -3964,6 +4000,11 @@ export type Database = {
       my_contact: { Args: never; Returns: Json }
       my_discovery_assignment: { Args: { p_company: string }; Returns: string }
       my_permissions: { Args: { p_company: string }; Returns: string[] }
+      open_board_case: {
+        Args: { p_company: string; p_kind: string; p_doc_type: string | null; p_title: string; p_brief: string; p_process_ids: string[]; p_classification?: string }
+        Returns: string
+      }
+      decide_board_case: { Args: { p_company: string; p_case: string; p_decision: string; p_note?: string }; Returns: undefined }
       promote_discovered_process: {
         Args: { p_company: string; p_discovered: string; p_code: string | null; p_owner_department: string | null; p_classification?: string; p_existing_process?: string }
         Returns: string

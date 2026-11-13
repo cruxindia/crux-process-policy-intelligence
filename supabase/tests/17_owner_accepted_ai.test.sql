@@ -9,9 +9,9 @@ select throws_ok($$ insert into public.ai_provider_policies (company_id, provide
                  '23514', null, 'training provider + internal data without a recorded acceptance is refused');
 select throws_ok($$ insert into public.ai_provider_policies (company_id, provider, max_classification, may_train_on_inputs, terms_checked_on,
                       training_accepted_by_membership_id, training_accepted_on, training_acceptance_note)
-                    values (tests.company('ALPHA'), 'gemini_free_y', 'confidential', true, current_date, tests.mid('a_admin'), current_date,
+                    values (tests.company('ALPHA'), 'gemini_free_y', 'restricted', true, current_date, tests.mid('a_admin'), current_date,
                             'Owner accepts Google may use interview data') $$,
-                 '23514', null, 'even with acceptance, a training provider never gets confidential data');
+                 '23514', null, 'even with acceptance, a training provider never gets restricted data (confidential allowed since PPI-029)');
 update public.ai_provider_policies
    set max_classification = 'internal', training_accepted_by_membership_id = tests.mid('a_admin'),
        training_accepted_on = current_date, training_acceptance_note = 'Owner accepts Google may use interview data (synthetic test)'

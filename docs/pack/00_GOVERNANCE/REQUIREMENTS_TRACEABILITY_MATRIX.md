@@ -98,4 +98,12 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 | V2-P7 | Queue, honest employee message, Pacific reset, admin usage | Implemented (unit-tested) | routing.test.ts; ai_jobs; admin usage/queue tables | Not exercised live (PR-038) |
 | V2-P8 | Live interactive process map (not image/Mermaid) | Tested (E2E) | React Flow nodes + zoom controls in chat and Review Centre | — |
 | V2-RC | Review Centre: profile, charter, process library + maps, draft SOPs, clarifications; correct via chat | Tested (E2E) | `work/[sessionId]/page.tsx`; sop.test.ts; PPI-028 test 20; promote-process.cjs | — |
+| S11-1 | Agents with detailed roles, responsibilities, functions and tasks | Tested (live) | `agent_charters.json` (12 roles, versioned); teams page; test 21 (charter immutable, hash must match) | — |
+| S11-2 | Agents talk and brainstorm with each other | Tested (live) | board plan: proposal → critiques addressed to the lead → consolidation → format → audit → revision; board-api.cjs (9 and 13 turns) | Critiques are sequential, not free-form chat (by design: auditable) |
+| S11-3 | Teams: audit, document format, legal & compliance, PM (LSS BB/PMP/agile), CS, CFA/CA | Implemented + live | 6 expert teams / 12 roles | AI roles, not certified people (PR-045) |
+| S11-4 | No forgetting / hallucination / drift over years | Tested (unit + live) | charter + prompt fingerprints per turn; numbered sources; reference library; deterministic checks incl. content preservation; append-only history with versions (D-068, D-069) | Model alias may change behind `gemini-flash-lite-latest` (PR-036) |
+| S11-5 | Correct practices and improvements suggested | Tested (live) | improvement_review case from the Review Centre (Lean Six Sigma lead + PMP/Agile/Compliance/CA/CFA/Audit) | Employee view of approved suggestions not built (D-071) |
+| S11-6 | Agreements, policies etc. drafted | Tested (live) | "Draft a new document" (policy, SOP, agreement, board resolution, compliance checklist, charter); NDA live test with clause outcome check | Professional sign-off required (PR-045) |
+| S11-7 | Interactive visual of teams talking | Tested (UI) | boardroom React Flow graph, live polling, active speaker pulse, click to filter | — |
+| S11-8 | Optimum key utilisation for many users | Implemented (unit) | 18 slots, sticky spread test (900 members over 9 slots), fallback, cap of 3 unlocks | Not load-tested with real keys (owner to paste) |
 

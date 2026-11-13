@@ -8,7 +8,14 @@ export type Conn = {
   priority: number; status: string; cooldown_until: string | null; has_key: boolean;
   assignments: { department_id: string | null; process_id: string | null; interview_category: string | null; active: boolean }[];
 };
-export type Need = { departmentId: string | null; processId: string | null; category: string };
+export type Need = { departmentId: string | null; processId: string | null; category: string; stickyKey?: string };
+
+/** FNV-1a: deterministic spread of people/cases across equal connections (same person -> same project). */
+const spread = (s: string) => {
+  let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; h ^= h >>> 16; // murmur3 finaliser
+  return h >>> 0;
+};
 
 /** Ordered eligible connections for a workload. Skips disabled, keyless (gemini) and cooling-down connections. */
 export function rankConnections(conns: Conn[], need: Need, now = new Date()) {
@@ -31,7 +38,8 @@ export function rankConnections(conns: Conn[], need: Need, now = new Date()) {
     }
     if (tier !== null) scored.push({ c, tier });
   }
-  return scored.sort((x, y) => x.tier - y.tier || x.c.priority - y.c.priority || x.c.name.localeCompare(y.c.name)).map((s) => s.c);
+  const tie = (c: Conn) => need.stickyKey ? spread(need.stickyKey + "|" + c.id) : 0;
+  return scored.sort((x, y) => x.tier - y.tier || x.c.priority - y.c.priority || tie(x.c) - tie(y.c) || x.c.name.localeCompare(y.c.name)).map((s) => s.c);
 }
 
 /** Next midnight in America/Los_Angeles (Google's daily quota reset), as a UTC Date. */

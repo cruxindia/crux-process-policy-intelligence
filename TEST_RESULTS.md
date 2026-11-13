@@ -1,5 +1,35 @@
 # Test Results
 
+## S-11 — Expert review board, 13-Nov-2026
+
+All live tests used the synthetic tenant `E2E-SYNTH` and real Gemini (gemini-3.5-flash-lite, free tier, server key — the owner's 26 keys were not used). No mocks.
+
+| Suite | Result | What it proves |
+|---|---|---|
+| Unit (`supabase/functions/tests/*.test.ts`, `web/lib/sop.test.ts`) | **53/53** | board plans, prompt rules, turn validation, sources without names, deterministic checks (codes, headings, title block, revision history, statutory numbers), content preservation, sticky spread (900 members over 9 slots, even and stable) |
+| DB local (`scripts/test-db.sh`) | **303/303**, 21 files | test 21: charters immutable + hash-checked, cases only via RPC, append-only turns/outputs, employee cannot open cases, approver-only decision, rejection needs a reason, restricted data never allowed for training providers |
+| Hosted bootstrap | 7 teams, **12/12 charters hash-verified**, prompt `board.turn` v3 active, 18 keyless slots, policy = confidential (CRUX + E2E) | verified by query after load |
+| Live API (`web/e2e/board-api.cjs`, deployed `board-ai` v4) | **23/23** | NDA (confidential): 9 turns, 95 s, audited *pass*, 15k characters, title block + revision history, placeholders, no asserted section numbers, all protective clauses present; improvement review of a discovered process: 13 turns incl. one audit-driven revision round, 133 s, sources cited |
+| Live UI (`web/e2e/board-ui.cjs`) | **14/14** (local production build against hosted Supabase; agreement re-run 12/12 incl. a revision round) | home link; case list; boardroom graph (experts, arrows); click-to-filter; document + audit verdict; reject without reason refused; approve recorded; teams page (6 teams, 12 versioned charters, no key material); phone layout without sideways scroll; no page errors |
+| Discovery regression after redeploy (`discovery-api.cjs`, `discovery-ai` v7) | **14/14** | sticky routing + capped key unlocks did not change interview behaviour |
+
+### Defects found by the live tests and fixed
+| # | Defect | Fix |
+|---|---|---|
+| 1 | v1 NDA contained internal codes ([L1], legal_compliance), an invented "thirty (30) days", plain-text headings; standard clauses missing; the AI audit passed it | prompt v2 (Markdown, plain-word placeholders, `[proposed — confirm]` defaults, expected sections per document type) + deterministic checks the audit cannot overrule (D-068/D-069) |
+| 2 | "Section 179 of the Companies Act" asserted without confirmation | statutory-number check (internal clause references allowed) |
+| 3 | Document controller collapsed an agreement's 26 clauses into 9 policy sections (13.8k → 9.2k characters); audit passed it | prompt v3 (formatting never removes content; agreements keep contract structure) + content-preservation check with one retry, else the formatted version is discarded |
+| 4 | Gemini occasionally hung > 50 s on a turn | output capped (12k tokens), one immediate retry on timeout, background resume |
+| 5 | Title block lines ran into one paragraph | renderer keeps single line breaks; ordered lists keep their numbers |
+| 6 | Phone: discussion column 723 px wide on a case with tables | grid `minmax(0, 1fr)` + wrapping (0 px sideways scroll) |
+| 7 | Approve/Reject gave no feedback for 5–10 s | buttons show "Recording…" while the decision is saved |
+| 8 | Test defects (not app): severability inside "Miscellaneous" counted as missing; decision checks latched onto an existing notice | checks accept bold clause labels; waits on the redirect |
+
+### Not yet proven (honest gaps)
+- The owner's real keys: routing to named slots, per-slot rate limits and "resting until" were unit-tested only.
+- Many simultaneous cases (load) — not tested.
+- Legal/tax/secretarial correctness of drafts — needs a qualified professional (PR-045).
+
 ## S-10 — AI-led discovery (Master Corrective Prompt v2.0), 12-Nov-2026
 
 All live tests used the synthetic tenant `E2E-SYNTH` and real Gemini (gemini-3.5-flash-lite, free tier). No mocks.

@@ -136,3 +136,30 @@ button.big { font-size: 1.1rem; padding: 12px 22px; margin-top: 8px; }
 .badge.danger { color: var(--danger); border-color: currentColor; }
 .card.hero { border-color: var(--accent); border-width: 2px; }
 table.wrap td, table.wrap th { white-space: normal; }
+
+/* Expert board (PPI-029) */
+.board-flow { height: 460px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.bnode { width: 168px; background: var(--surface); border: 2px solid var(--team); border-radius: 10px; font-size: .78rem; text-align: center; overflow: hidden; cursor: pointer; color: inherit; }
+.bnode .bteam { color: #fff; font-size: .68rem; padding: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bnode .btitle { padding: 6px 6px 2px; font-weight: 600; line-height: 1.2; }
+.bnode .bmeta { padding: 0 6px 6px; color: var(--muted); font-size: .7rem; }
+.bnode.sel { outline: 3px solid var(--accent); outline-offset: 2px; }
+.bnode.active { box-shadow: 0 0 0 0 var(--team); animation: bpulse 1.4s infinite; }
+@keyframes bpulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--team) 60%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+@media (prefers-reduced-motion: reduce) { .bnode.active { animation: none; outline: 3px dashed var(--team); } }
+.bprog { height: 6px; background: var(--border); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.bprog > div { height: 100%; background: var(--accent); transition: width .5s; }
+.board-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .board-cols { grid-template-columns: minmax(0, 1fr); } }
+.board-cols > section { min-width: 0; } .bturn, .md { overflow-wrap: anywhere; }
+.bturn { border-left-width: 4px; border-left-style: solid; padding: 10px 12px; }
+.md h2, .md h3, .md h4 { margin: 1em 0 .4em; } .md p { margin: .5em 0; } .md table { font-size: .85rem; } .md blockquote { border-left: 3px solid var(--border); margin: .5em 0; padding-left: 10px; color: var(--muted); }
+button.linklike { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; font: inherit; }
+@media print {
+  body * { visibility: hidden; }
+  .print-doc, .print-doc * { visibility: visible; }
+  .print-doc { position: absolute; left: 0; top: 0; width: 100%; border: 0; margin: 0; }
+  .no-print { display: none !important; }
+}
+main:has(.board-wide) { max-width: 1320px; }
+@media (max-width: 640px) { .board-flow { height: 360px; } }

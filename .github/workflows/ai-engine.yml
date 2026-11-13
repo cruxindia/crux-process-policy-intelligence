@@ -1,9 +1,9 @@
 name: ai-engine
 on:
   push:
-    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "supabase/bootstrap/*.sql", "web/lib/sop*.ts", ".github/workflows/ai-engine.yml"]
+    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "scripts/agent-charters-sql.mts", "supabase/bootstrap/*.sql", "supabase/bootstrap/*.json", "web/lib/sop*.ts", ".github/workflows/ai-engine.yml"]
   pull_request:
-    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "supabase/bootstrap/*.sql", "web/lib/sop*.ts", ".github/workflows/ai-engine.yml"]
+    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "scripts/agent-charters-sql.mts", "supabase/bootstrap/*.sql", "supabase/bootstrap/*.json", "web/lib/sop*.ts", ".github/workflows/ai-engine.yml"]
 permissions:
   contents: read
 jobs:
@@ -23,7 +23,14 @@ jobs:
           echo "adaptive $h"; grep -q "$h" supabase/bootstrap/adaptive_ai_setup.sql
           h2=$(node --experimental-strip-types scripts/prompt-hash-v2.mts 2>/dev/null | sed -E 's/.*"template_sha256":"([0-9a-f]{64})".*/\1/')
           echo "discovery $h2"; grep -q "$h2" supabase/bootstrap/discovery_setup.sql
+          h3=$(node --experimental-strip-types scripts/prompt-hash-board.mts 2>/dev/null | sed -E 's/.*"template_sha256":"([0-9a-f]{64})".*/\1/')
+          echo "board $h3"; grep -q "$h3" supabase/bootstrap/agent_board_setup.sql
+      # The expert charters in the database are generated from agent_charters.json; the committed SQL must be current.
+      - name: agent charters SQL is up to date
+        run: |
+          node --experimental-strip-types scripts/agent-charters-sql.mts 2>/dev/null > /tmp/agent_board_setup.sql
+          diff -u supabase/bootstrap/agent_board_setup.sql /tmp/agent_board_setup.sql
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check supabase/functions/interview-ai/index.ts supabase/functions/discovery-ai/index.ts
+      - run: deno check supabase/functions/interview-ai/index.ts supabase/functions/discovery-ai/index.ts supabase/functions/board-ai/index.ts
