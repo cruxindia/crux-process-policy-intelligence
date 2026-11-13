@@ -28,6 +28,42 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      blueprint_entries: {
+        Row: { id: string; company_id: string; section: string; statement: string; original_statement: string | null; source_kind: string; source_refs: Json;
+          status: string; proposed_by: string | null; ai_run_id: string | null; synthesis_id: string | null; decided_by: string | null; decided_at: string | null;
+          decision_note: string | null; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      blueprint_open_questions: {
+        Row: { id: string; company_id: string; section: string; question: string; status: string; synthesis_id: string | null; assigned_to: string | null;
+          answer: string | null; answered_by: string | null; answered_at: string | null; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      ctq_items: {
+        Row: { id: string; company_id: string; code: string; name: string; voice: string; expectation: string | null; measure: string; unit: string | null;
+          direction: string; baseline: string | null; target_value: number | null; target_text: string | null; status: string; source_kind: string; source_refs: Json;
+          proposed_by: string | null; ai_run_id: string | null; synthesis_id: string | null; target_requested_by: string | null; target_requested_at: string | null;
+          target_reason: string | null; approved_by: string | null; approved_at: string | null; decision_note: string | null; created_at: string; updated_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      blueprint_versions: {
+        Row: { id: string; company_id: string; version: number; content: Json; note: string | null; published_by: string; published_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      blueprint_syntheses: {
+        Row: { id: string; company_id: string; requested_by: string; status: string; counts: Json; error_text: string | null; started_at: string; finished_at: string | null }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       catalogue_item_sources: {
         Row: { id: string; company_id: string; item_id: string; discovered_process_id: string; method: string; linked_by: string; linked_at: string }
         Insert: never
@@ -2324,6 +2360,7 @@ export type Database = {
           name: string
           owner_membership_id: string
           process_id: string | null
+          purpose_kind: string
           purpose: string | null
           question_scopes: string[] | null
           starts_on: string | null
@@ -4040,6 +4077,18 @@ export type Database = {
       catalogue_link_source: { Args: { p_company: string; p_item: string; p_discovered: string; p_method?: string }; Returns: undefined }
       catalogue_unlink_source: { Args: { p_company: string; p_discovered: string }; Returns: undefined }
       catalogue_source_counts: { Args: { p_company: string }; Returns: { item_id: string; contributors: number }[] }
+      blueprint_my_rights: { Args: { p_company: string }; Returns: Json }
+      blueprint_start_leadership: { Args: { p_company: string; p_members: string[] }; Returns: number }
+      blueprint_add_entry: { Args: { p_company: string; p_section: string; p_statement: string }; Returns: string }
+      blueprint_decide_entry: { Args: { p_company: string; p_entry: string; p_decision: string; p_statement?: string | null; p_note?: string | null }; Returns: undefined }
+      blueprint_assign_question: { Args: { p_company: string; p_question: string; p_member: string | null; p_dismiss?: boolean }; Returns: undefined }
+      blueprint_answer_question: { Args: { p_company: string; p_question: string; p_answer: string }; Returns: undefined }
+      ctq_save: { Args: { p_company: string; p_id: string | null; p_name: string; p_voice: string; p_measure: string; p_unit: string | null; p_direction: string;
+        p_baseline: string | null; p_expectation?: string | null }; Returns: string }
+      ctq_request_target: { Args: { p_company: string; p_ctq: string; p_target_value: number | null; p_target_text: string | null; p_reason: string }; Returns: undefined }
+      ctq_decide_target: { Args: { p_company: string; p_ctq: string; p_decision: string; p_note?: string | null }; Returns: undefined }
+      ctq_retire: { Args: { p_company: string; p_ctq: string; p_note: string }; Returns: undefined }
+      blueprint_publish: { Args: { p_company: string; p_note: string | null }; Returns: number }
       catalogue_match_suggestions: {
         Args: { p_company: string; p_min?: number }
         Returns: { discovered_process_id: string; process_name: string; session_id: string; item_id: string | null; item_code: string | null; item_title: string | null; score: number | null }[]

@@ -41,7 +41,7 @@ select c.id, r.code, r.name from public.companies c
 insert into public.role_permissions (company_id, role_id, permission_code)
 select r.company_id, r.id, p.perm from public.roles r
  join (values
-  ('COMPANY_ADMIN', array['org.manage','membership.manage','role.manage','audit.read','dashboard.read','catalogue.manage','catalogue.approve']),
+  ('COMPANY_ADMIN', array['org.manage','membership.manage','role.manage','audit.read','dashboard.read','catalogue.manage','catalogue.approve','blueprint.manage','blueprint.approve']),
   ('DEPT_HEAD', array['process.read','process.edit','interview.manage','interview.review','evidence.read','evidence.upload','evidence.review',
                       'knowledge.read','knowledge.edit','knowledge.verify','clarification.create','clarification.respond','clarification.manage',
                       'dispute.raise','document.read','document.draft','classified.confidential_read','dashboard.read','ai.run']),
@@ -51,7 +51,7 @@ select r.company_id, r.id, p.perm from public.roles r
   ('PROCESS_OWNER', array['process.read','process.edit','process.approve','knowledge.read','knowledge.edit','knowledge.verify',
                           'document.read','document.review_owner','dispute.raise']),
   ('DOC_APPROVER', array['process.read','knowledge.read','knowledge.approve','document.read','document.approve','document.publish',
-                         'dispute.decide','dashboard.read','classified.confidential_read','catalogue.approve']),
+                         'dispute.decide','dashboard.read','classified.confidential_read','catalogue.approve','blueprint.approve']),
   ('AI_SERVICE', array['process.read','knowledge.read','knowledge.edit','interview.review','evidence.read','ai.run'])
  ) v(code, perms) on v.code = r.code
  cross join lateral unnest(v.perms) p(perm);

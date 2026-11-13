@@ -113,7 +113,9 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 - **M1 Catalogue — done:** PPI-030 + `/catalogue`; DB 327/327 (test 22: 24 assertions); E2E `catalogue.cjs` 17/17; hosted seeded (148 items each for CRUX and E2E-SYNTH, all "Not yet assessed").
 - **Consolidation — done (owner requirement 13-Nov: "only one document has to be made, considering inputs from all"):** PPI-031 `catalogue_item_sources` — every person's interview description of the same work is linked to ONE company item (suggested, confirmed by a person); drafts and improvement reviews use all of them; the board reconciles them into one document with a mandatory "Variations and open points" section and never names interviewees (D-079, D-080). Who-said-what is computed (not AI) and shown to the process owner and appended to the draft. Evidence: DB 344/344 (test 23), unit 61/61, E2E 13/13 UI + 17/17 live board, regressions board-api 23/23 and catalogue 17/17.
 - **Known limits:** redaction covers interviewees only (PR-047); matching is name-based and always confirmed by a person (PR-048).
-- **Next:** M2 Company Operating Blueprint (leadership discovery; VOC/VOB/VOE/VOR; CTQ with management-approved targets).
+- **Owner delegation (D-081):** Claude decides on Shantanu's behalf; people keep irreversible, money, security and adoption sign-offs.
+- **M2 Company Operating Blueprint — done (D-082, D-083):** PPI-032 + `blueprint-ai` + `/blueprint` (leadership interview, AI consultant synthesis, review, open questions, CTQs with maker-checker targets, immutable published versions); the expert board builds every document on the published blueprint. Evidence: DB 375/375 (test 24: 31 assertions), unit 63/63 functions, E2E `blueprint.cjs` 17/17 with live AI, board regression 23/23 on board-ai v10.
+- **Next:** M3 interview upgrade (3 contextual suggestions, N/A with reason, ask someone, 20 dimensions, "Your answer in action", department-head validation).
 
 ## 13. Decision / change log
 | Date | Change | By |

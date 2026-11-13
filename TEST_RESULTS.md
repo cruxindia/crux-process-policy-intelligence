@@ -1,5 +1,22 @@
 # Test Results
 
+## M2 — Company Operating Blueprint (blueprint §4), 13-Nov-2026
+
+Synthetic tenant `E2E-SYNTH`, real Gemini (free tier, server key). The synthetic lead played the MD. No mocks.
+
+| Suite | Result | What it proves |
+|---|---|---|
+| DB local (`scripts/test-db.sh`) | **375/375**, 24 files | test 24 (31 assertions): only managers start the leadership interview; 20 leadership questions, one campaign, re-invites add nothing; the leader gets exactly the 20 questions; an AI entry without sources and a CTQ with a target are impossible at table level; employees see only agreed statements, approved CTQs and questions addressed to them; reject needs a reason; edited wording keeps the AI original; publish refused until the core areas are agreed; open question → named leader → answer becomes a proposed entry; a target needs a reason, and its requester cannot approve it; a second person approves; the published snapshot carries the approved CTQ; versions cannot change; every member reads them |
+| Unit (`node --test`, functions) | **63/63** | sources and provenance; prompt forbids targets and the schema has no target field; target detection; invented refs, uncited items, targets and duplicates dropped; CTQ names in plain words; the published blueprint becomes a board source and the board task then requires alignment and no invented targets |
+| E2E live (`web/e2e/blueprint.cjs`) | **17/17** | leader invited from the Leadership tab; 20 answers given in the ordinary interview screen; AI consultant run in the background → cited proposals across the core areas, CTQs without targets, open questions; nobody named; confirm with edit, reject needs a reason; target sent for approval and self-approval refused; open question answered → goes to review; version published and readable; phone layout; no page errors |
+| Regression `board-api.cjs` (board-ai v10) | **23/23** | agreement and improvement cases unchanged; both cases now cite the published blueprint (12–13 turns each) |
+| Hosted | PPI-032 applied (version 20261113113627); prompt `blueprint.synthesis` v2 active (`c38476ef…`), v1 retired; blueprint-ai v2; board-ai v10 | verified by query |
+
+Defects found by our own tests and fixed:
+- **v1 synthesis:** compressed multi-fact answers into one statement per area, and returned CTQ names as identifiers. Fixed in prompt v2, plus name normalisation in code (D-083).
+- **E2E:** two inputs shared the label "Reason". Fixed with distinct labels.
+- **Test design:** the rerun check expected repeats of statements that already existed. It now checks proposed and agreed statements together.
+
 ## Consolidation — many people, ONE company process/document, 13-Nov-2026
 
 Owner requirement: "multiple people … would be chatting, but only one document has to be made, considering inputs from all, validating". Synthetic tenant `E2E-SYNTH`, real Gemini (free tier, server key; the owner's keys were not used). No mocks.

@@ -1,8 +1,8 @@
 # Database Schema Reference
 
-**Generated** 2026-11-13T10:40Z from a clean install of `supabase/migrations` (PPI-001…031) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
+**Generated** 2026-11-13T12:02Z from a clean install of `supabase/migrations` (PPI-001…032) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
 
-Summary: **68 tables**, **3 views**, **142 RLS policies** in `public`, **78 private helper functions**. All tables RLS-enabled. Same migrations applied to Supabase dev `pahzxpileudulljgaciw` (PG 17).
+Summary: **73 tables**, **3 views**, **147 RLS policies** in `public`, **82 private helper functions**. All tables RLS-enabled. Same migrations applied to Supabase dev `pahzxpileudulljgaciw` (PG 17).
 
 ### `agent_roles`
 RLS: enabled · Policies: `agent_roles_read` (SELECT)
@@ -295,6 +295,91 @@ Triggers: —
 | `last_error` | text |  |
 | `created_at` | timestamp with time zone | not null |
 | `finished_at` | timestamp with time zone |  |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+
+### `blueprint_entries`
+RLS: enabled · Policies: `blueprint_entries_read` (SELECT)
+
+Triggers: audit_blueprint_entries
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `section` | text | not null |
+| `statement` | text | not null |
+| `original_statement` | text |  |
+| `source_kind` | text | not null |
+| `source_refs` | jsonb | not null |
+| `status` | text | not null |
+| `proposed_by` | uuid |  |
+| `ai_run_id` | uuid |  |
+| `synthesis_id` | uuid |  |
+| `decided_by` | uuid |  |
+| `decided_at` | timestamp with time zone |  |
+| `decision_note` | text |  |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+
+### `blueprint_open_questions`
+RLS: enabled · Policies: `blueprint_questions_read` (SELECT)
+
+Triggers: audit_blueprint_questions
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `section` | text | not null |
+| `question` | text | not null |
+| `status` | text | not null |
+| `synthesis_id` | uuid |  |
+| `assigned_to` | uuid |  |
+| `answer` | text |  |
+| `answered_by` | uuid |  |
+| `answered_at` | timestamp with time zone |  |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+
+### `blueprint_syntheses`
+RLS: enabled · Policies: `blueprint_syntheses_read` (SELECT)
+
+Triggers: —
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `requested_by` | uuid | not null |
+| `status` | text | not null |
+| `counts` | jsonb | not null |
+| `error_text` | text |  |
+| `started_at` | timestamp with time zone | not null |
+| `finished_at` | timestamp with time zone |  |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+
+### `blueprint_versions`
+RLS: enabled · Policies: `blueprint_versions_read` (SELECT)
+
+Triggers: audit_blueprint_versions, blueprint_versions_immutable
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `version` | integer | not null |
+| `content` | jsonb | not null |
+| `note` | text |  |
+| `published_by` | uuid | not null |
+| `published_at` | timestamp with time zone | not null |
 
 Foreign keys:
 - FOREIGN KEY (company_id) REFERENCES companies(id)
@@ -598,6 +683,43 @@ Foreign keys:
 - FOREIGN KEY (company_id, campaign_id) REFERENCES interview_campaigns(company_id, id)
 - FOREIGN KEY (company_id, created_by_membership_id) REFERENCES memberships(company_id, id)
 - FOREIGN KEY (company_id, department_id) REFERENCES departments(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+
+### `ctq_items`
+RLS: enabled · Policies: `ctq_read` (SELECT)
+
+Triggers: audit_ctq_items, ctq_updated_at
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `code` | text | not null |
+| `name` | text | not null |
+| `voice` | text | not null |
+| `expectation` | text |  |
+| `measure` | text | not null |
+| `unit` | text |  |
+| `direction` | text | not null |
+| `baseline` | text |  |
+| `target_value` | numeric |  |
+| `target_text` | text |  |
+| `status` | text | not null |
+| `source_kind` | text | not null |
+| `source_refs` | jsonb | not null |
+| `proposed_by` | uuid |  |
+| `ai_run_id` | uuid |  |
+| `synthesis_id` | uuid |  |
+| `target_requested_by` | uuid |  |
+| `target_requested_at` | timestamp with time zone |  |
+| `target_reason` | text |  |
+| `approved_by` | uuid |  |
+| `approved_at` | timestamp with time zone |  |
+| `decision_note` | text |  |
+| `created_at` | timestamp with time zone | not null |
+| `updated_at` | timestamp with time zone | not null |
+
+Foreign keys:
 - FOREIGN KEY (company_id) REFERENCES companies(id)
 
 ### `departments`
@@ -1077,6 +1199,7 @@ Triggers: interview_campaigns_updated
 | `interview_mode` | text | not null |
 | `ai_provider` | text |  |
 | `max_ai_questions` | integer | not null |
+| `purpose_kind` | text | not null |
 
 Foreign keys:
 - FOREIGN KEY (company_id, department_id) REFERENCES departments(company_id, id)

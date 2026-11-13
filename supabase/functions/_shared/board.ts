@@ -3,6 +3,7 @@
 // (one bounded revision round if the audit says "revise"). Every turn is grounded in numbered sources and the role's charter.
 
 import { compareDescriptions, comparisonText, type DescStep } from "./compare.ts";
+export { nameTokens, redactNames } from "./names.ts";
 
 export const BOARD_PROMPT_KEY = "board.turn";
 export const BOARD_PROMPT_VERSION = 4;   // v2: Markdown, no internal codes, marked defaults, stricter audit; v3 (13-Nov-2026): formatting must preserve every clause; agreements keep contract structure; v4: many people's descriptions -> ONE company document
@@ -115,10 +116,15 @@ const peopleNote = (n: number) => n > 1
   ? ` The sources contain ${n} separate descriptions of this work by ${n} different people: write ONE company document. Compare them step by step; include a section headed "Variations and open points" listing every difference (step present in some descriptions only, different tool, owner, order or timing) with how many descriptions say each version and [TO CONFIRM — process owner: which practice is the standard]. Take "which description mentions which step" ONLY from the AUTOMATIC COMPARISON source — never infer it yourself; keep each person's tools exactly as worded there (e.g. a named app stays named in the as-is steps). If they truly agree, say so in that section. The platform appends the full comparison table as an annex; do not reproduce it.`
   : "";
 
-const TASK: Record<StepKind, (c: { kind: CaseKind; docType: DocType | null; title: string; people: number }) => string> = {
+/** When the company has a published Operating Blueprint, documents build on it (blueprint §4: every department refers back to it). */
+const blueprintNote = (has: boolean) => has
+  ? " Align the document with the COMPANY OPERATING BLUEPRINT source: serve its purpose and objectives, respect its risk appetite and legal environment, and use its approved CTQs and targets as the KPIs where they apply. Do not invent other targets; mark any further KPI target as [TO CONFIRM — management: target]."
+  : "";
+
+const TASK: Record<StepKind, (c: { kind: CaseKind; docType: DocType | null; title: string; people: number; blueprint: boolean }) => string> = {
   proposal: (c) => c.kind === "improvement_review"
-    ? `Write the first Process Improvement Charter for "${c.title}": as-is diagnosis (SIPOC, waste, bottlenecks, control gaps) and ranked improvement recommendations with KPIs, citing sources. Put the complete charter in "document".${peopleNote(c.people)}`
-    : `Draft the complete first version of the ${String(c.docType).replace(/_/g, " ")} "${c.title}" from the brief and sources. Put the full text in "document"; mark every missing fact as a placeholder.${EXPECT[c.docType ?? "other"] ? ` It must include at least: ${EXPECT[c.docType ?? "other"]}.` : ""}${peopleNote(c.people)}`,
+    ? `Write the first Process Improvement Charter for "${c.title}": as-is diagnosis (SIPOC, waste, bottlenecks, control gaps) and ranked improvement recommendations with KPIs, citing sources. Put the complete charter in "document".${peopleNote(c.people)}${blueprintNote(c.blueprint)}`
+    : `Draft the complete first version of the ${String(c.docType).replace(/_/g, " ")} "${c.title}" from the brief and sources. Put the full text in "document"; mark every missing fact as a placeholder.${EXPECT[c.docType ?? "other"] ? ` It must include at least: ${EXPECT[c.docType ?? "other"]}.` : ""}${peopleNote(c.people)}${blueprintNote(c.blueprint)}`,
   critique: () => `Critique the current draft strictly from your discipline. List the most important issues (max 8), each with why it matters and the exact fix or replacement wording. Do not rewrite the whole document. Leave "document" empty.`,
   consolidation: (c) => `Consolidate: produce the COMPLETE improved document in "document", accepting, adapting or rejecting each expert's points (say which in "message"). Put any unresolved disagreement in "dissent". If there is audit feedback, fix every listed item.${c.kind === "document_draft" && EXPECT[c.docType ?? "other"] ? ` Check it still includes at least: ${EXPECT[c.docType ?? "other"]}.` : ""}${peopleNote(c.people)}`,
   format: (c) => `Apply the CRUX house format to the consolidated document without changing its meaning or removing anything: keep EVERY section, clause and table (rename or renumber only). ${c.docType === "agreement" ? "This is an agreement: keep its contract structure and clause order; add only the title block at the top, and the revision history and the list of items to complete at the end." : c.docType === "board_resolution" ? "This is a resolution: keep its resolution structure; add only the title block, revision history and items to complete." : "Use the numbered house sections where the content fits them; content that fits none stays as its own section."} Return the COMPLETE formatted document in "document" and list open placeholders in "message".`,
@@ -138,8 +144,9 @@ export function buildTurnMessage(c: { kind: CaseKind; docType: DocType | null; t
   return JSON.stringify({
     case: { type: c.kind === "improvement_review" ? "Process improvement review" : `Draft ${String(c.docType).replace(/_/g, " ")}`,
       title: c.title, classification: c.classification },
-    your_turn: { role: step.role, kind: step.kind, address_your_output_to: step.to, task: TASK[step.kind]({ ...c, people: c.people ?? 1 }) },
-    sources: sources.map((s) => ({ ref: s.ref, text: clip(s.text, s.text.startsWith("AUTOMATIC COMPARISON") ? 12000 : 2500) })),
+    your_turn: { role: step.role, kind: step.kind, address_your_output_to: step.to,
+      task: TASK[step.kind]({ ...c, people: c.people ?? 1, blueprint: sources.some((s) => s.text.startsWith("COMPANY OPERATING BLUEPRINT")) }) },
+    sources: sources.map((s) => ({ ref: s.ref, text: clip(s.text, /^(AUTOMATIC COMPARISON|COMPANY OPERATING BLUEPRINT)/.test(s.text) ? 12000 : 2500) })),
     board_so_far: prior.map((p) => ({ seq: p.seq, role: p.role, team: p.team, kind: p.kind, summary: clip(p.summary, 300),
       ...(sinceDraft.includes(p) && (p.kind === "critique" || p.kind === "audit") ? { full_text: clip(p.content, 3500) } : {}) })),
     current_draft: currentDraft ? { title: currentDraft.title, body_md: clip(currentDraft.body_md, 24000) } : null,
@@ -181,10 +188,11 @@ export function validateTurn(raw: string, step: Step, sourceRefs: string[], role
 /** Numbered sources for a case: the requester's brief, then each discovered process (facts only, employee names never included). */
 export function buildSources(brief: string, procs: { name: string; purpose: string | null; frequency: string | null; volume: string | null;
   involvement: string | null; owner_text: string | null; departments: string[] | null; flow: { nodes: { id: string; type: string; label: string; actor?: string; system?: string }[]; edges: { from: string; to: string; label?: string }[] } | null;
-  coverage: Record<string, string> | null; facts: string[]; role: string | null; session_id?: string }[]): Source[] {
+  coverage: Record<string, string> | null; facts: string[]; role: string | null; session_id?: string }[], companyBlueprint?: string | null): Source[] {
   const out: Source[] = [];
   if (brief.trim()) out.push({ ref: "S0", text: `Requester's brief: ${brief.trim()}` });
   let n = 1;
+  if (companyBlueprint) out.push({ ref: `S${n++}`, text: companyBlueprint });
   const people = [...new Set(procs.map((p, i) => p.session_id ?? `#${i}`))];
   for (const [i, p] of procs.entries()) {
     const who = people.length > 1 ? `Description ${people.indexOf(p.session_id ?? `#${i}`) + 1} of ${people.length} (each number is a different person) — ` : "";
@@ -247,23 +255,6 @@ export function preservationIssues(before: string, after: string): string[] {
   if (after.length < before.length * 0.85) issues.push(`The formatted document is ${Math.round((1 - after.length / before.length) * 100)}% shorter than the consolidated draft; formatting must not remove content.`);
   if (lost.length > Math.max(1, Math.floor(heads(before).length * 0.1))) issues.push(`Sections missing after formatting: ${lost.slice(0, 8).join(", ")}${lost.length > 8 ? ", …" : ""}.`);
   return issues;
-}
-
-/** Interviewees are referred to by role, never by name: replaces their names (full name and first name) in free text. */
-export function redactNames(text: string | null | undefined, names: string[]): string | null {
-  if (text == null) return null;
-  let t = String(text);
-  for (const n of [...names].sort((a, b) => b.length - a.length)) t = t.replace(new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "gi"), "the interviewee");
-  return t;
-}
-/** Name tokens to protect: every leading part of each display name ("Neha", "Neha Shah", "Neha Shah K"), 3+ letters. */
-export function nameTokens(displayNames: (string | null | undefined)[]): string[] {
-  const out = new Set<string>();
-  for (const d of displayNames) {
-    const w = String(d ?? "").trim().split(/\s+/).filter(Boolean);
-    for (let i = 1; i <= w.length; i++) { const t = w.slice(0, i).join(" "); if (t.length >= 3) out.add(t); }
-  }
-  return [...out];
 }
 
 /** Stable small hash (FNV-1a) — used to spread load across connections deterministically. */

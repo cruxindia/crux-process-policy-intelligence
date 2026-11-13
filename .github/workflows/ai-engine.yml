@@ -25,6 +25,8 @@ jobs:
           echo "discovery $h2"; grep -q "$h2" supabase/bootstrap/discovery_setup.sql
           h3=$(node --experimental-strip-types scripts/prompt-hash-board.mts 2>/dev/null | sed -E 's/.*"template_sha256":"([0-9a-f]{64})".*/\1/')
           echo "board $h3"; grep -q "$h3" supabase/bootstrap/agent_board_setup.sql
+          h4=$(node --experimental-strip-types scripts/prompt-hash-blueprint.mts 2>/dev/null | sed -E 's/.*"template_sha256":"([0-9a-f]{64})".*/\1/')
+          echo "blueprint $h4"; grep -q "$h4" supabase/bootstrap/blueprint_setup.sql
       # The comparison used by the board and by the web app must be the same code.
       - name: compare.ts identical in Edge Functions and web
         run: diff -u supabase/functions/_shared/compare.ts web/lib/compare.ts
@@ -36,4 +38,4 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno check supabase/functions/interview-ai/index.ts supabase/functions/discovery-ai/index.ts supabase/functions/board-ai/index.ts
+      - run: deno check supabase/functions/interview-ai/index.ts supabase/functions/discovery-ai/index.ts supabase/functions/board-ai/index.ts supabase/functions/blueprint-ai/index.ts

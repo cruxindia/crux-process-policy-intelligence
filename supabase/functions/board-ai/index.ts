@@ -7,6 +7,7 @@ import { BOARD_PROMPT_KEY, BOARD_SCHEMA, BOARD_SYSTEM, MAX_REVISIONS, buildPlan,
   type CaseKind, type DocType, type PriorTurn, type Step } from "../_shared/board.ts";
 import { cooldownFor, rankConnections, type Conn } from "../_shared/routing.ts";
 import { compareDescriptions, comparisonAnnex } from "../_shared/compare.ts";
+import { blueprintSourceText } from "../_shared/blueprint-text.ts";
 
 const ALLOWED = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://crux-ppi.netlify.app,http://localhost:3000").split(",");
 const cors = (o: string | null) => ({ "access-control-allow-origin": o && ALLOWED.includes(o) ? o : ALLOWED[0]!,
@@ -121,7 +122,9 @@ async function runCase(svc: Db, co: string, caseId: string) {
   const cleaned = (procs ?? []).map((p: any) => ({ ...p, owner_text: red(p.owner_text), involvement: red(p.involvement), purpose: red(p.purpose),
     flow: p.flow ? { ...p.flow, nodes: (p.flow.nodes ?? []).map((n: any) => ({ ...n, label: red(n.label) ?? "", actor: n.actor ? red(n.actor) ?? undefined : undefined })) } : null,
     facts: (factsBy.get(p.session_id) ?? []).slice(-40).map((f: string) => red(f) ?? ""), role: roleBy.get(p.session_id) ?? null }));
-  const sources = buildSources(cs.brief ?? "", cleaned);
+  // The published Company Operating Blueprint is the foundation every document builds on (PPI-032).
+  const { data: bp } = await svc.from("blueprint_versions").select("version, content").eq("company_id", co).order("version", { ascending: false }).limit(1).maybeSingle();
+  const sources = buildSources(cs.brief ?? "", cleaned, bp ? blueprintSourceText(bp.version, bp.content) : null);
   const refs = sources.map((s) => s.ref);
   const people = new Set((procs ?? []).map((p: any) => p.session_id)).size;   // different interviews = different people's accounts
   // The comparison table is deterministic and appended to the final document, so the process owner sees who said what even if the AI's prose is wrong.
