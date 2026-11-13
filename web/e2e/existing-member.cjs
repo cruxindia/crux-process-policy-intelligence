@@ -24,6 +24,16 @@ const results = []; const check = (n, c, d = '') => results.push(`${c ? 'PASS' :
     check('one click opens the discovery conversation', started, p.url());
     await p.goto(BASE + `/c/${CO}`); await p.waitForLoadState('networkidle');
     check('visiting again does not create duplicates (one card)', (await p.getByTestId('discovery-card').count()) === 1);
+    // Manager view: per-person discovery progress with links to each summary.
+    await p.goto(BASE + `/c/${CO}/discovery`); await p.waitForLoadState('networkidle');
+    const t = p.getByTestId('discovery-progress').first();
+    const rows = await t.locator('tbody tr').count();
+    check('Discovery page shows per-person progress for the AI discovery campaign', rows >= 3, `rows=${rows}`);
+    check('progress rows link to each person\'s summary', (await t.locator('a[href*="/work/"]').count()) >= 1);
+    const overflow = await t.evaluate((el) => el.closest('.table-wrap').scrollWidth - el.closest('.table-wrap').clientWidth);
+    check('progress table fits without sideways scrolling on desktop', overflow <= 1, `overflow=${overflow}`);
+    check('join link status is shown to the administrator', /Join link currently starts/.test(await p.getByTestId('mode-switch').innerText())); // synthetic tenant has 3 links; CRUX has 1 (discovery)
+    await p.screenshot({ path: `${OUT}/51-discovery-progress.png`, fullPage: true });
   } catch (e) { check('no crash', false, e.message.split('\n')[0]); }
   finally { await b.close(); }
   console.log(results.join('\n'));

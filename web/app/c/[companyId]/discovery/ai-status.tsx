@@ -12,7 +12,7 @@ type Status =
  * Runs a REAL request to the configured AI provider through the server (Edge Function). Never shows "connected" without one.
  * Administrators can then switch the company's join link between the fixed questions and the AI interview.
  */
-export function AiStatus({ companyId, canSwitch, linkMode }: { companyId: string; canSwitch: boolean; linkMode: "adaptive" | "fixed" | null }) {
+export function AiStatus({ companyId, canSwitch, linkMode }: { companyId: string; canSwitch: boolean; linkMode: "adaptive" | "fixed" | "discovery" | null }) {
   const router = useRouter();
   const [s, setS] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,7 +61,7 @@ export function AiStatus({ companyId, canSwitch, linkMode }: { companyId: string
       {canSwitch && linkMode && (
         <div className="row" style={{ marginTop: 10 }} data-testid="mode-switch">
           <div className="grow small">
-            Join link currently starts: <strong>{linkMode === "adaptive" ? "the AI interview" : "the fixed questions"}</strong>
+            Join link currently starts: <strong>{linkMode === "discovery" ? "the AI-led discovery conversation" : linkMode === "adaptive" ? "the AI interview" : "the fixed questions"}</strong>
             {linkMode === "fixed" && !connected && <span className="muted"> · the AI must show <em>Connected</em> before it can be turned on</span>}
           </div>
           {linkMode === "fixed"

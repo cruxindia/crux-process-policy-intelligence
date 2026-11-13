@@ -24,7 +24,7 @@ export default async function DiscoveryPage({ params, searchParams }: {
   const { data: link } = canSwitch
     ? await supabase.from("company_join_links").select("interview_campaigns(code, interview_mode)").eq("company_id", companyId).eq("status", "active").limit(1).maybeSingle()
     : { data: null };
-  const linkMode = (link?.interview_campaigns?.interview_mode ?? null) as "adaptive" | "fixed" | null;
+  const linkMode = (link?.interview_campaigns?.interview_mode ?? null) as "adaptive" | "fixed" | "discovery" | null;
   const userIds = (members.data ?? []).map((m) => m.user_id);
   const { data: profiles } = userIds.length
     ? await supabase.from("user_profiles").select("id, display_name").in("id", userIds)
@@ -32,6 +32,21 @@ export default async function DiscoveryPage({ params, searchParams }: {
   const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
   const memberLabel = new Map((members.data ?? []).map((m) => [m.id, `${nameOf.get(m.user_id) ?? "Member"}${m.job_title ? ` · ${m.job_title}` : ""}`]));
   const depName = new Map((deps.data ?? []).map((d) => [d.id, `${d.code} · ${d.name}`]));
+  // AI-led discovery progress per person (RLS limits rows to conversations this viewer may read).
+  const hasDisc = (campaigns.data ?? []).some((c) => c.interview_mode === "discovery");
+  const [sess, dprof, dproc] = hasDisc ? await Promise.all([
+    supabase.from("interview_sessions").select("id, assignment_id, status, started_at, submitted_at").eq("company_id", companyId),
+    supabase.from("discovery_profiles").select("session_id, stage, updated_at, inventory_confirmed").eq("company_id", companyId),
+    supabase.from("discovered_processes").select("session_id, completeness, linked_process_id").eq("company_id", companyId).neq("status", "removed"),
+  ]) : [{ data: [] }, { data: [] }, { data: [] }];
+  const sessOf = new Map((sess.data ?? []).map((x) => [x.assignment_id, x]));
+  const profOf = new Map((dprof.data ?? []).map((x) => [x.session_id, x]));
+  const procsOf = new Map<string, { n: number; sum: number; linked: number }>();
+  for (const x of dproc.data ?? []) {
+    const v = procsOf.get(x.session_id) ?? { n: 0, sum: 0, linked: 0 };
+    v.n++; v.sum += x.completeness; if (x.linked_process_id) v.linked++; procsOf.set(x.session_id, v);
+  }
+  const STAGE: Record<string, string> = { person: "About them", responsibilities: "Their work", inventory: "Activity list", process_deep_dive: "Activities in detail", wrap_up: "Wrapping up" };
   const tCount = { department: 0, process: 0 };
   for (const t of templates.data ?? []) if (t.scope_type === "department" || t.scope_type === "process") tCount[t.scope_type]++;
 
@@ -80,8 +95,29 @@ export default async function DiscoveryPage({ params, searchParams }: {
         const mine = (assignments.data ?? []).filter((a) => a.campaign_id === c.id);
         return (
           <div key={c.id} className="card">
-            <div className="row"><strong className="grow">{c.code} · {c.name}</strong>{c.interview_mode === "adaptive" && <span className="badge ok" title={`AI provider policy: ${c.ai_provider ?? "default"} · up to ${c.max_ai_questions} AI questions`}>AI interview</span>}<span className="badge">{c.status}</span></div>
+            <div className="row"><strong className="grow">{c.code} · {c.name}</strong>{c.interview_mode === "adaptive" && <span className="badge ok" title={`AI provider policy: ${c.ai_provider ?? "default"} · up to ${c.max_ai_questions} AI questions`}>AI interview</span>}{c.interview_mode === "discovery" && <span className="badge ok">AI discovery</span>}<span className="badge">{c.status}</span></div>
             <div className="muted small">{c.department_id ? depName.get(c.department_id) : ""}{c.due_on ? ` · due ${c.due_on}` : ""}</div>
+            {c.interview_mode === "discovery" ? (
+              <>
+                <p className="small muted">Everyone in the company gets this conversation automatically the next time they open the app — no assignment needed.
+                  {" "}{mine.filter((a) => sessOf.get(a.id)?.status === "submitted").length} submitted · {mine.filter((a) => ["in_progress", "reopened"].includes(sessOf.get(a.id)?.status ?? "")).length} in progress · {mine.filter((a) => !sessOf.get(a.id)).length} not started.</p>
+                {mine.length > 0 && (
+                  <div className="table-wrap"><table className="wrap" data-testid="discovery-progress"><thead><tr><th>Person</th><th>Status</th><th>Where they are</th><th>Activities found</th></tr></thead><tbody>
+                    {mine.map((a) => {
+                      const s = sessOf.get(a.id); const pr = s ? profOf.get(s.id) : undefined; const pc = s ? procsOf.get(s.id) : undefined;
+                      return (
+                        <tr key={a.id}>
+                          <td>{s ? <Link href={`/c/${companyId}/work/${s.id}`} title="What we understood">{memberLabel.get(a.respondent_membership_id) ?? "Member"}</Link> : memberLabel.get(a.respondent_membership_id) ?? "Member"}</td>
+                          <td>{!s ? "Not started" : s.status === "submitted" ? "Submitted" : "In progress"}</td>
+                          <td className="small">{pr ? `${STAGE[pr.stage] ?? pr.stage}${pr.inventory_confirmed ? " · list confirmed" : ""}` : "—"}</td>
+                          <td className="small">{pc?.n ? `${pc.n} · ${Math.round(pc.sum / pc.n)}% detail${pc.linked ? ` · ${pc.linked} in catalogue` : ""}` : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody></table></div>
+                )}
+              </>
+            ) : <>
             {mine.length > 0 && (
               <ul className="small">
                 {mine.map((a) => <li key={a.id}>{memberLabel.get(a.respondent_membership_id) ?? "Member"} — {a.status.replace("_", " ")}
@@ -98,6 +134,7 @@ export default async function DiscoveryPage({ params, searchParams }: {
                 </select></div>
               <div style={{ alignSelf: "end" }}><button type="submit" disabled={!c.department_id}>Assign interview</button></div>
             </form>
+            </>}
           </div>
         );
       })}
