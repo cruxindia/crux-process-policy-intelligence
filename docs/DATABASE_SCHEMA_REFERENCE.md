@@ -1,13 +1,141 @@
 # Database Schema Reference
 
-**Generated** 2026-11-11T12:47Z from a clean install of `supabase/migrations` (PPI-001…018) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
+**Generated** 2026-11-13T10:40Z from a clean install of `supabase/migrations` (PPI-001…031) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
 
-Summary: **49 tables**, **2 views**, **118 RLS policies** in `public`, **66 private helper functions**. All tables RLS-enabled. Same migrations applied to Supabase dev `pahzxpileudulljgaciw` (PG 17).
+Summary: **68 tables**, **3 views**, **142 RLS policies** in `public`, **78 private helper functions**. All tables RLS-enabled. Same migrations applied to Supabase dev `pahzxpileudulljgaciw` (PG 17).
+
+### `agent_roles`
+RLS: enabled · Policies: `agent_roles_read` (SELECT)
+
+Triggers: agent_roles_guard, agent_roles_hash
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `team_id` | uuid | not null |
+| `code` | text | not null |
+| `version` | integer | not null |
+| `title` | text | not null |
+| `credentials` | text | not null |
+| `charter` | text | not null |
+| `charter_sha256` | text | not null |
+| `status` | text | not null |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, team_id) REFERENCES agent_teams(company_id, id)
+
+### `agent_teams`
+RLS: enabled · Policies: `agent_teams_read` (SELECT)
+
+Triggers: —
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `code` | text | not null |
+| `name` | text | not null |
+| `mission` | text | not null |
+| `sort_order` | smallint | not null |
+| `status` | text | not null |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+
+### `ai_connection_assignments`
+RLS: enabled · Policies: `aca_admin_ins` (INSERT), `aca_admin_read` (SELECT), `aca_admin_upd` (UPDATE)
+
+Triggers: audit_ai_connection_assignments
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `connection_id` | uuid | not null |
+| `department_id` | uuid |  |
+| `process_id` | uuid |  |
+| `interview_category` | text |  |
+| `active` | boolean | not null |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, connection_id) REFERENCES ai_provider_connections(company_id, id)
+- FOREIGN KEY (company_id, department_id) REFERENCES departments(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, process_id) REFERENCES processes(company_id, id)
+
+### `ai_jobs`
+RLS: enabled · Policies: `aj_read` (SELECT)
+
+Triggers: —
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `membership_id` | uuid |  |
+| `session_id` | uuid |  |
+| `process_id` | uuid |  |
+| `connection_id` | uuid |  |
+| `task_type` | text | not null |
+| `payload_ref` | jsonb | not null |
+| `priority` | smallint | not null |
+| `status` | text | not null |
+| `retry_count` | integer | not null |
+| `run_after` | timestamp with time zone | not null |
+| `idempotency_key` | text | not null |
+| `error_class` | text |  |
+| `created_at` | timestamp with time zone | not null |
+| `started_at` | timestamp with time zone |  |
+| `completed_at` | timestamp with time zone |  |
+
+Foreign keys:
+- FOREIGN KEY (company_id, connection_id) REFERENCES ai_provider_connections(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, membership_id) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id, process_id) REFERENCES discovered_processes(company_id, id)
+- FOREIGN KEY (company_id, session_id) REFERENCES interview_sessions(company_id, id)
+
+### `ai_provider_connections`
+RLS: enabled · Policies: `apc_admin_ins` (INSERT), `apc_admin_read` (SELECT), `apc_admin_upd` (UPDATE)
+
+Triggers: apc_limit, apc_updated, audit_ai_provider_connections
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `name` | text | not null |
+| `provider` | text | not null |
+| `policy_provider` | text | not null |
+| `gcp_project_id` | text |  |
+| `model` | text | not null |
+| `base_url` | text |  |
+| `priority` | smallint | not null |
+| `status` | text | not null |
+| `vault_secret_id` | uuid |  |
+| `key_set_at` | timestamp with time zone |  |
+| `health` | text | not null |
+| `last_tested_at` | timestamp with time zone |  |
+| `last_success_at` | timestamp with time zone |  |
+| `last_error_class` | text |  |
+| `last_error_at` | timestamp with time zone |  |
+| `cooldown_until` | timestamp with time zone |  |
+| `created_at` | timestamp with time zone | not null |
+| `updated_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, policy_provider) REFERENCES ai_provider_policies(company_id, provider)
 
 ### `ai_provider_policies`
 RLS: enabled · Policies: `app_read` (SELECT)
 
-Triggers: —
+Triggers: audit_ai_provider_policies
 
 | Column | Type | Null |
 |---|---|---|
@@ -20,8 +148,12 @@ Triggers: —
 | `status` | text | not null |
 | `notes` | text |  |
 | `created_at` | timestamp with time zone | not null |
+| `training_accepted_by_membership_id` | uuid |  |
+| `training_accepted_on` | date |  |
+| `training_acceptance_note` | text |  |
 
 Foreign keys:
+- FOREIGN KEY (company_id, training_accepted_by_membership_id) REFERENCES memberships(company_id, id)
 - FOREIGN KEY (company_id) REFERENCES companies(id)
 
 ### `ai_runs`
@@ -50,11 +182,13 @@ Triggers: ai_runs_guard, ai_runs_no_delete
 | `idempotency_key` | text |  |
 | `created_at` | timestamp with time zone | not null |
 | `finished_at` | timestamp with time zone |  |
+| `connection_id` | uuid |  |
 
 Foreign keys:
 - FOREIGN KEY (company_id) REFERENCES companies(id)
 - FOREIGN KEY (company_id, prompt_version_id) REFERENCES prompt_versions(company_id, id)
 - FOREIGN KEY (company_id, requested_by_membership_id) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id, connection_id) REFERENCES ai_provider_connections(company_id, id)
 
 ### `approval_decisions`
 RLS: enabled · Policies: `ad_insert` (INSERT), `ad_read` (SELECT)
@@ -165,10 +299,211 @@ Triggers: —
 Foreign keys:
 - FOREIGN KEY (company_id) REFERENCES companies(id)
 
+### `board_cases`
+RLS: enabled · Policies: `board_cases_read` (SELECT)
+
+Triggers: audit_board_cases, board_cases_no_delete, board_cases_updated
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `kind` | text | not null |
+| `doc_type` | text |  |
+| `title` | text | not null |
+| `brief` | text | not null |
+| `source_process_ids` | uuid[] | not null |
+| `classification` | text | not null |
+| `status` | text | not null |
+| `plan` | jsonb |  |
+| `next_step` | integer | not null |
+| `revision_rounds` | smallint | not null |
+| `last_error` | text |  |
+| `run_lock_until` | timestamp with time zone |  |
+| `created_by_membership_id` | uuid | not null |
+| `decided_by_membership_id` | uuid |  |
+| `decided_at` | timestamp with time zone |  |
+| `decision_note` | text |  |
+| `created_at` | timestamp with time zone | not null |
+| `updated_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, created_by_membership_id) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id, decided_by_membership_id) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+
+### `board_outputs`
+RLS: enabled · Policies: `board_outputs_read` (SELECT)
+
+Triggers: board_outputs_append_only
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `case_id` | uuid | not null |
+| `version` | integer | not null |
+| `title` | text | not null |
+| `body_md` | text | not null |
+| `dissent` | text |  |
+| `audit_verdict` | text |  |
+| `audit_notes` | text |  |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, case_id) REFERENCES board_cases(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+
+### `board_turns`
+RLS: enabled · Policies: `board_turns_read` (SELECT)
+
+Triggers: board_turns_append_only
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `case_id` | uuid | not null |
+| `seq` | integer | not null |
+| `step` | integer | not null |
+| `role_id` | uuid | not null |
+| `role_code` | text | not null |
+| `team_code` | text | not null |
+| `kind` | text | not null |
+| `addressed_to` | text[] | not null |
+| `summary` | text | not null |
+| `content` | text | not null |
+| `key_points` | text[] | not null |
+| `citations` | text[] | not null |
+| `verdict` | text |  |
+| `ai_run_id` | uuid |  |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, ai_run_id) REFERENCES ai_runs(company_id, id)
+- FOREIGN KEY (company_id, case_id) REFERENCES board_cases(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, role_id) REFERENCES agent_roles(company_id, id)
+
+### `catalogue_classification_requests`
+RLS: enabled · Policies: `catalogue_requests_read` (SELECT)
+
+Triggers: audit_catalogue_requests, catalogue_requests_no_delete
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `item_id` | uuid | not null |
+| `from_class` | text | not null |
+| `to_class` | text | not null |
+| `basis` | text |  |
+| `basis_reference` | text |  |
+| `reason` | text | not null |
+| `requested_by` | uuid | not null |
+| `requested_at` | timestamp with time zone | not null |
+| `status` | text | not null |
+| `decided_by` | uuid |  |
+| `decided_at` | timestamp with time zone |  |
+| `decision_note` | text |  |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, item_id) REFERENCES catalogue_items(company_id, id)
+
+### `catalogue_functions`
+RLS: enabled · Policies: `catalogue_functions_read` (SELECT)
+
+Triggers: audit_catalogue_functions, catalogue_functions_no_delete, catalogue_functions_updated
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `code` | text | not null |
+| `name` | text | not null |
+| `description` | text |  |
+| `sort_order` | smallint | not null |
+| `department_id` | uuid |  |
+| `status` | text | not null |
+| `source` | text | not null |
+| `created_at` | timestamp with time zone | not null |
+| `updated_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, department_id) REFERENCES departments(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+
+### `catalogue_item_sources`
+RLS: enabled · Policies: `catalogue_sources_read` (SELECT)
+
+Triggers: audit_catalogue_sources
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `item_id` | uuid | not null |
+| `discovered_process_id` | uuid | not null |
+| `method` | text | not null |
+| `linked_by` | uuid | not null |
+| `linked_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, discovered_process_id) REFERENCES discovered_processes(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, item_id) REFERENCES catalogue_items(company_id, id)
+
+### `catalogue_items`
+RLS: enabled · Policies: `catalogue_items_read` (SELECT)
+
+Triggers: audit_catalogue_items, catalogue_items_no_delete, catalogue_items_updated
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `kind` | text | not null |
+| `code` | text | not null |
+| `title` | text | not null |
+| `description` | text |  |
+| `function_id` | uuid | not null |
+| `ownership_note` | text |  |
+| `source` | text | not null |
+| `status` | text | not null |
+| `classification` | text | not null |
+| `basis` | text |  |
+| `basis_reference` | text |  |
+| `classification_reason` | text |  |
+| `classified_by` | uuid |  |
+| `classified_at` | timestamp with time zone |  |
+| `approved_by` | uuid |  |
+| `process_status` | text | not null |
+| `process_note` | text |  |
+| `document_status` | text | not null |
+| `document_note` | text |  |
+| `process_id` | uuid |  |
+| `discovered_process_id` | uuid |  |
+| `board_case_id` | uuid |  |
+| `document_id` | uuid |  |
+| `status_updated_by` | uuid |  |
+| `status_updated_at` | timestamp with time zone |  |
+| `created_by` | uuid |  |
+| `created_at` | timestamp with time zone | not null |
+| `updated_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, board_case_id) REFERENCES board_cases(company_id, id)
+- FOREIGN KEY (company_id, discovered_process_id) REFERENCES discovered_processes(company_id, id)
+- FOREIGN KEY (company_id, document_id) REFERENCES documents(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, function_id) REFERENCES catalogue_functions(company_id, id)
+- FOREIGN KEY (company_id, process_id) REFERENCES processes(company_id, id)
+
 ### `clarification_responses`
 RLS: enabled · Policies: `cr_insert` (INSERT), `cr_read` (SELECT)
 
-Triggers: audit_clarification_responses, clarification_responses_after, clarification_responses_append_only, clarification_responses_before
+Triggers: audit_clarification_responses, clarification_responses_after, clarification_responses_append_only, clarification_responses_before, clarification_responses_notify
 
 | Column | Type | Null |
 |---|---|---|
@@ -236,8 +571,34 @@ Triggers: companies_updated
 | `status` | text | not null |
 | `created_at` | timestamp with time zone | not null |
 | `updated_at` | timestamp with time zone | not null |
+| `ai_connection_limit` | smallint | not null |
+| `catalogue_settings` | jsonb | not null |
 
 
+
+### `company_join_links`
+RLS: enabled · Policies: `cjl_read` (SELECT), `cjl_update` (UPDATE)
+
+Triggers: —
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `label` | text | not null |
+| `token_sha256` | text | not null |
+| `campaign_id` | uuid | not null |
+| `department_id` | uuid | not null |
+| `status` | text | not null |
+| `max_per_day` | integer | not null |
+| `created_by_membership_id` | uuid |  |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, campaign_id) REFERENCES interview_campaigns(company_id, id)
+- FOREIGN KEY (company_id, created_by_membership_id) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id, department_id) REFERENCES departments(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
 
 ### `departments`
 RLS: enabled · Policies: `departments_read` (SELECT), `departments_update` (UPDATE), `departments_write` (INSERT)
@@ -260,10 +621,93 @@ Foreign keys:
 - FOREIGN KEY (company_id) REFERENCES companies(id)
 - FOREIGN KEY (company_id, parent_department_id) REFERENCES departments(company_id, id)
 
+### `discovered_process_flows`
+RLS: enabled · Policies: `dpf_read` (SELECT)
+
+Triggers: dpf_append_only
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `process_id` | uuid | not null |
+| `version` | integer | not null |
+| `flow` | jsonb | not null |
+| `ai_run_id` | uuid | not null |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, ai_run_id) REFERENCES ai_runs(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, process_id) REFERENCES discovered_processes(company_id, id)
+
+### `discovered_processes`
+RLS: enabled · Policies: `dpr_read` (SELECT)
+
+Triggers: audit_discovered_processes, dpr_no_delete
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `session_id` | uuid | not null |
+| `membership_id` | uuid | not null |
+| `process_key` | text | not null |
+| `name` | text | not null |
+| `purpose` | text |  |
+| `involvement` | text |  |
+| `owner_text` | text |  |
+| `importance` | text |  |
+| `frequency` | text |  |
+| `volume` | text |  |
+| `departments` | text[] | not null |
+| `status` | text | not null |
+| `completeness` | smallint | not null |
+| `coverage` | jsonb | not null |
+| `flow` | jsonb | not null |
+| `flow_version` | integer | not null |
+| `linked_process_id` | uuid |  |
+| `first_ai_run_id` | uuid |  |
+| `last_ai_run_id` | uuid |  |
+| `created_at` | timestamp with time zone | not null |
+| `updated_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, first_ai_run_id) REFERENCES ai_runs(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, last_ai_run_id) REFERENCES ai_runs(company_id, id)
+- FOREIGN KEY (company_id, linked_process_id) REFERENCES processes(company_id, id)
+- FOREIGN KEY (company_id, membership_id) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id, session_id) REFERENCES interview_sessions(company_id, id)
+
+### `discovery_profiles`
+RLS: enabled · Policies: `dp_read` (SELECT)
+
+Triggers: —
+
+| Column | Type | Null |
+|---|---|---|
+| `company_id` | uuid | not null |
+| `session_id` | uuid | not null |
+| `membership_id` | uuid | not null |
+| `profile` | jsonb | not null |
+| `responsibilities` | jsonb | not null |
+| `inventory_confirmed` | boolean | not null |
+| `stage` | text | not null |
+| `focus_process_key` | text |  |
+| `last_ai_run_id` | uuid |  |
+| `updated_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, last_ai_run_id) REFERENCES ai_runs(company_id, id)
+- FOREIGN KEY (company_id, membership_id) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id, session_id) REFERENCES interview_sessions(company_id, id)
+
 ### `dispute_decisions`
 RLS: enabled · Policies: `dd_insert` (INSERT), `dd_read` (SELECT)
 
-Triggers: audit_dispute_decisions, dispute_decisions_after, dispute_decisions_append_only, dispute_decisions_guard
+Triggers: audit_dispute_decisions, dispute_decisions_after, dispute_decisions_append_only, dispute_decisions_guard, dispute_decisions_notify
 
 | Column | Type | Null |
 |---|---|---|
@@ -283,7 +727,7 @@ Foreign keys:
 ### `dispute_positions`
 RLS: enabled · Policies: `dp_insert` (INSERT), `dp_read` (SELECT)
 
-Triggers: audit_dispute_positions, dispute_positions_append_only, dispute_positions_guard
+Triggers: audit_dispute_positions, dispute_positions_append_only, dispute_positions_guard, dispute_positions_notify
 
 | Column | Type | Null |
 |---|---|---|
@@ -306,7 +750,7 @@ Foreign keys:
 ### `disputes`
 RLS: enabled · Policies: `ds_insert` (INSERT), `ds_read` (SELECT), `ds_update` (UPDATE)
 
-Triggers: audit_disputes, disputes_guard, disputes_updated
+Triggers: audit_disputes, disputes_guard, disputes_notify, disputes_updated
 
 | Column | Type | Null |
 |---|---|---|
@@ -522,6 +966,27 @@ Foreign keys:
 - FOREIGN KEY (company_id, process_id) REFERENCES processes(company_id, id)
 - FOREIGN KEY (company_id, uploaded_by_membership_id) REFERENCES memberships(company_id, id)
 
+### `interview_answer_analyses`
+RLS: enabled · Policies: `iaa_read` (SELECT)
+
+Triggers: iaa_append_only
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `session_id` | uuid | not null |
+| `answer_id` | uuid | not null |
+| `ai_run_id` | uuid | not null |
+| `understood_answer` | text | not null |
+| `analysis` | jsonb | not null |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, ai_run_id) REFERENCES ai_runs(company_id, id)
+- FOREIGN KEY (company_id, answer_id) REFERENCES interview_answers(company_id, id)
+- FOREIGN KEY (company_id, session_id) REFERENCES interview_sessions(company_id, id)
+
 ### `interview_answer_drafts`
 RLS: enabled · Policies: `iad_owner` (ALL)
 
@@ -608,12 +1073,64 @@ Triggers: interview_campaigns_updated
 | `due_on` | date |  |
 | `created_at` | timestamp with time zone | not null |
 | `updated_at` | timestamp with time zone | not null |
+| `question_scopes` | text[] |  |
+| `interview_mode` | text | not null |
+| `ai_provider` | text |  |
+| `max_ai_questions` | integer | not null |
 
 Foreign keys:
 - FOREIGN KEY (company_id, department_id) REFERENCES departments(company_id, id)
 - FOREIGN KEY (company_id) REFERENCES companies(id)
 - FOREIGN KEY (company_id, owner_membership_id) REFERENCES memberships(company_id, id)
 - FOREIGN KEY (company_id, process_id) REFERENCES processes(company_id, id)
+
+### `interview_clarifications`
+RLS: enabled · Policies: `icl_read` (SELECT)
+
+Triggers: audit_interview_clarifications, icl_guard, icl_no_delete
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `session_id` | uuid | not null |
+| `earlier_answer_id` | uuid | not null |
+| `later_answer_id` | uuid | not null |
+| `description` | text | not null |
+| `question_id` | uuid |  |
+| `status` | text | not null |
+| `raised_by_ai_run_id` | uuid | not null |
+| `resolved_by_ai_run_id` | uuid |  |
+| `resolution_note` | text |  |
+| `created_at` | timestamp with time zone | not null |
+| `resolved_at` | timestamp with time zone |  |
+
+Foreign keys:
+- FOREIGN KEY (company_id, earlier_answer_id) REFERENCES interview_answers(company_id, id)
+- FOREIGN KEY (company_id, later_answer_id) REFERENCES interview_answers(company_id, id)
+- FOREIGN KEY (company_id, question_id) REFERENCES interview_questions(company_id, id)
+- FOREIGN KEY (company_id, raised_by_ai_run_id) REFERENCES ai_runs(company_id, id)
+- FOREIGN KEY (company_id, resolved_by_ai_run_id) REFERENCES ai_runs(company_id, id)
+- FOREIGN KEY (company_id, session_id) REFERENCES interview_sessions(company_id, id)
+
+### `interview_dimension_coverage`
+RLS: enabled · Policies: `idc_read` (SELECT)
+
+Triggers: —
+
+| Column | Type | Null |
+|---|---|---|
+| `company_id` | uuid | not null |
+| `session_id` | uuid | not null |
+| `dimension` | text | not null |
+| `status` | text | not null |
+| `note` | text |  |
+| `ai_run_id` | uuid |  |
+| `updated_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, ai_run_id) REFERENCES ai_runs(company_id, id)
+- FOREIGN KEY (company_id, session_id) REFERENCES interview_sessions(company_id, id)
 
 ### `interview_questions`
 RLS: enabled · Policies: `iq_insert` (INSERT), `iq_read` (SELECT)
@@ -1125,4 +1642,3 @@ Triggers: —
 
 Foreign keys:
 - FOREIGN KEY (id) REFERENCES auth.users(id)
-

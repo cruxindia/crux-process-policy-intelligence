@@ -3,9 +3,10 @@
 // The browser only reads results through RLS. Keys stay server-side; logs hold metadata only.
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { GeminiProvider, OllamaProvider, providerFromEnv, type AiProvider } from "../_shared/ai-provider.ts";
-import { BOARD_PROMPT_KEY, BOARD_SCHEMA, BOARD_SYSTEM, MAX_REVISIONS, buildPlan, buildSources, buildTurnMessage, lintDocument, preservationIssues, revisionSteps, validateTurn,
+import { BOARD_PROMPT_KEY, BOARD_SCHEMA, BOARD_SYSTEM, MAX_REVISIONS, buildPlan, buildSources, buildTurnMessage, descriptionsByPerson, lintDocument, nameTokens, preservationIssues, redactNames, revisionSteps, validateTurn,
   type CaseKind, type DocType, type PriorTurn, type Step } from "../_shared/board.ts";
 import { cooldownFor, rankConnections, type Conn } from "../_shared/routing.ts";
+import { compareDescriptions, comparisonAnnex } from "../_shared/compare.ts";
 
 const ALLOWED = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://crux-ppi.netlify.app,http://localhost:3000").split(",");
 const cors = (o: string | null) => ({ "access-control-allow-origin": o && ALLOWED.includes(o) ? o : ALLOWED[0]!,
@@ -100,7 +101,7 @@ async function runCase(svc: Db, co: string, caseId: string) {
 
   // Sources: the brief + each selected discovered process (facts only; employee names are never included).
   const { data: procs } = cs.source_process_ids.length
-    ? await svc.from("discovered_processes").select("id, session_id, name, purpose, frequency, volume, involvement, owner_text, departments, flow, coverage")
+    ? await svc.from("discovered_processes").select("id, session_id, membership_id, name, purpose, frequency, volume, involvement, owner_text, departments, flow, coverage")
         .eq("company_id", co).in("id", cs.source_process_ids)
     : { data: [] };
   const sessions = [...new Set((procs ?? []).map((p: any) => p.session_id))];
@@ -111,8 +112,20 @@ async function runCase(svc: Db, co: string, caseId: string) {
   const factsBy = new Map<string, string[]>();
   for (const a of analyses ?? []) factsBy.set(a.session_id, [...(factsBy.get(a.session_id) ?? []), ...((a.analysis?.identified_facts ?? []) as string[])]);
   const roleBy = new Map((profs ?? []).map((p: any) => [p.session_id, [p.profile?.designation?.value, p.profile?.department?.value].filter(Boolean).join(", ") || null]));
-  const sources = buildSources(cs.brief ?? "", (procs ?? []).map((p: any) => ({ ...p, facts: (factsBy.get(p.session_id) ?? []).slice(-40), role: roleBy.get(p.session_id) ?? null })));
+  // Interviewees are never named to the board (flow actors and owners often carry their names): redact before building sources.
+  const mids = [...new Set((procs ?? []).map((p: any) => p.membership_id).filter(Boolean))];
+  const { data: ms } = mids.length ? await svc.from("memberships").select("user_id").eq("company_id", co).in("id", mids) : { data: [] };
+  const { data: ups } = (ms ?? []).length ? await svc.from("user_profiles").select("display_name").in("id", (ms ?? []).map((m: any) => m.user_id)) : { data: [] };
+  const names = nameTokens((ups ?? []).map((u: any) => u.display_name));
+  const red = (t: string | null) => redactNames(t, names);
+  const cleaned = (procs ?? []).map((p: any) => ({ ...p, owner_text: red(p.owner_text), involvement: red(p.involvement), purpose: red(p.purpose),
+    flow: p.flow ? { ...p.flow, nodes: (p.flow.nodes ?? []).map((n: any) => ({ ...n, label: red(n.label) ?? "", actor: n.actor ? red(n.actor) ?? undefined : undefined })) } : null,
+    facts: (factsBy.get(p.session_id) ?? []).slice(-40).map((f: string) => red(f) ?? ""), role: roleBy.get(p.session_id) ?? null }));
+  const sources = buildSources(cs.brief ?? "", cleaned);
   const refs = sources.map((s) => s.ref);
+  const people = new Set((procs ?? []).map((p: any) => p.session_id)).size;   // different interviews = different people's accounts
+  // The comparison table is deterministic and appended to the final document, so the process owner sees who said what even if the AI's prose is wrong.
+  const annex = people > 1 ? comparisonAnnex(compareDescriptions(descriptionsByPerson(cleaned)), people) : "";
   const lead = plan[0]!.role;
 
   let next: number = cs.next_step; let revisions: number = cs.revision_rounds;
@@ -133,8 +146,8 @@ async function runCase(svc: Db, co: string, caseId: string) {
     const lastAudit = [...(turnRows ?? [])].reverse().find((t: any) => t.kind === "audit");
     const feedback = step.kind === "consolidation" && lastAudit?.verdict === "revise" ? lastAudit.content : null;
     const draft = outRows?.[0] ? { title: outRows[0].title, body_md: outRows[0].body_md } : null;
-    const checks = step.kind === "audit" && draft ? lintDocument(draft.body_md, "formatted") : [];
-    const userMsg = buildTurnMessage({ kind: cs.kind, docType: cs.doc_type, title: cs.title, brief: cs.brief ?? "", classification: cs.classification },
+    const checks = step.kind === "audit" && draft ? lintDocument(draft.body_md, "formatted", people, names) : [];
+    const userMsg = buildTurnMessage({ kind: cs.kind, docType: cs.doc_type, title: cs.title, brief: cs.brief ?? "", classification: cs.classification, people },
       step, sources, prior, draft, feedback, checks);
     const system = `${BOARD_SYSTEM}\n\nYOUR CHARTER (${role.code} v${role.version} — ${role.title})\n${role.charter}`;
 
@@ -173,7 +186,7 @@ async function runCase(svc: Db, co: string, caseId: string) {
         const v = validateTurn(r.text, step, refs, [...roles.keys()]);
         if (!v.ok) { lastErr = v.errors.join("; "); log("invalid_output", { case: caseId, step: next, errors: v.errors }); note = `\n\nYour previous output was rejected: ${v.errors.join("; ")}. Return valid JSON matching the schema.`; continue; }
         // Deterministic document checks: one corrective retry; if they still fail, the audit sees them as confirmed defects.
-        const lint = v.turn.document ? lintDocument(v.turn.document.body_md, step.kind === "format" ? "formatted" : "draft") : [];
+        const lint = v.turn.document ? lintDocument(v.turn.document.body_md, step.kind === "format" ? "formatted" : "draft", people, names) : [];
         // Formatting may not lose content (observed 13-Nov-2026: an agreement's 26 clauses collapsed into 9 policy sections).
         const lost = step.kind === "format" && v.turn.document && draft ? preservationIssues(draft.body_md, v.turn.document.body_md) : [];
         if (lost.length && attempt === 0) { log("preservation_retry", { case: caseId, step: next, issues: lost.length }); note = `\n\nYour formatted document was rejected because it lost content: ${lost.join(" ")} Start again from current_draft and keep every section and clause.`; continue; }
@@ -219,7 +232,8 @@ async function runCase(svc: Db, co: string, caseId: string) {
         } else if (next === plan.length - 1) {
           const { data: last } = await svc.from("board_outputs").select("version, title, body_md").eq("company_id", co).eq("case_id", caseId).order("version", { ascending: false }).limit(1);
           const { data: cons } = await svc.from("board_outputs").select("dissent").eq("company_id", co).eq("case_id", caseId).not("dissent", "is", null).order("version", { ascending: false }).limit(1);
-          if (last?.[0]) await svc.from("board_outputs").insert({ company_id: co, case_id: caseId, version: last[0].version + 1, title: last[0].title, body_md: last[0].body_md,
+          if (last?.[0]) await svc.from("board_outputs").insert({ company_id: co, case_id: caseId, version: last[0].version + 1, title: last[0].title,
+            body_md: annex && !last[0].body_md.includes("## Annex — How the") ? last[0].body_md + annex : last[0].body_md,
             dissent: cons?.[0]?.dissent ?? null, audit_verdict: t.verdict, audit_notes: t.audit_notes });
         }
       }

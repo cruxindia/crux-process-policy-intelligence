@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireMembership } from "@/lib/session";
 import { memberNames } from "@/lib/names";
 import { BASIS_LABEL, CLASS_LABEL, DOC_STATUS_LABEL, GAP_LABEL, GAP_ORDER, GAP_TONE, KIND_LABEL, PROCESS_LABEL } from "@/lib/catalogue-ui";
-import { addItem, decideClassification, mapFunction } from "./actions";
+import { addItem, decideClassification, linkSource, mapFunction } from "./actions";
 
 export default async function CataloguePage({ params, searchParams }: {
   params: Promise<{ companyId: string }>; searchParams: Promise<Record<string, string | undefined>>;
@@ -12,7 +12,8 @@ export default async function CataloguePage({ params, searchParams }: {
   const { supabase, permissions } = await requireMembership(companyId);
   const canManage = permissions.has("catalogue.manage");
   const canApprove = permissions.has("catalogue.approve");
-  const tab = sp.tab === "functions" ? "functions" : sp.tab === "approvals" ? "approvals" : "items";
+  const canLink = canManage || permissions.has("process.edit");
+  const tab = sp.tab === "functions" ? "functions" : sp.tab === "approvals" ? "approvals" : sp.tab === "inbox" ? "inbox" : "items";
 
   const [{ data: items }, { data: fns }, { data: depts }, { data: pending }] = await Promise.all([
     supabase.from("catalogue_gaps").select("id, kind, code, title, function_id, function_name, classification, pending_class, process_status, document_status, gap_type, status")
@@ -22,6 +23,12 @@ export default async function CataloguePage({ params, searchParams }: {
     supabase.from("catalogue_classification_requests").select("id, item_id, from_class, to_class, basis, basis_reference, reason, requested_by, requested_at")
       .eq("company_id", companyId).eq("status", "pending").order("requested_at"),
   ]);
+  const [{ data: srcCounts }, { data: unmatched }] = await Promise.all([
+    supabase.rpc("catalogue_source_counts", { p_company: companyId }),
+    supabase.rpc("catalogue_match_suggestions", { p_company: companyId }),
+  ]);
+  const contributors = new Map<string, number>((srcCounts ?? []).map((r: { item_id: string; contributors: number }) => [r.item_id, r.contributors]));
+  const inbox = (unmatched ?? []) as { discovered_process_id: string; process_name: string; session_id: string; item_id: string | null; item_code: string | null; item_title: string | null; score: number | null }[];
   const all = (items ?? []).filter((i) => i.status !== "retired");
   const counts = new Map<string, number>();
   for (const i of all) counts.set(i.gap_type, (counts.get(i.gap_type) ?? 0) + 1);
@@ -59,7 +66,8 @@ export default async function CataloguePage({ params, searchParams }: {
       <nav className="tabs" style={{ margin: "16px 0" }}>
         <Link href={`/c/${companyId}/catalogue`} className={tab === "items" ? "on" : ""}>Items ({all.length})</Link>{" · "}
         <Link href={`/c/${companyId}/catalogue?tab=functions`} className={tab === "functions" ? "on" : ""}>Functions ({fns?.length ?? 0})</Link>{" · "}
-        <Link href={`/c/${companyId}/catalogue?tab=approvals`} className={tab === "approvals" ? "on" : ""} data-testid="approvals-tab">Waiting for approval ({pending?.length ?? 0})</Link>
+        <Link href={`/c/${companyId}/catalogue?tab=approvals`} className={tab === "approvals" ? "on" : ""} data-testid="approvals-tab">Waiting for approval ({pending?.length ?? 0})</Link>{" · "}
+        <Link href={`/c/${companyId}/catalogue?tab=inbox`} className={tab === "inbox" ? "on" : ""} data-testid="inbox-tab">From interviews — not yet matched ({inbox.length})</Link>
       </nav>
 
       {tab === "items" && (<>
@@ -73,7 +81,7 @@ export default async function CataloguePage({ params, searchParams }: {
         </form>
         <div className="table-wrap">
           <table className="wrap" data-testid="catalogue-table">
-            <thead><tr><th>Item</th><th>Function</th><th>Classification</th><th>Done today?</th><th>Document</th><th>Status</th></tr></thead>
+            <thead><tr><th>Item</th><th>Function</th><th>Classification</th><th>Done today?</th><th title="People whose interview describes this work">Described by</th><th>Document</th><th>Status</th></tr></thead>
             <tbody>
               {shown.map((i) => (
                 <tr key={i.id}>
@@ -81,11 +89,12 @@ export default async function CataloguePage({ params, searchParams }: {
                   <td className="small">{i.function_name}</td>
                   <td>{CLASS_LABEL[i.classification]}{i.pending_class && <div className="small muted">→ {CLASS_LABEL[i.pending_class]} (awaiting approval)</div>}</td>
                   <td className="small">{PROCESS_LABEL[i.process_status]}</td>
+                  <td className="num small">{contributors.get(i.id) ?? "—"}</td>
                   <td className="small">{DOC_STATUS_LABEL[i.document_status]}</td>
                   <td><span className={`badge ${GAP_TONE[i.gap_type] ?? ""}`}>{GAP_LABEL[i.gap_type]}</span></td>
                 </tr>
               ))}
-              {!shown.length && <tr><td colSpan={6} className="muted">Nothing matches.</td></tr>}
+              {!shown.length && <tr><td colSpan={7} className="muted">Nothing matches.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -125,6 +134,39 @@ export default async function CataloguePage({ params, searchParams }: {
                   </form>) : <span className="small">{f.department_id ? deptName.get(f.department_id) : "Not mapped yet"}</span>}</td>
               </tr>))}</tbody>
           </table></div>
+        </>
+      )}
+
+      {tab === "inbox" && (
+        <>
+          <p className="muted small">
+            Each person describes their work in their own interview. The company keeps <strong>one</strong> item per process, SOP or policy:
+            link every description of the same work to that item, and its document is drafted from all of them together — agreed steps once,
+            differences listed for the process owner to settle. Suggestions match by name and department; a person always confirms.
+          </p>
+          {!inbox.length && <p className="muted">Every interview description you can see is matched to a company item.</p>}
+          {inbox.length > 0 && (
+            <div className="table-wrap"><table className="wrap" data-testid="inbox-table">
+              <thead><tr><th>Described in an interview as</th><th>Suggested company item</th>{canLink && <th>Link to</th>}</tr></thead>
+              <tbody>{inbox.slice(0, 100).map((d) => (
+                <tr key={d.discovered_process_id} data-testid="inbox-row">
+                  <td><Link href={`/c/${companyId}/work/${d.session_id}#p-${d.discovered_process_id}`}>{d.process_name}</Link></td>
+                  <td className="small">{d.item_id ? <><Link href={`/c/${companyId}/catalogue/${d.item_id}`}>{d.item_title}</Link> <span className="muted">{d.item_code} · match {Math.round((d.score ?? 0) * 100)}%</span></> : <span className="muted">No close match — choose one or add a new item</span>}</td>
+                  {canLink && (
+                    <td>
+                      <form action={linkSource.bind(null, companyId)} className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                        <input type="hidden" name="discovered" value={d.discovered_process_id} />
+                        <input type="hidden" name="method" value={d.item_id ? "suggested" : "manual"} />
+                        <select name="item" defaultValue={d.item_id ?? ""} aria-label={`Company item for ${d.process_name}`} required style={{ maxWidth: 260 }}>
+                          <option value="" disabled>Choose…</option>
+                          {all.filter((i) => i.kind !== "policy").map((i) => <option key={i.id} value={i.id}>{i.code} · {i.title}</option>)}
+                        </select>
+                        <button type="submit" className="secondary">Link</button>
+                      </form>
+                    </td>)}
+                </tr>))}</tbody>
+            </table></div>)}
+          {inbox.length > 100 && <p className="muted small">Showing the first 100 of {inbox.length}.</p>}
         </>
       )}
 

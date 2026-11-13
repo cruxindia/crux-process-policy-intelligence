@@ -179,9 +179,9 @@ BOUNDARIES: Do not rewrite the document; report. Be strict: when in doubt, 'revi
       from public.agent_teams t where t.company_id = v_co and t.code = 'audit'
     on conflict (company_id, code, version) do nothing;
     insert into public.prompt_versions (company_id, prompt_key, version, purpose, template_sha256, output_schema, status)
-    values (v_co, 'board.turn', 3, 'Expert review board turn: one expert proposes, critiques, consolidates, formats or audits, within its charter and grounded in numbered sources',
-            'd74e2038ac1198c79518de1d32be198dcd25c15b5a785b6f14ff709d6589b931', '{"see":"supabase/functions/_shared/board.ts BOARD_SCHEMA"}'::jsonb, 'active')
+    values (v_co, 'board.turn', 4, 'Expert review board turn: one expert proposes, critiques, consolidates, formats or audits, within its charter and grounded in numbered sources',
+            '671e107fc8d9ff07caf912a967ca8f257bb56c003808450274074c2246701565', '{"see":"supabase/functions/_shared/board.ts BOARD_SCHEMA"}'::jsonb, 'active')
     on conflict (company_id, prompt_key, version) do nothing;
-    update public.prompt_versions set status = 'retired' where company_id = v_co and prompt_key = 'board.turn' and version < 3 and status = 'active';
+    update public.prompt_versions set status = 'retired' where company_id = v_co and prompt_key = 'board.turn' and version < 4 and status = 'active';
   end loop;
 end $setup$;

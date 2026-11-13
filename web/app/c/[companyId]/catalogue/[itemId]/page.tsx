@@ -4,7 +4,8 @@ import { requireMembership } from "@/lib/session";
 import { fmtDate, memberNames } from "@/lib/names";
 import { BASIS_LABEL, CLASS_HELP, CLASS_LABEL, DOC_STATUS_LABEL, GAP_LABEL, GAP_TONE, KIND_LABEL, PROCESS_LABEL } from "@/lib/catalogue-ui";
 import { STATUS_LABEL as BOARD_STATUS } from "@/lib/board-ui";
-import { decideClassification, draftWithBoard, requestClassification, setStatus } from "../actions";
+import { compareDescriptions, type DescStep } from "@/lib/compare";
+import { decideClassification, draftWithBoard, improveWithBoard, linkSource, requestClassification, setStatus, unlinkSource } from "../actions";
 
 export default async function CatalogueItemPage({ params, searchParams }: {
   params: Promise<{ companyId: string; itemId: string }>; searchParams: Promise<Record<string, string | undefined>>;
@@ -19,6 +20,7 @@ export default async function CatalogueItemPage({ params, searchParams }: {
   const canApprove = permissions.has("catalogue.approve");
   const canStatus = canManage || permissions.has("process.edit");
   const canDraft = permissions.has("document.draft") || permissions.has("org.manage");
+  const canReview = permissions.has("interview.review") || permissions.has("process.edit") || permissions.has("org.manage");
   const [{ data: history }, { data: dprocs }, { data: bcase }, { data: dept }] = await Promise.all([
     supabase.from("catalogue_classification_requests").select("*").eq("company_id", companyId).eq("item_id", itemId).order("requested_at", { ascending: false }),
     canStatus ? supabase.from("discovered_processes").select("id, name, session_id").eq("company_id", companyId).neq("status", "removed").order("name").limit(300)
@@ -26,8 +28,27 @@ export default async function CatalogueItemPage({ params, searchParams }: {
     it.board_case_id ? supabase.from("board_cases").select("id, status, title").eq("id", it.board_case_id).maybeSingle() : Promise.resolve({ data: null }),
     it.department_id ? supabase.from("departments").select("code, name").eq("id", it.department_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
+  const [{ data: srcRows }, { data: counts }] = await Promise.all([
+    supabase.from("catalogue_item_sources").select("discovered_process_id, method, linked_by, linked_at").eq("company_id", companyId).eq("item_id", itemId).order("linked_at"),
+    supabase.rpc("catalogue_source_counts", { p_company: companyId }),
+  ]);
+  const srcIds = (srcRows ?? []).map((r) => r.discovered_process_id as string);
+  const { data: srcProcs } = srcIds.length
+    ? await supabase.from("discovered_processes").select("id, name, session_id, membership_id, purpose, flow").eq("company_id", companyId).in("id", srcIds)
+    : { data: [] as { id: string; name: string; session_id: string; membership_id: string; purpose: string | null; flow: unknown }[] };
+  const procBy = new Map((srcProcs ?? []).map((d) => [d.id, d]));
+  // Who mentioned which step — computed, not AI (same function the expert board uses).
+  const persons = [...new Set((srcProcs ?? []).map((d) => d.session_id))];
+  const personSteps: DescStep[][] = persons.map((sid) => (srcProcs ?? []).filter((d) => d.session_id === sid).flatMap((d) =>
+    (((d.flow as { nodes?: { type: string; label: string; system?: string }[] } | null)?.nodes) ?? []).map((n) => ({ label: n.label, decision: n.type === "decision", system: n.system ?? null }))));
+  const matrix = persons.length > 1 ? compareDescriptions(personSteps) : [];
+  const totalSources = (counts ?? []).find((c: { item_id: string }) => c.item_id === itemId)?.contributors ?? 0;
+  const hiddenSources = Math.max(0, totalSources - srcIds.length);
+  const { data: linkedElsewhere } = canStatus ? await supabase.from("catalogue_item_sources").select("discovered_process_id").eq("company_id", companyId) : { data: [] };
+  const taken = new Set((linkedElsewhere ?? []).map((r) => r.discovered_process_id as string));
+  const linkable = (dprocs ?? []).filter((d) => !taken.has(d.id));
   const { names } = await memberNames(supabase, companyId);
-  const linked = (dprocs ?? []).find((d) => d.id === it.discovered_process_id);
+  const personName = persons.map((sid) => { const d = (srcProcs ?? []).find((x) => x.session_id === sid); return d ? names.get(d.membership_id) ?? "A member" : "A member"; });
   const pending = (history ?? []).find((h) => h.status === "pending");
 
   return (
@@ -46,14 +67,18 @@ export default async function CatalogueItemPage({ params, searchParams }: {
             <dt>Classification</dt><dd>{CLASS_LABEL[it.classification]}{it.basis && ` · ${BASIS_LABEL[it.basis] ?? it.basis}`}{it.basis_reference && ` — ${it.basis_reference}`}
               {it.classification_reason && <div className="muted">“{it.classification_reason}” — {names.get(it.classified_by ?? "") ?? "a member"}{it.approved_by && `, approved by ${names.get(it.approved_by) ?? "a member"}`}</div>}</dd>
             <dt>Done today?</dt><dd>{PROCESS_LABEL[it.process_status]}{it.process_note && <div className="muted">{it.process_note}</div>}
-              {linked && <div><Link href={`/c/${companyId}/work/${linked.session_id}#p-${linked.id}`}>From an interview: {linked.name}</Link></div>}</dd>
+              {totalSources > 0 && <div>Described in {totalSources} interview{totalSources === 1 ? "" : "s"} — see below</div>}</dd>
             <dt>Document</dt><dd>{DOC_STATUS_LABEL[it.document_status]}{it.document_note && <div className="muted">{it.document_note}</div>}
               {bcase && <div><Link href={`/c/${companyId}/board/${bcase.id}`}>Expert board draft — {BOARD_STATUS[bcase.status] ?? bcase.status}</Link></div>}</dd>
           </dl>
           {it.description && <p className="small">{it.description}</p>}
-          {canDraft && it.kind !== "process" && !bcase && it.classification !== "not_applicable" && (
+          {canDraft && !bcase && it.classification !== "not_applicable" && (
             <form action={draftWithBoard.bind(null, companyId, itemId)}><button type="submit" className="secondary">Draft it with the expert board</button>
-              <div className="muted small">Opens a drafting case with what is known about this item; facts not given stay as placeholders.</div></form>
+              <div className="muted small">One company document from {srcIds.length > 1 ? `all ${srcIds.length} descriptions below` : srcIds.length === 1 ? "the description below" : "what is known about this item"}; facts not given stay as placeholders.</div></form>
+          )}
+          {canReview && srcIds.length > 0 && (
+            <form action={improveWithBoard.bind(null, companyId, itemId)} style={{ marginTop: 8 }}><button type="submit" className="secondary">Ask the expert teams to improve this</button>
+              <div className="muted small">Reviews how the company does this work, from {srcIds.length === 1 ? "the description" : `all ${srcIds.length} descriptions`} — not one person&rsquo;s view.</div></form>
           )}
         </section>
 
@@ -100,10 +125,6 @@ export default async function CatalogueItemPage({ params, searchParams }: {
               <label htmlFor="process_status">Is this done today?</label>
               <select id="process_status" name="process_status" defaultValue={it.process_status}>{Object.entries(PROCESS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
               <label htmlFor="process_note">How (optional)</label><input id="process_note" name="process_note" defaultValue={it.process_note ?? ""} />
-              <label htmlFor="discovered_process">Described in an interview as (optional)</label>
-              <select id="discovered_process" name="discovered_process" defaultValue={it.discovered_process_id ?? ""}>
-                <option value="">—</option>{(dprocs ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
               <label htmlFor="document_status">Is it documented?</label>
               <select id="document_status" name="document_status" defaultValue={it.document_status}>{Object.entries(DOC_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
               <label htmlFor="document_note">Where / which document (optional)</label><input id="document_note" name="document_note" defaultValue={it.document_note ?? ""} />
@@ -111,6 +132,48 @@ export default async function CatalogueItemPage({ params, searchParams }: {
             </form>)}
         </section>
       </div>
+
+      <h2>What people said</h2>
+      <section data-testid="sources">
+        <p className="muted small">Everyone who describes this work in their interview is linked here. Drafts and improvement reviews use all of them together:
+          what everyone agrees on becomes the company procedure once; differences are listed for the process owner to settle.</p>
+        {!totalSources && <p className="muted">Nobody has described this in an interview yet.</p>}
+        {srcIds.length > 0 && (
+          <div className="table-wrap"><table className="wrap" data-testid="sources-table">
+            <thead><tr><th>Described as</th><th>By</th><th>Linked</th>{canStatus && <th></th>}</tr></thead>
+            <tbody>{(srcRows ?? []).map((r) => { const d = procBy.get(r.discovered_process_id); return (
+              <tr key={r.discovered_process_id}>
+                <td>{d ? <Link href={`/c/${companyId}/work/${d.session_id}#p-${d.id}`}>{d.name}</Link> : "Interview process"}{d?.purpose && <div className="small muted">{d.purpose}</div>}</td>
+                <td className="small">{d ? names.get(d.membership_id) ?? "a member" : "—"}</td>
+                <td className="small">{fmtDate(r.linked_at)}{r.method === "suggested" && " · from a suggestion"}</td>
+                {canStatus && <td><form action={unlinkSource.bind(null, companyId, itemId)}><input type="hidden" name="discovered" value={r.discovered_process_id} />
+                  <button type="submit" className="secondary small">Remove</button></form></td>}
+              </tr>); })}</tbody>
+          </table></div>)}
+        {matrix.length > 0 && (
+          <details className="card" open data-testid="side-by-side">
+            <summary><strong>Side by side — who does which step</strong> <span className="muted small">({matrix.filter((r) => !r.everyone).length} of {matrix.length} steps differ)</span></summary>
+            <p className="muted small">Computed by the platform from each person&rsquo;s own process map (not by the AI). Each row is one step of the work; a dash means that person
+              did not mention it. Rows marked <span className="badge part">differs</span> are for the process owner to settle. Matching is by wording — check rows that look merged or split.</p>
+            <div className="table-wrap"><table className="wrap small">
+              <thead><tr><th>#</th>{personName.map((n, k) => <th key={k}>{n}</th>)}<th></th></tr></thead>
+              <tbody>{matrix.map((r, k) => (
+                <tr key={k}><td className="num">{k + 1}</td>
+                  {r.steps.map((st, d) => <td key={d}>{st ? (st.decision ? <em>{st.label}</em> : st.label) : <span className="muted">—</span>}</td>)}
+                  <td>{r.everyone ? <span className="badge ok">all</span> : <span className="badge part">differs</span>}</td></tr>))}</tbody>
+            </table></div>
+          </details>)}
+        {hiddenSources > 0 && <p className="muted small">{hiddenSources} more description{hiddenSources === 1 ? " is" : "s are"} in interviews you cannot open; they are still part of this item.</p>}
+        {canStatus && linkable.length > 0 && (
+          <form action={linkSource.bind(null, companyId)} className="row card" style={{ gap: 6, flexWrap: "wrap" }} data-testid="link-source">
+            <input type="hidden" name="item" value={itemId} /><input type="hidden" name="back" value="item" />
+            <select name="discovered" required defaultValue="" aria-label="Interview description to add" style={{ maxWidth: 360 }}>
+              <option value="" disabled>Add an interview description…</option>
+              {linkable.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <button type="submit" className="secondary">Add to this item</button>
+          </form>)}
+      </section>
 
       <h2>Classification history</h2>
       {!history?.length ? <p className="muted">No classification yet.</p> : (

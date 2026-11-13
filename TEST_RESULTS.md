@@ -1,5 +1,27 @@
 # Test Results
 
+## Consolidation — many people, ONE company process/document, 13-Nov-2026
+
+Owner requirement: "multiple people … would be chatting, but only one document has to be made, considering inputs from all, validating". Synthetic tenant `E2E-SYNTH`, real Gemini (free tier, server key; the owner's keys were not used). No mocks.
+
+| Suite | Result | What it proves |
+|---|---|---|
+| DB local (`scripts/test-db.sh`) | **344/344**, 23 files | test 23 (17 assertions): employees cannot link or write sources; suggestion picks the right company process (department boost); two people's descriptions → one item; linking marks "done today"; a description belongs to exactly one item (move/move back); status form also records a source; members see the contributor count but only the sources from conversations they can read; employees cannot unlink; max 25 processes per case |
+| Unit (`node --test`) | **61/61** | per-person source labels; "Variations and open points" required when ≥2 people (lint, not overrulable); interviewee names redacted and linted; automatic comparison on the real synthetic data gives the true answer (leave check 1 & 3, address check 1 & 2, no step lost or duplicated); source codes in any bracket form rejected |
+| E2E UI (`web/e2e/consolidation.cjs`) | **13/13** | "From interviews" list with suggestions; three people's descriptions linked to ONE new item; computed side-by-side shows who does which step; "Described by 3"; ONE draft case carries all three; remove a description |
+| E2E live board (`RUN_BOARD=1`) | **17/17** | the board finishes; the document has "Variations and open points" with correct attributions; the computed comparison annex is appended; no interviewee names; no source codes in the text |
+| Regression `board-api.cjs` (board-ai v9) | **23/23** | agreement and improvement cases unchanged |
+| Regression `catalogue.cjs` | **17/17** | M1 unchanged |
+| Hosted | PPI-031 applied (version 20261113102502); prompt `board.turn` v4 active (`671e107f…`) for CRUX and E2E-SYNTH; board-ai v9 | verified by query; security advisors: no new class of finding |
+
+Defects found by our own live tests and fixed (D-080):
+- **v6:** the "Variations" section was missing and the AI audit passed it.
+- **v6 again:** once the section was added, it misattributed steps between people and turned one person's WhatsApp hand-off into "secure channels".
+- **v7:** a side-by-side list did not fix the attributions.
+- **v8:** who-said-what is now **computed**. It is the authoritative source for the board, it is appended as an annex, and the item page shows the same table.
+- **v8 → v9:** `[source: S13]` slipped past the reference-code lint; the lint is now widened.
+- **Web:** an item-page crash (names used before they were loaded) was caught by the E2E run.
+
 ## M1 — Catalogue & classification (blueprint §5), 13-Nov-2026
 
 | Suite | Result | What it proves |

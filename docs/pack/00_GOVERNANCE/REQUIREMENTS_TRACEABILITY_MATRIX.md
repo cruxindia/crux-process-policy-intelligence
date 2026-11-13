@@ -111,4 +111,5 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 | BP-5c | Mandatory / Required / Recommended / Not applicable with reason, basis, approval where material | Tested (DB + E2E) | `catalogue_request_classification`, `catalogue_decide_classification`, maker-checker, history | Which classes need approval is configurable per company (no UI yet) |
 | BP-5d | Missing document ≠ missing process | Tested (DB + E2E) | `catalogue_gaps.gap_type` (process gap vs documentation gap) | — |
 | BP-5e | Document gap → draft | Tested (E2E) | "Draft it with the expert board" links the case back to the item | — |
+| BP-5f | Many people → ONE company process/document (owner, 13-Nov): inputs from all contributors consolidated and validated; no per-person documents | Tested (DB + unit + E2E + live AI) | PPI-031 `catalogue_item_sources`, `catalogue_link_source`, `catalogue_match_suggestions`, `catalogue_source_counts`; "From interviews" tab; item "What people said"; board rule 13 + per-person source labels + Variations lint; test 23; `consolidation.cjs` | PR-047, PR-048 |
 

@@ -1,7 +1,7 @@
 // Board engine — pure tests. Run: node --experimental-strip-types --test supabase/functions/tests/board.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BOARD_SYSTEM, buildPlan, buildSources, buildTurnMessage, lintDocument, preservationIssues, revisionSteps, validateTurn } from "../_shared/board.ts";
+import { BOARD_SYSTEM, buildPlan, buildSources, buildTurnMessage, lintDocument, nameTokens, preservationIssues, redactNames, revisionSteps, validateTurn } from "../_shared/board.ts";
 
 test("plans: right lead per document type; critics then consolidation, format, final audit", () => {
   const ag = buildPlan("document_draft", "agreement");
@@ -88,4 +88,56 @@ test("format task keeps contract structure for agreements", () => {
     { role: "docs_controller", kind: "format", to: [] }, [], [], { title: "NDA", body_md: "x" }, null));
   assert.match(m.your_turn.task, /keep its contract structure/);
   assert.match(BOARD_SYSTEM, /Formatting never removes or merges content/);
+});
+
+// Consolidation (13-Nov-2026): several people's accounts of the same work → ONE company document.
+test("several people: sources say which description belongs to which (unnamed) person; task asks for one document", () => {
+  const p = (session_id: string, name: string) => ({ session_id, name, purpose: null, frequency: null, volume: null, involvement: null, owner_text: null,
+    departments: null, flow: null, coverage: null, facts: [], role: "Operations executive" });
+  const src = buildSources("brief", [p("a", "Case allocation"), p("b", "Allocation of cases"), p("a", "Escalation")]);
+  assert.match(src[1]!.text, /^Description 1 of 2/); assert.match(src[2]!.text, /^Description 2 of 2/); assert.match(src[3]!.text, /^Description 1 of 2/);
+  assert.doesNotMatch(buildSources("", [p("a", "x")])[0]!.text, /Description/, "one person: no labels");
+  const msg = JSON.parse(buildTurnMessage({ kind: "document_draft", docType: "sop", title: "T", brief: "", classification: "internal", people: 3 },
+    buildPlan("document_draft", "sop")[0]!, src, [], null, null));
+  assert.match(msg.your_turn.task, /3 different people: write ONE company document/); assert.match(msg.your_turn.task, /Variations and open points/);
+  const one = JSON.parse(buildTurnMessage({ kind: "document_draft", docType: "sop", title: "T", brief: "", classification: "internal" },
+    buildPlan("document_draft", "sop")[0]!, src, [], null, null));
+  assert.doesNotMatch(one.your_turn.task, /Variations/);
+  assert.match(BOARD_SYSTEM, /13\. Several sources may describe the SAME work/);
+});
+
+test("lint: several people need a 'Variations and open points' section; interviewee names never appear", () => {
+  const doc = "# SOP\n\n## 1. Purpose\nText.\n";
+  assert.ok(lintDocument(doc, "draft", 3).some((i) => /Variations and open points/.test(i)));
+  assert.ok(!lintDocument(doc + "\n## 9. Variations and open points\nNone — all three agree.\n", "draft", 3).some((i) => /Variations/.test(i)));
+  assert.ok(!lintDocument(doc, "draft", 1).some((i) => /Variations/.test(i)), "single description: not required");
+  const names = nameTokens(["Neha Shah K", "Al", null]);
+  assert.deepEqual(names, ["Neha", "Neha Shah", "Neha Shah K"]);
+  assert.ok(lintDocument(doc + "Neha assigns cases.", "draft", 1, names).some((i) => /names interviewed employees/.test(i)));
+  assert.ok(!lintDocument(doc + "The operations executive assigns cases.", "draft", 1, names).some((i) => /names interviewed/.test(i)));
+  assert.equal(redactNames("Assigned by Neha Shah on WhatsApp; neha checks", names), "Assigned by the interviewee on WhatsApp; the interviewee checks");
+  assert.equal(redactNames(null, names), null);
+});
+
+test("several people: the automatic comparison (not the AI) says who mentioned which step", () => {
+  const f = (labels: string[]) => ({ nodes: labels.map((l, i) => ({ id: `n${i}`, type: l.endsWith("?") ? "decision" : "task", label: l })), edges: [] });
+  const p = (session_id: string, labels: string[]) => ({ session_id, name: "Allocation", purpose: null, frequency: "Daily", volume: null, involvement: null, owner_text: null,
+    departments: null, flow: f(labels), coverage: null, facts: [], role: null });
+  const src = buildSources("", [p("a", ["Bank emails case list", "Assign cases on WhatsApp", "Is the address complete?"]), p("b", ["Receive bank email with case list", "Is officer on leave?"])]);
+  const cmp = src.at(-1)!.text;
+  assert.match(cmp, /^AUTOMATIC COMPARISON of the 2 descriptions/);
+  assert.match(cmp, /\[all\]: D1: Bank emails case list \| D2: Receive bank email with case list/);
+  assert.match(cmp, /\[only 2 of 2\]: D1: — not mentioned \| D2: Decision: Is officer on leave\?/);
+  assert.equal(buildSources("", [p("a", ["x"])]).filter((s) => /AUTOMATIC COMPARISON/.test(s.text)).length, 0);
+  const msg = JSON.parse(buildTurnMessage({ kind: "document_draft", docType: "sop", title: "T", brief: "", classification: "internal", people: 2 },
+    buildPlan("document_draft", "sop")[0]!, src, [], null, null));
+  assert.match(msg.your_turn.task, /ONLY from the AUTOMATIC COMPARISON source/);
+});
+
+test("lint: source codes in any bracket form are rejected; plain brackets are fine", () => {
+  const base = "# T\n\n## 1. Purpose\n";
+  for (const bad of ["Text [S3].", "Text (L1, L7).", "Mentioned twice [source: S13].", "Tools (source: S4, S8, S13)."])
+    assert.ok(lintDocument(base + bad, "draft").some((i) => /source\/library codes/.test(i)), bad);
+  for (const ok of ["Use form [TO CONFIRM — Finance: form name].", "Within 3 days (SLA).", "Section 4 (Scope)."])
+    assert.ok(!lintDocument(base + ok, "draft").some((i) => /source\/library codes/.test(i)), ok);
 });

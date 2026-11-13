@@ -28,6 +28,12 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      catalogue_item_sources: {
+        Row: { id: string; company_id: string; item_id: string; discovered_process_id: string; method: string; linked_by: string; linked_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       catalogue_classification_requests: {
         Row: { id: string; company_id: string; item_id: string; from_class: string; to_class: string; basis: string | null; basis_reference: string | null;
           reason: string; requested_by: string; requested_at: string; status: string; decided_by: string | null; decided_at: string | null; decision_note: string | null }
@@ -4031,6 +4037,13 @@ export type Database = {
       catalogue_decide_classification: { Args: { p_company: string; p_request: string; p_decision: string; p_note?: string }; Returns: undefined }
       catalogue_set_status: { Args: { p_company: string; p_item: string; p_process_status: string; p_process_note: string | null; p_document_status: string; p_document_note: string | null; p_discovered_process?: string | null; p_process?: string | null }; Returns: undefined }
       catalogue_link_case: { Args: { p_company: string; p_item: string; p_case: string }; Returns: undefined }
+      catalogue_link_source: { Args: { p_company: string; p_item: string; p_discovered: string; p_method?: string }; Returns: undefined }
+      catalogue_unlink_source: { Args: { p_company: string; p_discovered: string }; Returns: undefined }
+      catalogue_source_counts: { Args: { p_company: string }; Returns: { item_id: string; contributors: number }[] }
+      catalogue_match_suggestions: {
+        Args: { p_company: string; p_min?: number }
+        Returns: { discovered_process_id: string; process_name: string; session_id: string; item_id: string | null; item_code: string | null; item_title: string | null; score: number | null }[]
+      }
       open_board_case: {
         Args: { p_company: string; p_kind: string; p_doc_type: string | null; p_title: string; p_brief: string; p_process_ids: string[]; p_classification?: string }
         Returns: string

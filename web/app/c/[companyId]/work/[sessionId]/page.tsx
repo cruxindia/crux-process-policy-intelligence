@@ -58,6 +58,16 @@ export default async function WorkSummary({ params, searchParams }: { params: Pr
   // Expert board (PPI-029): reviewers can ask the expert teams to improve a discovered process; earlier cases are listed per process.
   const canExpert = !mine && ["interview.review", "process.edit", "org.manage"].some((x) => permissions.has(x));
   const procIds = (procs ?? []).map((p) => p.id);
+  // Consolidation (PPI-031): each description may belong to ONE company catalogue item that collects everyone's descriptions.
+  const [{ data: srcLinks }, { data: srcCounts }] = procIds.length ? await Promise.all([
+    supabase.from("catalogue_item_sources").select("discovered_process_id, item_id").eq("company_id", companyId).in("discovered_process_id", procIds),
+    supabase.rpc("catalogue_source_counts", { p_company: companyId }),
+  ]) : [{ data: [] as { discovered_process_id: string; item_id: string }[] }, { data: [] as { item_id: string; contributors: number }[] }];
+  const itemIds = [...new Set((srcLinks ?? []).map((l) => l.item_id))];
+  const { data: linkedItems } = itemIds.length ? await supabase.from("catalogue_items").select("id, code, title").eq("company_id", companyId).in("id", itemIds)
+    : { data: [] as { id: string; code: string; title: string }[] };
+  const itemOf = new Map((srcLinks ?? []).map((l) => [l.discovered_process_id, (linkedItems ?? []).find((i) => i.id === l.item_id)]));
+  const peopleOn = new Map((srcCounts ?? []).map((c) => [c.item_id, c.contributors]));
   const { data: boardCases } = canExpert && procIds.length
     ? await supabase.from("board_cases").select("id, title, status, source_process_ids, created_at").eq("company_id", companyId).overlaps("source_process_ids", procIds).order("created_at", { ascending: false })
     : { data: [] as { id: string; title: string; status: string; source_process_ids: string[]; created_at: string }[] };
@@ -129,11 +139,21 @@ export default async function WorkSummary({ params, searchParams }: { params: Pr
                   <div className="muted" style={{ marginTop: 4 }}>It enters the catalogue as a <em>candidate</em>; approval follows the normal review route.</div>
                 </details>
               )}
+              {itemOf.get(p.id) ? (
+                <p className="small" data-testid="company-item"><span className="badge ok">Part of a company process</span>{" "}
+                  <Link href={`/c/${companyId}/catalogue/${itemOf.get(p.id)!.id}`}>{itemOf.get(p.id)!.code} · {itemOf.get(p.id)!.title}</Link>
+                  {" "}<span className="muted">— described by {peopleOn.get(itemOf.get(p.id)!.id) ?? 1} {peopleOn.get(itemOf.get(p.id)!.id) === 1 ? "person" : "people"}; documents and reviews are made there from all descriptions</span></p>
+              ) : !mine && (
+                <p className="small muted" data-testid="company-item-missing">Not yet matched to a company process — <Link href={`/c/${companyId}/catalogue?tab=inbox`}>match it</Link> so it is combined with everyone else&rsquo;s description.</p>
+              )}
               {canExpert && (
                 <div className="small row" style={{ gap: 8, flexWrap: "wrap" }} data-testid="expert-improve">
-                  <form action={openImprovementCase.bind(null, companyId, sessionId, p.id, p.name)}>
-                    <button type="submit" className="secondary">Ask the expert teams to improve this</button>
-                  </form>
+                  {itemOf.get(p.id) ? (
+                    <Link href={`/c/${companyId}/catalogue/${itemOf.get(p.id)!.id}`}>Improve the company process (all descriptions) →</Link>
+                  ) : (
+                    <form action={openImprovementCase.bind(null, companyId, sessionId, p.id, p.name)}>
+                      <button type="submit" className="secondary" title="Uses this person's description only">Ask the expert teams to improve this (this description only)</button>
+                    </form>)}
                   {(boardCases ?? []).filter((b) => b.source_process_ids.includes(p.id)).map((b) => (
                     <Link key={b.id} href={`/c/${companyId}/board/${b.id}`}>{BOARD_STATUS[b.status] ?? b.status} · {fmtDate(b.created_at)}</Link>
                   ))}
