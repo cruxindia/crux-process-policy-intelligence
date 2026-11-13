@@ -107,6 +107,12 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 - **Acceptance:** [x] PPI-029 + test 21 (local suite 303/303); [x] unit tests 53/53; [x] teams/charters/prompt loaded on hosted with hash check (12/12 charters); [x] live NDA case (confidential) 9 turns → audited → awaiting approval; [x] live improvement case 13 turns incl. one audit-driven revision round; [x] 4 live defects found and fixed (D-069); [x] UI renders (desktop + phone, no console errors); [x] discovery regression 14/14 after redeploy; [ ] owner pastes keys; [ ] owner acceptance.
 - **Status:** Live on Supabase; web deployed with this commit.
 
+## 12E. Blueprint completion programme (from 13-Nov-2026)
+- **Objective:** close every gap between the 9-Nov blueprint v1.0 and the platform — see `BLUEPRINT_GAP_ANALYSIS.md` (status by section, contradictions X-1…X-8, dependencies, modules M1…M10).
+- **Owner decisions (13-Nov):** keep confidential on free Gemini (D-072); blueprint build order (D-073); in-app reminders only (D-074); stronger Gemini model as validator (D-075); 26 key slots (D-076).
+- **M1 Catalogue — done:** PPI-030 + `/catalogue`; DB 327/327 (test 22: 24 assertions); E2E `catalogue.cjs` 17/17; hosted seeded (148 items each for CRUX and E2E-SYNTH, all "Not yet assessed").
+- **Next:** M2 Company Operating Blueprint (leadership discovery; VOC/VOB/VOE/VOR; CTQ with management-approved targets).
+
 ## 13. Decision / change log
 | Date | Change | By |
 |---|---|---|

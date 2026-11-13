@@ -35,7 +35,7 @@ export type DbError = { message: string; code?: string } | null;
 /** Human-readable text for errors raised by database guards (PPI_* messages) and RLS refusals. */
 export function explain(error: DbError): string {
   if (!error) return "";
-  if (error.code === "42501") return "You do not have permission to do that.";
   const m = /PPI_[A-Z_]+:\s*(.*)$/.exec(error.message);
+  if (error.code === "42501" && !m) return "You do not have permission to do that.";  // our own guards explain themselves
   return m?.[1] ?? error.message;
 }

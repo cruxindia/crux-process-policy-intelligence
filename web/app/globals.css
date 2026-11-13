@@ -163,3 +163,11 @@ button.linklike { background: none; border: 0; padding: 0; color: var(--accent);
 }
 main:has(.board-wide) { max-width: 1320px; }
 @media (max-width: 640px) { .board-flow { height: 360px; } }
+
+/* Catalogue (PPI-030) */
+dl.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 12px; margin: 10px 0; }
+dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; }
+nav.tabs a.on { font-weight: 600; text-decoration: none; color: var(--text); }
+a.card.stat { color: inherit; } a.card.stat.sel { border-color: var(--accent); border-width: 2px; }
+.badge.part { color: var(--accent); border-color: currentColor; }
+form.filters select, form.filters input { width: auto; min-width: 140px; margin: 0; }

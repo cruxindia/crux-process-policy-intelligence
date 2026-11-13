@@ -45,6 +45,7 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
         <Link className="button secondary" href={`/c/${companyId}/requests`}>Questions &amp; disputes</Link>
         {canManage && <Link className="button secondary" href={`/c/${companyId}/discovery`}>Discovery setup</Link>}
         {canBoard && <Link className="button secondary" href={`/c/${companyId}/board`}>Expert board</Link>}
+        <Link className="button secondary" href={`/c/${companyId}/catalogue`}>Catalogue</Link>
         {canAdmin && <Link className="button secondary" href={`/c/${companyId}/admin`}>Administration</Link>}
       </div>
 

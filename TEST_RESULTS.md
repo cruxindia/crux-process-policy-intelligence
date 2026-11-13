@@ -1,5 +1,15 @@
 # Test Results
 
+## M1 — Catalogue & classification (blueprint §5), 13-Nov-2026
+
+| Suite | Result | What it proves |
+|---|---|---|
+| DB local (`scripts/test-db.sh`) | **327/327**, 22 files | test 22: baseline 148 items (idempotent), nothing pre-classified, members read / cannot write, reason required, Mandatory needs basis + reference, Mandatory waits for approval, one pending change per item, no self-approval, rejection needs a reason, owning department head updates status (not other departments), process gap vs documentation gap, company isolation |
+| Hosted | PPI-030 applied; 148 items for CRUX and E2E-SYNTH; catalogue rights granted to company admins (manage + approve) and document approvers (approve) | verified by query |
+| E2E (`web/e2e/catalogue.cjs`) | **17/17** | list + gap summary + filters; Required applies at once; "done today + no document" = Document missing; Mandatory refused without basis/reference, then sent for approval; self-approval refused with a clear reason; approvals tab; function → department mapping; "Draft it with the expert board" opens and links a case; history; phone layout 0 px sideways |
+
+Defect found and fixed: self-approval was refused but shown as the generic "You do not have permission" — the app now shows the guard's own reason (D-078). The schema-security test caught default write grants on the new view (revoked).
+
 ## S-11 — Expert review board, 13-Nov-2026
 
 All live tests used the synthetic tenant `E2E-SYNTH` and real Gemini (gemini-3.5-flash-lite, free tier, server key — the owner's 26 keys were not used). No mocks.

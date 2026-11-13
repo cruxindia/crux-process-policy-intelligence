@@ -131,7 +131,7 @@ Create **new** keys first (the ones posted in chat on 13-Nov are exposed — PR-
 | PDM Agent 6 | PDM Agent 6 | Finance, Tax & Investment |
 | PDM Agent 7 | PDM Agent 7 | Document Standards & Control |
 | PDM Agent 8 | PDM Agent 8 | Independent Audit & Assurance |
-| **any one** PD Agent key | PD Agents (shared project) | Overflow for everything (all 9 PD keys share one Google project = one quota, so one key is enough) |
+| PD Agent 1 … 9 | PD Agent 1 … 9 | Shared overflow for everything (9 separate projects = 9 quotas); later dedicated to the validator and legal reviewer (stronger model) |
 
 Until a slot has a key, its work uses the shared pool and then the server key, so nothing stops.
 

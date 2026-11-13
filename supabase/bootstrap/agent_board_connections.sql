@@ -14,18 +14,19 @@ update public.ai_provider_policies p
   from public.companies c
  where p.company_id = c.id and c.code in ('CRUX', 'E2E-SYNTH') and p.provider = 'gemini_free';
 
--- 2) Room for the owner's 26 keys mapped onto 18 slots (the 9 "PD" keys share one Google project = one quota = one slot).
+-- 2) Room for the owner's 26 keys, one slot each (owner, 13-Nov: every key is a separate Google project with its own quota).
 update public.companies set ai_connection_limit = 30 where code = 'CRUX' and ai_connection_limit < 30;
 
 -- 3) Named, KEYLESS slots. The owner pastes each key in Admin -> AI connections; nothing here holds a key.
 --    Process Agent 1-9  -> discovery interviews; each employee sticks to one slot (spread by member), others are fallback.
 --    PDM Agent 1-8      -> one or two per expert team, sized to that team's share of board turns.
---    PD Agents (shared) -> unassigned overflow pool for everything else (adaptive interviews, any team whose slots are resting).
+--    PD Agent 1-9       -> unassigned overflow pool (9 separate quotas) for everything; to be dedicated to new reviewers as they are built.
 do $slots$
 declare v_co uuid; r record; v_id uuid;
 begin
   select id into v_co from public.companies where code = 'CRUX';
   if v_co is null then return; end if;
+  update public.ai_provider_connections set name = 'PD Agent 1' where company_id = v_co and name = 'PD Agents (shared project)';  -- renamed 13-Nov
   for r in select * from (values
       ('Process Agent 1', 'discovery'), ('Process Agent 2', 'discovery'), ('Process Agent 3', 'discovery'),
       ('Process Agent 4', 'discovery'), ('Process Agent 5', 'discovery'), ('Process Agent 6', 'discovery'),
@@ -34,7 +35,8 @@ begin
       ('PDM Agent 3', 'team:legal'), ('PDM Agent 4', 'team:legal'),
       ('PDM Agent 5', 'team:cs'),    ('PDM Agent 6', 'team:finance'),
       ('PDM Agent 7', 'team:docs'),  ('PDM Agent 8', 'team:audit'),
-      ('PD Agents (shared project)', null)) as v(name, cat)
+      ('PD Agent 1', null), ('PD Agent 2', null), ('PD Agent 3', null), ('PD Agent 4', null), ('PD Agent 5', null),
+      ('PD Agent 6', null), ('PD Agent 7', null), ('PD Agent 8', null), ('PD Agent 9', null)) as v(name, cat)
   loop
     insert into public.ai_provider_connections (company_id, name, provider, policy_provider, model, priority, health)
     values (v_co, r.name, 'gemini', 'gemini_free', 'gemini-flash-lite-latest', case when r.cat is null then 50 else 100 end, 'not_configured')

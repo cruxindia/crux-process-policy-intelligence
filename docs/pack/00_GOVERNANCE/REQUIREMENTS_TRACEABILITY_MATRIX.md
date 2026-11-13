@@ -106,4 +106,9 @@ Status vocabulary (Master §15). Two layers are tracked separately because the d
 | S11-6 | Agreements, policies etc. drafted | Tested (live) | "Draft a new document" (policy, SOP, agreement, board resolution, compliance checklist, charter); NDA live test with clause outcome check | Professional sign-off required (PR-045) |
 | S11-7 | Interactive visual of teams talking | Tested (UI) | boardroom React Flow graph, live polling, active speaker pulse, click to filter | — |
 | S11-8 | Optimum key utilisation for many users | Implemented (unit) | 18 slots, sticky spread test (900 members over 9 slots), fallback, cap of 3 unlocks | Not load-tested with real keys (owner to paste) |
+| BP-5a | Functional catalogue mapped to actual departments (many-to-one) | Tested (DB + E2E) | PPI-030 `catalogue_functions`, `catalogue_save_function`; test 22; catalogue.cjs | — |
+| BP-5b | Enterprise policy catalogue (23) + department SOP lists + core processes, configurable | Tested (DB + E2E) | `seed_blueprint_catalogue` (148 items), add-item form | Starting list only; evolves through validated inputs |
+| BP-5c | Mandatory / Required / Recommended / Not applicable with reason, basis, approval where material | Tested (DB + E2E) | `catalogue_request_classification`, `catalogue_decide_classification`, maker-checker, history | Which classes need approval is configurable per company (no UI yet) |
+| BP-5d | Missing document ≠ missing process | Tested (DB + E2E) | `catalogue_gaps.gap_type` (process gap vs documentation gap) | — |
+| BP-5e | Document gap → draft | Tested (E2E) | "Draft it with the expert board" links the case back to the item | — |
 

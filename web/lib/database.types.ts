@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      // PPI-030 (manual until the next full type generation): catalogue.
+      catalogue_functions: {
+        Row: { id: string; company_id: string; code: string; name: string; description: string | null; sort_order: number; department_id: string | null;
+          status: string; source: string; created_at: string; updated_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      catalogue_items: {
+        Row: CatalogueItemRow
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      catalogue_classification_requests: {
+        Row: { id: string; company_id: string; item_id: string; from_class: string; to_class: string; basis: string | null; basis_reference: string | null;
+          reason: string; requested_by: string; requested_at: string; status: string; decided_by: string | null; decided_at: string | null; decision_note: string | null }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       // PPI-029 (manual until the next full type generation): expert review board.
       agent_teams: {
         Row: { id: string; company_id: string; code: string; name: string; mission: string; sort_order: number; status: string; created_at: string }
@@ -3866,6 +3887,10 @@ export type Database = {
       }
     }
     Views: {
+      catalogue_gaps: {
+        Row: CatalogueItemRow & { function_code: string; function_name: string; department_id: string | null; pending_class: string | null; gap_type: string }
+        Relationships: []
+      }
       dashboard_process_status: {
         Row: {
           company_id: string | null
@@ -4000,6 +4025,12 @@ export type Database = {
       my_contact: { Args: never; Returns: Json }
       my_discovery_assignment: { Args: { p_company: string }; Returns: string }
       my_permissions: { Args: { p_company: string }; Returns: string[] }
+      catalogue_save_function: { Args: { p_company: string; p_id: string | null; p_code: string; p_name: string; p_description: string | null; p_department: string | null }; Returns: string }
+      catalogue_save_item: { Args: { p_company: string; p_id: string | null; p_kind: string; p_code: string; p_title: string; p_description: string | null; p_function: string; p_ownership_note: string | null; p_status?: string }; Returns: string }
+      catalogue_request_classification: { Args: { p_company: string; p_item: string; p_to: string; p_basis: string | null; p_reference: string | null; p_reason: string }; Returns: string }
+      catalogue_decide_classification: { Args: { p_company: string; p_request: string; p_decision: string; p_note?: string }; Returns: undefined }
+      catalogue_set_status: { Args: { p_company: string; p_item: string; p_process_status: string; p_process_note: string | null; p_document_status: string; p_document_note: string | null; p_discovered_process?: string | null; p_process?: string | null }; Returns: undefined }
+      catalogue_link_case: { Args: { p_company: string; p_item: string; p_case: string }; Returns: undefined }
       open_board_case: {
         Args: { p_company: string; p_kind: string; p_doc_type: string | null; p_title: string; p_brief: string; p_process_ids: string[]; p_classification?: string }
         Returns: string
@@ -4174,3 +4205,11 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+/** PPI-030 catalogue item row (shared by the table and the gap view). */
+export type CatalogueItemRow = { id: string; company_id: string; kind: string; code: string; title: string; description: string | null; function_id: string;
+  ownership_note: string | null; source: string; status: string; classification: string; basis: string | null; basis_reference: string | null;
+  classification_reason: string | null; classified_by: string | null; classified_at: string | null; approved_by: string | null;
+  process_status: string; process_note: string | null; document_status: string; document_note: string | null; process_id: string | null;
+  discovered_process_id: string | null; board_case_id: string | null; document_id: string | null; status_updated_by: string | null;
+  status_updated_at: string | null; created_by: string | null; created_at: string; updated_at: string }
