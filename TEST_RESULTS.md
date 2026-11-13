@@ -1,5 +1,25 @@
 # Test Results
 
+## M3 — Interview upgrade (blueprint §6, §9), 14-Nov-2026
+
+Synthetic tenant `E2E-SYNTH`, real Gemini (free tier, server key), discovery prompt v4 (`a88831c6…`) on discovery-ai v8. No mocks.
+
+| Suite | Result | What it proves |
+|---|---|---|
+| DB local (`scripts/test-db.sh`) | **407/407**, 25 files | test 25 (32 assertions): max 3 suggestions; an answer from a suggestion is recorded and must be a real answer; "not applicable" needs a reason; "save for later" is an answer kind; ask a colleague → request assigned in Requests, answer becomes "someone else knows", same colleague not asked twice, not yourself, only the respondent, rows not writable directly; the colleague sees it and replies, outsiders see neither request nor reply, the respondent gets the reply; department heads hold `process.validate`; employees and other departments' heads cannot validate; nobody validates a process only they described; nothing to validate without descriptions; open items need a note; sending back needs a reason; validations only via the function and never editable; a changed map marks the validation out of date; "I don't know" answers count as knowledge gaps |
+| Unit (`node --test`, functions) | **68/68** | 20-dimension sufficiency (critical / N/A / ≤4 optional untouched); old 10-dimension coverage mapped conservatively; suggestions: max 3, distinct, no echoes or screen options, no invented numbers; grounding uses the transcript; answer-in-action from map comparison and every 3rd answer; blueprint, department knowledge and colleague replies reach the model |
+| API live (`discovery-api.cjs`) | **14/14** | discovery-ai v8 with prompt v4: profile, responsibilities, inventory, forgotten work, corrections, live map — no regressions; every AI question after the opener came with 2–3 suggestions |
+| E2E live (`interview-upgrade.cjs`) | **20/20 local, 20/20 production** | suggestions shown and editable; answer from suggestion stored as such; save for later + panel answer; N/A needs a reason; ask a colleague → Requests → reply appears in the interview; answer-in-action cards; phone layout; company item → "Not validated yet" with open items → department head validates → badge in the catalogue; no page errors |
+| Regressions | discovery-flow **19/19** (local + production), consolidation **13/13** (local + production), catalogue **17/17** | answer options changed (7 chips, "Explain with an example"); nothing else broke |
+| Hosted | PPI-033 (20261113203330), PPI-034 (20261113203600), PPI-035 (20261113210024); `interview.discovery` v4 active for CRUX and E2E-SYNTH, v3 retired; `process.validate` granted to DEPT_HEAD and PROCESS_OWNER (CRUX) and to the synthetic discovery lead (E2E-SYNTH only) | verified by query; security advisors: no new findings beyond the existing definer-RPC pattern |
+
+Defects found by our own tests and fixed:
+- **FK index check** (test 01) caught four new foreign keys without indexes — added.
+- **Legacy coverage mapping** first ignored old keys that share a name with new ones (trigger, activities…) — legacy form now detected as a whole.
+- **Lint:** a state update inside an effect ("Correct this") — moved to a timer.
+- **Live observation (kept as risk PR-052):** suggestions included colleagues' steps the new employee had not mentioned; label now says they are guesses, and answers from a suggestion are flagged for reviewers.
+- **Layout:** radio buttons in the validation form stacked above their labels — fixed.
+
 ## M2 — Company Operating Blueprint (blueprint §4), 13-Nov-2026
 
 Synthetic tenant `E2E-SYNTH`, real Gemini (free tier, server key). The synthetic lead played the MD. No mocks.
