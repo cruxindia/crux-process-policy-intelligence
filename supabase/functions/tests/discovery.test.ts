@@ -60,14 +60,29 @@ test("mergeProcess: coverage never downgrades; completeness follows coverage, mo
   assert.equal(m.coverage.purpose, "sufficient"); assert.equal(m.coverage.trigger, "sufficient");
   assert.ok(m.completeness <= processCompleteness(m.coverage) + 10);
 });
-test("processSufficient needs all critical sufficient and the rest touched", () => {
-  const all = Object.fromEntries(["purpose", "trigger", "roles", "activities", "controls", "exceptions"].map((k) => [k, "sufficient"])) as Record<string, "sufficient">;
-  assert.equal(processSufficient(all), false);
-  assert.equal(processSufficient({ ...all, systems: "partial", tat: "partial", dependencies: "partial", performance: "partial" }), true);
+test("processSufficient (20 dimensions, D-086): critical sufficient or N/A, at most 4 optional untouched", () => {
+  const crit = ["purpose", "trigger", "input", "owner", "activities", "decisions", "output", "exceptions", "controls"];
+  const all = Object.fromEntries(crit.map((k) => [k, "sufficient"])) as Record<string, "sufficient">;
+  assert.equal(processSufficient(all), false, "11 optional untouched");
+  const seven = Object.fromEntries(["source", "participants", "systems", "approvals", "recipient", "sla", "escalation"].map((k) => [k, "partial"]));
+  assert.equal(processSufficient({ ...all, ...seven } as any), true, "4 optional untouched is enough");
+  assert.equal(processSufficient({ ...all, ...seven, decisions: "not_applicable" } as any), true, "N/A counts as covered");
+  assert.equal(processSufficient({ ...all, ...seven, decisions: "partial" } as any), false, "critical partial");
   assert.equal(processCompleteness({}), 0);
 });
-test("completion: requires core profile + confirmed inventory + sufficient processes + model agreement; or budget", () => {
-  const cov = Object.fromEntries(["purpose", "trigger", "roles", "activities", "controls", "exceptions", "systems", "tat", "dependencies", "performance"].map((k) => [k, "sufficient"])) as Record<string, "sufficient">;
+test("legacy 10-dimension coverage maps conservatively to the 20", async () => {
+  const { normaliseCoverage, completeness } = await import("../_shared/dimensions.ts");
+  const old = Object.fromEntries(["purpose", "trigger", "roles", "activities", "systems", "tat", "controls", "exceptions", "dependencies", "performance"].map((k) => [k, "sufficient"]));
+  const n = normaliseCoverage(old);
+  assert.equal(n.trigger, "sufficient"); assert.equal(n.input, "partial"); assert.equal(n.decisions, "partial"); assert.equal(n.sla, "sufficient");
+  assert.equal(n.output, "not_started", "output was never asked before");
+  assert.equal(processSufficient(old as any), false, "old 'complete' is not complete under the 20");
+  assert.ok(completeness(old) > 50 && completeness(old) < 100);
+  assert.equal(normaliseCoverage({ bogus: "sufficient", purpose: "weird" }).purpose, "not_started");
+});
+test("completion: requires core profile + confirmed inventory + sufficient processes + model agreement; or budget", async () => {
+  const { DIM_KEYS } = await import("../_shared/dimensions.ts");
+  const cov = Object.fromEntries(DIM_KEYS.map((k) => [k, "sufficient"])) as Record<string, "sufficient">;
   const p: KnownProcess = { key: "p", name: "P", status: "sufficient", completeness: 100, coverage: cov, flow: { nodes: [], edges: [] } };
   const prof = { designation: "x", department: "y", reporting_manager: "z", functions_handled: "f" };
   assert.equal(decideCompletionV2(prof, {}, true, [p], 0, "complete", 5, 60).complete, true);
@@ -75,6 +90,46 @@ test("completion: requires core profile + confirmed inventory + sufficient proce
   assert.equal(decideCompletionV2({ designation: "x" }, {}, true, [p], 0, "complete", 5, 60).complete, false, "core profile missing");
   assert.equal(decideCompletionV2(prof, {}, true, [p], 1, "complete", 5, 60).complete, false, "open clarification");
   assert.equal(decideCompletionV2({}, {}, false, [], 0, "continue", 60, 60).complete, true, "budget reached");
+});
+test("suggestions (D-084): max 3, distinct, no echoes, no screen options, no invented numbers", async () => {
+  const { cleanSuggestions, SYSTEM_PROMPT_V2, TURN_SCHEMA_V2 } = await import("../_shared/discovery.ts");
+  const q = "Who decides which branch handles a new case?";
+  const out = cleanSuggestions(["The Operations Manager assigns it manually", "the operations manager assigns it manually.", "I don't know",
+    "Not applicable", "Who decides which branch handles a new case", "Closed within 2 days", "Within 48 hours of receipt",
+    "The branch manager decides", "The system assigns it automatically", "A fourth one"], q, "we close most cases in 48 hours");
+  assert.deepEqual(out, ["The Operations Manager assigns it manually", "Within 48 hours of receipt", "The branch manager decides"]);
+  assert.deepEqual(cleanSuggestions("nope", q, ""), []);
+  assert.deepEqual(cleanSuggestions(["1. Yes, that is everything"], "Anything else?", ""), ["Yes, that is everything"]);
+  assert.match(SYSTEM_PROMPT_V2, /up to 3 short answers/);
+  assert.ok((TURN_SCHEMA_V2 as any).properties.next_question.properties.suggestions);
+});
+test("validateTurnV2 carries cleaned suggestions; grounding includes the transcript", async () => {
+  const { validateTurnV2 } = await import("../_shared/discovery.ts");
+  const raw = JSON.stringify({ understood_answer: "u", intent: "answer", stage: "process_deep_dive",
+    next_question: { question: "How long does it take?", reason: "r", kind: "follow_up", suggestions: ["About 3 days", "About 9 days", "Same day"] },
+    completion_assessment: { sufficient_information: false, recommended_next_action: "continue" } });
+  const v = validateTurnV2(raw, { transcript: [{ ref: "Q1", question: "q", answer: "usually 3 days" }], openClarifications: [], processes: [] });
+  assert.ok(v.ok); if (!v.ok) return;
+  assert.deepEqual(v.turn.next_question.suggestions, ["About 3 days", "Same day"]);
+});
+test("answer in action (D-087): new steps by map comparison; otherwise every 3rd answer", async () => {
+  const { answerInAction } = await import("../_shared/discovery.ts");
+  const prev = { nodes: [{ id: "s", type: "start" as const, label: "Case received" }, { id: "a", type: "step" as const, label: "Check file" }], edges: [] };
+  const next = { nodes: [...prev.nodes, { id: "b", type: "step" as const, label: "Assign officer" }, { id: "e", type: "end" as const, label: "Done" }], edges: [] };
+  const t = { understood_answer: "The branch assigns an officer", missing_information: ["who backs up", "b", "c", "d"], dependencies: ["Operations"] };
+  const x = answerInAction(prev, next, t, "Case allocation", ["Branch"], 1)!;
+  assert.deepEqual(x.steps_added, ["Assign officer"]); assert.deepEqual(x.departments, ["Branch", "Operations"]); assert.equal(x.unclear.length, 3);
+  assert.equal(answerInAction(prev, prev, t, null, [], 2), null);
+  assert.ok(answerInAction(prev, prev, t, null, [], 3));
+});
+test("blueprint, colleagues and department knowledge reach the model as background", async () => {
+  const { buildUserMessageV2 } = await import("../_shared/discovery.ts");
+  const m = JSON.parse(buildUserMessageV2({ company: "C", campaignPurpose: null, department: "OPS", knownProfile: {}, profile: {}, responsibilities: [], processes: [],
+    stage: "person", focusProcessKey: null, inventoryConfirmed: false, transcript: [], latestRef: "Q1", openClarifications: [], aiQuestionsAsked: 0, maxAiQuestions: 10,
+    companyBlueprint: "COMPANY OPERATING BLUEPRINT version 1", departmentKnowledge: [{ process: "Allocation", steps: ["Assign officer"] }],
+    colleagueAnswers: [{ ref: "Q2", colleague_role: "Branch Manager", reply: "We use the tracker" }] }));
+  assert.match(m.company_blueprint, /^COMPANY OPERATING BLUEPRINT/); assert.equal(m.department_knowledge[0].steps[0], "Assign officer");
+  assert.equal(m.colleague_answers[0].colleague_role, "Branch Manager");
 });
 test("progress: weighted profile / inventory / processes", () => {
   assert.equal(progressV2({}, {}, false, 0, []), 0);

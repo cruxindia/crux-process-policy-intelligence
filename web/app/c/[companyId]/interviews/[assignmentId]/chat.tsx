@@ -30,7 +30,7 @@ const BASIS: Record<string, string> = { direct: "my own work", documented: "a do
 
 function shown(a: ChatAnswer) {
   if (a.kind === "answer" || a.kind === "depends") return a.text ?? "";
-  return KIND_TEXT[a.kind] + (a.kind === "refer_to_owner" && a.referred ? ` — ${a.referred}` : "");
+  return KIND_TEXT[a.kind] + (a.kind === "refer_to_owner" && a.referred ? ` — ${a.referred}` : a.kind === "not_applicable" && a.text ? ` — ${a.text}` : "");
 }
 
 type TurnQuestion = { id: string; seq: number; text: string; reason: string | null; dimension: string | null; generated_by: string; kind: string | null };
@@ -255,7 +255,7 @@ function Composer(props: {
 }) {
   const { q } = props;
   const [text, setText] = useState(props.existing ? (props.existing.text ?? "") : (q.draft ?? ""));
-  const [askWho, setAskWho] = useState(false);
+  const [askWho, setAskWho] = useState<false | "who" | "na">(false);
   const [who, setWho] = useState("");
   const [error, setError] = useState("");
   const [saveState, setSaveState] = useState("");
@@ -303,14 +303,15 @@ function Composer(props: {
       )}
       {askWho ? (
         <div className="row" style={{ marginTop: 8, flexWrap: "nowrap" }}>
-          <input aria-label="Who knows" value={who} onChange={(e) => setWho(e.target.value)} placeholder="Who knows? (name or role)" />
-          <button type="button" disabled={pending || !who.trim()} onClick={() => send("refer_to_owner", "", who.trim())}>OK</button>
+          <input aria-label={askWho === "na" ? "Why it does not apply" : "Who knows"} value={who} onChange={(e) => setWho(e.target.value)}
+            placeholder={askWho === "na" ? "Why does this not apply to your work?" : "Who knows? (name or role)"} />
+          <button type="button" disabled={pending || !who.trim()} onClick={() => askWho === "na" ? send("not_applicable", who.trim()) : send("refer_to_owner", "", who.trim())}>OK</button>
         </div>
       ) : (
         <div className="chips" style={{ marginTop: 8 }}>
           <button type="button" className="chip ghost" disabled={pending} onClick={() => send("unknown", "")}>I don&rsquo;t know</button>
-          <button type="button" className="chip ghost" disabled={pending} onClick={() => send("not_applicable", "")}>Not applicable</button>
-          <button type="button" className="chip ghost" disabled={pending} onClick={() => setAskWho(true)}>Someone else knows</button>
+          <button type="button" className="chip ghost" disabled={pending} onClick={() => { setWho(""); setAskWho("na"); }}>Not applicable</button>
+          <button type="button" className="chip ghost" disabled={pending} onClick={() => { setWho(""); setAskWho("who"); }}>Someone else knows</button>
           {props.editing && <button type="button" className="chip ghost" onClick={props.onCancel}>Cancel edit</button>}
         </div>
       )}

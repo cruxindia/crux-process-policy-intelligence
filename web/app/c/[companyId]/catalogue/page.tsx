@@ -23,10 +23,12 @@ export default async function CataloguePage({ params, searchParams }: {
     supabase.from("catalogue_classification_requests").select("id, item_id, from_class, to_class, basis, basis_reference, reason, requested_by, requested_at")
       .eq("company_id", companyId).eq("status", "pending").order("requested_at"),
   ]);
-  const [{ data: srcCounts }, { data: unmatched }] = await Promise.all([
+  const [{ data: srcCounts }, { data: unmatched }, { data: vals }] = await Promise.all([
     supabase.rpc("catalogue_source_counts", { p_company: companyId }),
     supabase.rpc("catalogue_match_suggestions", { p_company: companyId }),
+    supabase.rpc("process_validation_status", { p_company: companyId }),
   ]);
+  const validation = new Map((vals ?? []).map((v) => [v.item_id, v]));
   const contributors = new Map<string, number>((srcCounts ?? []).map((r: { item_id: string; contributors: number }) => [r.item_id, r.contributors]));
   const inbox = (unmatched ?? []) as { discovered_process_id: string; process_name: string; session_id: string; item_id: string | null; item_code: string | null; item_title: string | null; score: number | null }[];
   const all = (items ?? []).filter((i) => i.status !== "retired");
@@ -85,7 +87,8 @@ export default async function CataloguePage({ params, searchParams }: {
             <tbody>
               {shown.map((i) => (
                 <tr key={i.id}>
-                  <td><span className="muted small">{KIND_LABEL[i.kind]} · {i.code}</span><br /><Link href={`/c/${companyId}/catalogue/${i.id}`}>{i.title}</Link></td>
+                  <td><span className="muted small">{KIND_LABEL[i.kind]} · {i.code}</span><br /><Link href={`/c/${companyId}/catalogue/${i.id}`}>{i.title}</Link>
+                    {validation.get(i.id) && <> <ValidationBadge v={validation.get(i.id)!} /></>}</td>
                   <td className="small">{i.function_name}</td>
                   <td>{CLASS_LABEL[i.classification]}{i.pending_class && <div className="small muted">→ {CLASS_LABEL[i.pending_class]} (awaiting approval)</div>}</td>
                   <td className="small">{PROCESS_LABEL[i.process_status]}</td>
@@ -191,4 +194,9 @@ export default async function CataloguePage({ params, searchParams }: {
       )}
     </>
   );
+}
+
+function ValidationBadge({ v }: { v: { decision: string; stale: boolean } }) {
+  if (v.decision === "changes_requested") return <span className="badge warn" data-testid="validation-badge">sent back</span>;
+  return <span className={`badge ${v.stale ? "part" : "ok"}`} data-testid="validation-badge">{v.stale ? "validated · changed since" : "✓ validated"}</span>;
 }

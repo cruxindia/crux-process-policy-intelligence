@@ -1,9 +1,9 @@
 name: ai-engine
 on:
   push:
-    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "scripts/agent-charters-sql.mts", "supabase/bootstrap/*.sql", "supabase/bootstrap/*.json", "web/lib/sop*.ts", "web/lib/compare.ts", ".github/workflows/ai-engine.yml"]
+    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "scripts/agent-charters-sql.mts", "supabase/bootstrap/*.sql", "supabase/bootstrap/*.json", "web/lib/sop*.ts", "web/lib/compare.ts", "web/lib/dimensions.ts", ".github/workflows/ai-engine.yml"]
   pull_request:
-    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "scripts/agent-charters-sql.mts", "supabase/bootstrap/*.sql", "supabase/bootstrap/*.json", "web/lib/sop*.ts", "web/lib/compare.ts", ".github/workflows/ai-engine.yml"]
+    paths: ["supabase/functions/**", "scripts/prompt-hash*.mts", "scripts/agent-charters-sql.mts", "supabase/bootstrap/*.sql", "supabase/bootstrap/*.json", "web/lib/sop*.ts", "web/lib/compare.ts", "web/lib/dimensions.ts", ".github/workflows/ai-engine.yml"]
 permissions:
   contents: read
 jobs:
@@ -29,7 +29,7 @@ jobs:
           echo "blueprint $h4"; grep -q "$h4" supabase/bootstrap/blueprint_setup.sql
       # The comparison used by the board and by the web app must be the same code.
       - name: compare.ts identical in Edge Functions and web
-        run: diff -u supabase/functions/_shared/compare.ts web/lib/compare.ts
+        run: diff -u supabase/functions/_shared/compare.ts web/lib/compare.ts && diff -u supabase/functions/_shared/dimensions.ts web/lib/dimensions.ts
       # The expert charters in the database are generated from agent_charters.json; the committed SQL must be current.
       - name: agent charters SQL is up to date
         run: |

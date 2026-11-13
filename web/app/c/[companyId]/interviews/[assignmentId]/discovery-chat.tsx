@@ -4,10 +4,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ProcessMap, type ProcessFlow } from "@/components/process-map";
-import { saveAnswer, submitInterview } from "./actions";
+import { DIMENSIONS, normaliseCoverage } from "@/lib/dimensions";
+import { askColleague, saveAnswer, submitInterview } from "./actions";
 
-export type DQuestion = { id: string; seq: number; text: string; reason: string | null; generatedBy: string; processKey: string | null; draft: string | null };
-export type DAnswer = { kind: string; text: string | null; referred: string | null };
+export type DQuestion = { id: string; seq: number; text: string; reason: string | null; generatedBy: string; processKey: string | null; draft: string | null; suggestions: string[] };
+export type DAnswer = { kind: string; text: string | null; referred: string | null; fromSuggestion?: boolean };
+export type DHelp = { questionId: string; role: string; status: string; reply: string | null };
+export type DMember = { id: string; name: string };
+type InAction = { understood: string; process: string | null; steps_added: string[]; departments: string[]; unclear: string[] };
 export type DProcess = {
   id: string; key: string; name: string; status: string; completeness: number; coverage: Record<string, string> | null;
   flow: ProcessFlow | null; flow_version: number; involvement: string | null; frequency: string | null; departments: string[] | null; purpose: string | null;
@@ -17,8 +21,8 @@ export type DState = {
   responsibilities: { name: string; kind: string; note?: string }[]; processes: DProcess[];
 };
 type Turn = DState & {
-  ok: true; pending?: boolean; next_question: { id: string; seq: number; text: string; reason: string | null; generated_by: string; process_key?: string | null; kind?: string } | null;
-  acknowledgement?: string | null; complete?: boolean; complete_reason?: string; progress?: number; model?: string;
+  ok: true; pending?: boolean; next_question: { id: string; seq: number; text: string; reason: string | null; generated_by: string; process_key?: string | null; kind?: string; suggestions?: string[] } | null;
+  acknowledgement?: string | null; complete?: boolean; complete_reason?: string; progress?: number; model?: string; in_action?: InAction | null;
 };
 type Fail = { ok: false; error: { class: string; message: string; retry_at?: string } & Partial<DState> };
 type Phase = { phase: "idle" | "thinking" | "queued" | "error" | "complete"; message?: string; retryAt?: string };
@@ -34,11 +38,9 @@ const PROFILE_LABEL: Record<string, string> = {
   interacting_departments: "Works with",
 };
 const STATUS_LABEL: Record<string, string> = { identified: "Identified", in_discovery: "Being discussed", sufficient: "Well understood", removed: "Removed" };
-const DIMS = ["purpose", "trigger", "roles", "activities", "systems", "tat", "controls", "exceptions", "dependencies", "performance"];
-const DIM_LABEL: Record<string, string> = { purpose: "Purpose", trigger: "Trigger", roles: "Roles", activities: "Steps", systems: "Systems", tat: "Turnaround",
-  controls: "Controls", exceptions: "Exceptions", dependencies: "Other teams", performance: "Performance" };
-const KIND_TEXT: Record<string, string> = { unknown: "I'm not sure", not_applicable: "Not applicable to my work", refer_to_owner: "Someone else knows" };
-const shown = (a: DAnswer) => a.kind === "answer" || a.kind === "depends" ? a.text ?? "" : KIND_TEXT[a.kind] + (a.referred ? ` — ${a.referred}` : "");
+const KIND_TEXT: Record<string, string> = { unknown: "I'm not sure", not_applicable: "Not applicable", refer_to_owner: "I asked a colleague", deferred: "⏳ Saved for later" };
+const shown = (a: DAnswer) => a.kind === "answer" || a.kind === "depends" ? a.text ?? ""
+  : KIND_TEXT[a.kind] + (a.kind === "not_applicable" && a.text ? ` — ${a.text}` : a.referred ? ` — ${a.referred}` : "");
 
 function localProgress(s: DState) {
   const pf = Object.keys(PROFILE_LABEL).filter((k) => s.profile[k]).length / Object.keys(PROFILE_LABEL).length;
@@ -51,14 +53,17 @@ function localProgress(s: DState) {
 export function DiscoveryChat(props: {
   companyId: string; assignmentId: string; sessionId: string; questions: DQuestion[]; answers: Record<string, DAnswer>;
   state: DState; open: boolean; canAnswer: boolean; submittedAt: string | null; aiProvider: string | null;
+  members: DMember[]; help: DHelp[];
 }) {
   const [questions, setQuestions] = useState(props.questions);
   const [answers, setAnswers] = useState(props.answers);
   const [st, setSt] = useState<DState>(props.state);
   const [acks, setAcks] = useState<Record<string, string>>({}); // question id -> acknowledgement shown before it
+  const [actions, setActions] = useState<Record<string, InAction>>({}); // question id -> "Your answer in action" shown before it
+  const [seed, setSeed] = useState<{ text: string; n: number }>({ text: "", n: 0 }); // text pushed into the composer ("Correct this")
   const [ai, setAi] = useState<Phase>({ phase: "idle" });
   const [progress, setProgress] = useState<number>(() => localProgress(props.state));
-  const [tab, setTab] = useState<"map" | "list" | "me">("map");
+  const [tab, setTab] = useState<"map" | "list" | "me" | "later">("map");
   const [mapKey, setMapKey] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [submitting, startSubmit] = useTransition();
@@ -101,8 +106,9 @@ export function DiscoveryChat(props: {
     const nq = r.next_question;
     if (nq) {
       if (r.acknowledgement) setAcks((a) => ({ ...a, [nq.id]: r.acknowledgement! }));
+      if (r.in_action) setActions((a) => ({ ...a, [nq.id]: r.in_action! }));
       setQuestions((qs) => qs.some((q) => q.id === nq.id) ? qs : [...qs, { id: nq.id, seq: nq.seq, text: nq.text, reason: nq.reason,
-        generatedBy: nq.generated_by, processKey: nq.process_key ?? null, draft: null }]);
+        generatedBy: nq.generated_by, processKey: nq.process_key ?? null, draft: null, suggestions: nq.suggestions ?? [] }]);
       setAi({ phase: "idle" });
     } else if (r.complete) {
       setProgress(100);
@@ -133,6 +139,8 @@ export function DiscoveryChat(props: {
   const finished = ai.phase === "complete" || !props.open;
   const visible = questions.filter((q) => answers[q.id] || q.id === current?.id);
   const procName = useMemo(() => Object.fromEntries(st.processes.map((p) => [p.key, p.name])), [st.processes]);
+  const later = questions.filter((q) => answers[q.id]?.kind === "deferred");
+  const replyBy = useMemo(() => new Map(props.help.filter((h) => h.reply).map((h) => [h.questionId, h])), [props.help]);
 
   return (
     <div className="disc">
@@ -170,12 +178,15 @@ export function DiscoveryChat(props: {
             return (
               <div key={q.id}>
                 {acks[q.id] && <div className="bubble bot ack">{acks[q.id]}</div>}
+                {actions[q.id] && <InActionCard a={actions[q.id]!} canCorrect={canAnswer && q.id === current?.id}
+                  onCorrect={() => setSeed((x) => ({ text: "That's not quite right: ", n: x.n + 1 }))} />}
                 <div className="bubble bot" data-ai={q.generatedBy === "ai" ? "1" : undefined}>
                   {q.processKey && procName[q.processKey] && <div className="proc-tag">{procName[q.processKey]}</div>}
                   {q.text}
                   {q.reason && <div className="why">{q.reason}</div>}
                 </div>
                 {a && <div className="bubble me"><span style={{ whiteSpace: "pre-wrap" }}>{shown(a)}</span></div>}
+                {replyBy.get(q.id) && <div className="bubble bot small" data-testid="colleague-reply">💬 Reply from the {replyBy.get(q.id)!.role}: {replyBy.get(q.id)!.reply}</div>}
               </div>
             );
           })}
@@ -195,6 +206,7 @@ export function DiscoveryChat(props: {
           {finished && (props.open ? (
             <div className="bubble bot" data-testid="disc-complete">
               {ai.message ? `${ai.message} ` : ""}Thank you — that&rsquo;s everything for now. Have a look at the summary of what I understood, then press <strong>Submit</strong>.
+              {later.length > 0 && <> You saved {later.length} question{later.length === 1 ? "" : "s"} for later — you can answer {later.length === 1 ? "it" : "them"} under <strong>Saved for later</strong> first.</>}
               You can still add or correct something by typing it below before you submit.
               {props.canAnswer && (
                 <div style={{ marginTop: 10 }}>
@@ -209,7 +221,7 @@ export function DiscoveryChat(props: {
         </div>
 
         {current && canAnswer && (
-          <Composer key={current.id} q={current} companyId={props.companyId} assignmentId={props.assignmentId}
+          <Composer key={current.id} q={current} companyId={props.companyId} assignmentId={props.assignmentId} members={props.members} seed={seed}
             onSaved={(id, a) => setAnswers((p) => ({ ...p, [id]: a }))} />
         )}
       </div>
@@ -217,7 +229,7 @@ export function DiscoveryChat(props: {
       <aside ref={panel} className={`disc-panel${panelOpen ? " open" : ""}`} aria-label="What I've understood so far">
         <a className="small" href={`/c/${props.companyId}/work/${props.sessionId}`} style={{ float: "right" }}>Full summary →</a>
         <div className="tabs" role="tablist">
-          {([["map", "Process map"], ["list", `Activities (${live.length})`], ["me", "About you"]] as const).map(([k, l]) => (
+          {([["map", "Process map"], ["list", `Activities (${live.length})`], ["me", "About you"], ...(later.length ? [["later", `Saved for later (${later.length})`]] : [])] as [typeof tab, string][]).map(([k, l]) => (
             <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "tab on" : "tab"} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -249,12 +261,17 @@ export function DiscoveryChat(props: {
                 <span className={`badge ${p.status === "sufficient" ? "ok" : p.status === "in_discovery" ? "part" : ""}`}>{STATUS_LABEL[p.status] ?? p.status}</span>
                 <div className="bar thin"><div style={{ width: `${p.completeness}%` }} /></div>
                 <div className="muted small">{[p.frequency, p.involvement, ...(p.departments ?? [])].filter(Boolean).join(" · ")}</div>
-                <div className="dims small">
-                  {DIMS.map((d) => { const s = p.coverage?.[d]; return <span key={d} className={`badge ${s === "sufficient" ? "ok" : s === "partial" ? "part" : ""}`}>{DIM_LABEL[d]}</span>; })}
-                </div>
+                <Dims coverage={p.coverage} />
               </li>
             ))}
           </ul>
+        )}
+        {tab === "later" && (
+          <div data-testid="later-list">
+            <p className="muted small">Answer these whenever you&rsquo;re ready — before you submit.</p>
+            {later.map((q) => <LaterItem key={q.id} q={q} companyId={props.companyId} assignmentId={props.assignmentId} disabled={!canAnswer}
+              onSaved={(id, a) => setAnswers((p) => ({ ...p, [id]: a }))} />)}
+          </div>
         )}
         {tab === "me" && (
           <div>
@@ -272,9 +289,62 @@ export function DiscoveryChat(props: {
   );
 }
 
-function Composer(props: { q: DQuestion; companyId: string; assignmentId: string; onSaved: (id: string, a: DAnswer) => void }) {
+/** The 20 dimensions of a process (blueprint §6C) — covered, partly covered, not applicable or not yet discussed. */
+function Dims({ coverage }: { coverage: Record<string, string> | null }) {
+  const c = normaliseCoverage(coverage);
+  return (
+    <div className="dims small">
+      {DIMENSIONS.map((d) => { const s = c[d.key]; return <span key={d.key} title={d.ask}
+        className={`badge ${s === "sufficient" ? "ok" : s === "partial" ? "part" : s === "not_applicable" ? "na" : ""}`}>{d.label}{s === "not_applicable" ? " · n/a" : ""}</span>; })}
+    </div>
+  );
+}
+
+/** "Your answer in action" (blueprint §9): what was understood, what it added to the map, who is affected, what is unclear. */
+function InActionCard({ a, canCorrect, onCorrect }: { a: InAction; canCorrect: boolean; onCorrect: () => void }) {
+  const [ok, setOk] = useState(false);
+  return (
+    <div className="bubble bot in-action" data-testid="in-action">
+      <strong>Your answer in action</strong>
+      <div className="small" style={{ marginTop: 4 }}>I understood: {a.understood}</div>
+      {a.steps_added.length > 0 && <div className="small">Added to the map{a.process ? ` of “${a.process}”` : ""}: {a.steps_added.join(" → ")}</div>}
+      {a.departments.length > 0 && <div className="small">Teams involved: {a.departments.join(", ")}</div>}
+      {a.unclear.length > 0 && <div className="small muted">Still unclear: {a.unclear.join("; ")}</div>}
+      {ok ? <div className="small muted" style={{ marginTop: 6 }}>Thanks for checking.</div> : canCorrect && (
+        <div className="chips" style={{ marginTop: 8 }}>
+          <button type="button" className="chip ghost" onClick={() => setOk(true)}>That&rsquo;s right</button>
+          <button type="button" className="chip ghost" onClick={onCorrect}>Correct this</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LaterItem(props: { q: DQuestion; companyId: string; assignmentId: string; disabled: boolean; onSaved: (id: string, a: DAnswer) => void }) {
+  const [text, setText] = useState(""); const [error, setError] = useState(""); const [pending, start] = useTransition();
+  const send = () => start(async () => {
+    const r = await saveAnswer({ companyId: props.companyId, assignmentId: props.assignmentId, questionId: props.q.id, kind: "answer", text: text.trim(),
+      basis: "direct", referredNote: "", revisionReason: "Answered after saving it for later" });
+    if (!r.ok) setError(r.error); else props.onSaved(props.q.id, { kind: "answer", text: text.trim(), referred: null });
+  });
+  return (
+    <div className="card" style={{ padding: 10, marginBottom: 8 }}>
+      <div className="small">{props.q.text}</div>
+      {error && <div className="notice error small">{error}</div>}
+      <textarea aria-label={`Answer to: ${props.q.text}`} rows={2} value={text} onChange={(e) => setText(e.target.value)} disabled={props.disabled} />
+      <button type="button" disabled={props.disabled || pending || !text.trim()} onClick={send} style={{ marginTop: 6 }}>{pending ? "…" : "Answer"}</button>
+    </div>
+  );
+}
+
+function Composer(props: { q: DQuestion; companyId: string; assignmentId: string; members: DMember[]; seed: { text: string; n: number };
+  onSaved: (id: string, a: DAnswer) => void }) {
   const { q } = props;
   const [text, setText] = useState(q.draft ?? "");
+  const [picked, setPicked] = useState<string | null>(null);   // the suggestion tapped (if the text still equals it, the answer is "from a suggestion")
+  const [mode, setMode] = useState<"" | "na" | "ask">("");
+  const [extra, setExtra] = useState("");                       // N/A reason or the note to the colleague
+  const [helper, setHelper] = useState("");
   const [error, setError] = useState("");
   const [saveState, setSaveState] = useState("");
   const [pending, start] = useTransition();
@@ -292,31 +362,84 @@ function Composer(props: { q: DQuestion; companyId: string; assignmentId: string
     return () => clearTimeout(t);
   }, [text, q.id, props.companyId]);
 
+  const prefill = useCallback((s: string) => { setPicked(null); setText(s); setTimeout(() => { box.current?.focus(); box.current?.setSelectionRange(s.length, s.length); }, 0); }, []);
+  useEffect(() => {
+    if (!props.seed.n) return;
+    const t = setTimeout(() => prefill(props.seed.text), 0);
+    return () => clearTimeout(t);
+  }, [props.seed, prefill]);
+
   function send(kind: string, value: string) {
     setError("");
     start(async () => {
+      const fromSuggestion = kind === "answer" && picked !== null && value === picked;
       const r = await saveAnswer({ companyId: props.companyId, assignmentId: props.assignmentId, questionId: q.id,
-        kind, text: value, basis: "direct", referredNote: "", revisionReason: "" });
+        kind, text: value, basis: "direct", referredNote: "", revisionReason: "", fromSuggestion });
       if (!r.ok) { setError(r.error); return; }
-      props.onSaved(q.id, { kind, text: value || null, referred: null });
+      props.onSaved(q.id, { kind, text: value || null, referred: null, fromSuggestion });
     });
   }
-  const prefill = (s: string) => { setText(s); setTimeout(() => { box.current?.focus(); box.current?.setSelectionRange(s.length, s.length); }, 0); };
+  function ask() {
+    setError("");
+    start(async () => {
+      const r = await askColleague({ companyId: props.companyId, assignmentId: props.assignmentId, questionId: q.id, helperId: helper, note: extra });
+      if (!r.ok) { setError(r.error); return; }
+      props.onSaved(q.id, { kind: "refer_to_owner", text: null, referred: `${props.members.find((m) => m.id === helper)?.name ?? "a colleague"} will be asked` });
+    });
+  }
 
   return (
     <div className="composer">
       {error && <div className="notice error" style={{ margin: "0 0 8px" }}>{error}</div>}
-      <div className="row" style={{ alignItems: "flex-end", flexWrap: "nowrap" }}>
-        <textarea ref={box} aria-label="Your answer" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type your answer in your own words…" rows={2}
-          onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && text.trim()) send("answer", text.trim()); }} />
-        <button type="button" disabled={pending || !text.trim()} onClick={() => send("answer", text.trim())}>{pending ? "…" : "Send"}</button>
-      </div>
-      <div className="chips" style={{ marginTop: 8 }}>
-        <button type="button" className="chip ghost" disabled={pending} onClick={() => send("unknown", "")}>I&rsquo;m not sure</button>
-        <button type="button" className="chip ghost" disabled={pending} onClick={() => send("answer", "Can you explain what you mean?")}>Can you explain?</button>
-        <button type="button" className="chip ghost" disabled={pending} onClick={() => prefill("I forgot one more responsibility: ")}>I forgot something</button>
-        <button type="button" className="chip ghost" disabled={pending} onClick={() => prefill("Let me correct my earlier answer: ")}>Correct an earlier answer</button>
-      </div>
+      {q.suggestions.length > 0 && mode === "" && (
+        <div style={{ marginBottom: 8 }}>
+          <div className="small muted">Suggested answers (guesses from what we know so far — tap one only if it is true, adjust it, or write your own):</div>
+          <div className="chips" style={{ marginTop: 4 }}>
+            {q.suggestions.map((s) => <button key={s} type="button" data-testid="suggestion" className={`chip${picked === s ? "" : " sug"}`} disabled={pending}
+              onClick={() => { setText(s); setPicked(s); }}>{s}</button>)}
+          </div>
+        </div>
+      )}
+      {mode === "na" ? (
+        <div className="row" style={{ flexWrap: "nowrap" }}>
+          <input aria-label="Why it does not apply" value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="Why does this not apply to your work?" />
+          <button type="button" disabled={pending || !extra.trim()} onClick={() => send("not_applicable", extra.trim())}>OK</button>
+          <button type="button" className="secondary" onClick={() => setMode("")}>Back</button>
+        </div>
+      ) : mode === "ask" ? (
+        <div data-testid="ask-colleague">
+          <div className="row" style={{ flexWrap: "nowrap" }}>
+            <select aria-label="Colleague" value={helper} onChange={(e) => setHelper(e.target.value)}>
+              <option value="">Who knows the answer?</option>
+              {props.members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </div>
+          <input aria-label="Note to your colleague" value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="Optional note, e.g. “You handle the payment approvals”"
+            style={{ marginTop: 6 }} />
+          <div className="row" style={{ marginTop: 6 }}>
+            <button type="button" disabled={pending || !helper} onClick={ask}>{pending ? "…" : "Send request"}</button>
+            <button type="button" className="secondary" onClick={() => setMode("")}>Back</button>
+          </div>
+          <div className="small muted" style={{ marginTop: 4 }}>They get a request in “Requests”. Their reply is added to your interview; you can carry on meanwhile.</div>
+        </div>
+      ) : (
+        <div className="row" style={{ alignItems: "flex-end", flexWrap: "nowrap" }}>
+          <textarea ref={box} aria-label="Your answer" value={text} onChange={(e) => setText(e.target.value)} placeholder="Type your answer in your own words…" rows={2}
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && text.trim()) send("answer", text.trim()); }} />
+          <button type="button" disabled={pending || !text.trim()} onClick={() => send("answer", text.trim())}>{pending ? "…" : "Send"}</button>
+        </div>
+      )}
+      {mode === "" && (
+        <div className="chips" style={{ marginTop: 8 }}>
+          <button type="button" className="chip ghost" disabled={pending} onClick={() => send("unknown", "")}>I&rsquo;m not sure</button>
+          <button type="button" className="chip ghost" disabled={pending} onClick={() => send("answer", "I didn't understand the question — can you explain it with an example?")}>Explain with an example</button>
+          <button type="button" className="chip ghost" disabled={pending} onClick={() => { setExtra(""); setMode("na"); }}>Not applicable</button>
+          <button type="button" className="chip ghost" disabled={pending} onClick={() => { setExtra(""); setMode("ask"); }}>Ask a colleague</button>
+          <button type="button" className="chip ghost" disabled={pending} onClick={() => send("deferred", "")}>Save for later</button>
+          <button type="button" className="chip ghost" disabled={pending} onClick={() => prefill("I forgot one more responsibility: ")}>I forgot something</button>
+          <button type="button" className="chip ghost" disabled={pending} onClick={() => prefill("Let me correct my earlier answer: ")}>Correct an earlier answer</button>
+        </div>
+      )}
       <div className="small muted" style={{ marginTop: 6 }}>{saveState}</div>
     </div>
   );

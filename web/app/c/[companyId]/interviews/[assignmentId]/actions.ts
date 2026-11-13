@@ -5,7 +5,7 @@ import { requireMembership, explain } from "@/lib/session";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-const KINDS = ["answer", "unknown", "not_applicable", "depends", "refer_to_owner"] as const;
+const KINDS = ["answer", "unknown", "not_applicable", "depends", "refer_to_owner", "deferred"] as const;
 const BASES = ["direct", "hearsay", "assumed", "documented"] as const;
 type Kind = (typeof KINDS)[number];
 type Basis = (typeof BASES)[number];
@@ -19,13 +19,14 @@ export async function startInterview(companyId: string, assignmentId: string) {
 
 export async function saveAnswer(input: {
   companyId: string; assignmentId: string; questionId: string;
-  kind: string; text: string; basis: string; referredNote: string; revisionReason: string;
+  kind: string; text: string; basis: string; referredNote: string; revisionReason: string; fromSuggestion?: boolean;
 }): Promise<ActionResult> {
   const { supabase, membership } = await requireMembership(input.companyId);
   if (!KINDS.includes(input.kind as Kind) || !BASES.includes(input.basis as Basis)) return { ok: false, error: "Invalid choice." };
   const text = input.text.trim();
   if (input.kind === "answer" && !text) return { ok: false, error: "Type your answer, or tap “I don't know”." };
   if (input.kind === "depends" && !text) return { ok: false, error: "Explain what it depends on." };
+  if (input.kind === "not_applicable" && !text) return { ok: false, error: "Tell us briefly why this does not apply to your work." };
   if (input.kind === "refer_to_owner" && !input.referredNote.trim())
     return { ok: false, error: "Tell us who knows (name or role)." };
 
@@ -37,12 +38,14 @@ export async function saveAnswer(input: {
     .eq("question_id", input.questionId)
     .maybeSingle();
   const reason = input.revisionReason.trim() || "Changed by the respondent during the interview";
+  const fromSuggestion = input.kind === "answer" && input.fromSuggestion === true;
 
   const { error } = await supabase.from("interview_answers").insert({
     company_id: input.companyId,
     question_id: input.questionId,
     answer_kind: input.kind as Kind,
-    answer_text: text || null,
+    answer_text: input.kind === "deferred" ? null : text || null,
+    from_suggestion: fromSuggestion,
     knowledge_basis: input.basis as Basis,
     referred_note: input.kind === "refer_to_owner" ? input.referredNote.trim() : null,
     answered_by_membership_id: membership.id,
@@ -65,4 +68,15 @@ export async function submitInterview(companyId: string, assignmentId: string, s
   const a = await supabase.from("interview_assignments").update({ status: "completed" }).eq("id", assignmentId).eq("company_id", companyId);
   if (a.error) redirect(`${back}?e=${encodeURIComponent(explain(a.error))}`);
   redirect(`${back}?submitted=1`);
+}
+
+/** "Ask a colleague" (D-085): a request in the Requests module linked to this question; the answer becomes "someone else knows". */
+export async function askColleague(input: { companyId: string; assignmentId: string; questionId: string; helperId: string; note: string }): Promise<ActionResult> {
+  const { supabase } = await requireMembership(input.companyId);
+  if (!input.helperId) return { ok: false, error: "Choose the colleague who knows." };
+  const { error } = await supabase.rpc("interview_ask_colleague", { p_company: input.companyId, p_question: input.questionId,
+    p_helper: input.helperId, p_note: input.note.trim() || null });
+  if (error) return { ok: false, error: explain(error) };
+  revalidatePath(`/c/${input.companyId}/interviews/${input.assignmentId}`);
+  return { ok: true };
 }

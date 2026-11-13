@@ -115,3 +115,13 @@ export async function addItem(companyId: string, form: FormData) {
   if (error || !data) redirect(`/c/${companyId}/catalogue?e=${encodeURIComponent(explain(error) || "Could not add.")}`);
   redirect(`/c/${companyId}/catalogue/${data}?ok=Added.`);
 }
+
+/** Department-head validation of the company version of this process (D-088). */
+export async function validateProcess(companyId: string, itemId: string, form: FormData) {
+  const { supabase } = await requireMembership(companyId);
+  const decision = s(form, "decision");
+  const { error } = await supabase.rpc("process_validate", { p_company: companyId, p_item: itemId, p_decision: decision, p_note: s(form, "note") || null });
+  revalidatePath(`/c/${companyId}/catalogue`);
+  redirect(`/c/${companyId}/catalogue/${itemId}?${error ? "e=" + encodeURIComponent(explain(error))
+    : "ok=" + encodeURIComponent(decision === "validated" ? "Validated — the process is recorded as confirmed by the department." : "Sent back — the reason is recorded.")}#validation`);
+}

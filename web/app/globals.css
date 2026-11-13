@@ -171,3 +171,7 @@ nav.tabs a.on { font-weight: 600; text-decoration: none; color: var(--text); }
 a.card.stat { color: inherit; } a.card.stat.sel { border-color: var(--accent); border-width: 2px; }
 .badge.part { color: var(--accent); border-color: currentColor; }
 form.filters select, form.filters input { width: auto; min-width: 140px; margin: 0; }
+/* M3: not-applicable dimension, "Your answer in action" */
+.badge.na { color: var(--muted); border-style: dashed; }
+.bubble.in-action { border-left: 3px solid var(--accent); }
+.chip.sug { background: color-mix(in srgb, var(--accent) 10%, transparent); color: inherit; border-color: transparent; text-align: left; }

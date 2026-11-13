@@ -8,14 +8,20 @@ import { GeminiProvider, OllamaProvider, providerFromEnv, type AiProvider } from
 import {
   PROMPT_KEY_V2, SYSTEM_PROMPT_V2, TURN_SCHEMA_V2, blockingClarifications, buildUserMessageV2, decideCompletionV2, dedupeContradictions,
   isRepeatV2, isRepeatedClarification, similarity, INVENTORY_NUDGE, needsInventoryNudge, mergeProcess, mergeResponsibilities, openingQuestion, progressV2, sha256Hex, validateTurnV2,
-  type ContextV2, type Flow, type KnownProcess, type Stage,
+  answerInAction, type ContextV2, type Flow, type KnownProcess, type Stage,
 } from "../_shared/discovery.ts";
+import { blueprintSourceText } from "../_shared/blueprint-text.ts";
+import { nameTokens, redactNames } from "../_shared/names.ts";
 import { cooldownFor, healthFor, HEALTH_LABEL, rankConnections, savedMessage, type Conn } from "../_shared/routing.ts";
 
 const ALLOWED = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://crux-ppi.netlify.app,http://localhost:3000").split(",");
 const cors = (o: string | null) => ({ "access-control-allow-origin": o && ALLOWED.includes(o) ? o : ALLOWED[0]!,
   "access-control-allow-headers": "authorization, x-client-info, apikey, content-type", "access-control-allow-methods": "POST, OPTIONS", vary: "origin" });
-const KIND: Record<string, string> = { unknown: "I don't know", not_applicable: "Not applicable to my work", refer_to_owner: "Someone else knows", depends: "It depends" };
+const KIND: Record<string, string> = { unknown: "I don't know", not_applicable: "Not applicable", refer_to_owner: "Someone else knows", depends: "It depends",
+  deferred: "(saved for later — the employee will come back to this)" };
+/** Transcript text of an answer: free text for answers; the option chosen otherwise, with the reason / who knows. */
+const answerText = (x: any) => x.answer_kind === "answer" || x.answer_kind === "depends" ? (x.answer_text ?? "")
+  : KIND[x.answer_kind] + (x.answer_kind === "not_applicable" && x.answer_text ? ` — ${x.answer_text}` : x.referred_note ? ` — ${x.referred_note}` : "");
 function apiKey(dictVar: string, legacy: string) {
   try { const o = JSON.parse(Deno.env.get(dictVar) ?? ""); const k = o.default ?? Object.values(o)[0]; if (typeof k === "string" && k) return k; } catch { /* unset */ }
   return Deno.env.get(legacy) ?? "";
@@ -127,7 +133,7 @@ async function turn(userDb: Db, svc: Db, uid: string, sessionId: string) {
     svc.from("companies").select("name").eq("id", co).single(),
     svc.from("departments").select("code, name").eq("company_id", co).eq("id", a.department_id).maybeSingle(),
     svc.from("user_profiles").select("display_name").eq("id", uid).maybeSingle(),
-    svc.from("interview_questions").select("id, seq, question_text, field_key, generated_by, rationale").eq("company_id", co).eq("session_id", sessionId).order("seq"),
+    svc.from("interview_questions").select("id, seq, question_text, field_key, generated_by, rationale, suggestions").eq("company_id", co).eq("session_id", sessionId).order("seq"),
     svc.from("discovery_profiles").select("*").eq("company_id", co).eq("session_id", sessionId).maybeSingle(),
     svc.from("discovered_processes").select("*").eq("company_id", co).eq("session_id", sessionId).order("created_at"),
     svc.from("interview_clarifications").select("id, description, earlier_answer_id, later_answer_id, question_id").eq("company_id", co).eq("session_id", sessionId).eq("status", "open"),
@@ -157,8 +163,8 @@ async function turn(userDb: Db, svc: Db, uid: string, sessionId: string) {
   const answered = qs.filter((q: any) => ansBy.has(q.id));
   const latestQ = answered[answered.length - 1]; const latestA: any = ansBy.get(latestQ.id);
   const transcript = answered.map((q: any) => { const x: any = ansBy.get(q.id);
-    const text = x.answer_kind === "answer" || x.answer_kind === "depends" ? (x.answer_text ?? "") : KIND[x.answer_kind] + (x.referred_note ? ` — ${x.referred_note}` : "");
-    return { ref: `Q${q.seq}`, answerId: x.id, question: q.question_text, answer: text, edited: (x.revision_no ?? 1) > 1 }; });
+    return { ref: `Q${q.seq}`, answerId: x.id, question: q.question_text, answer: answerText(x), edited: (x.revision_no ?? 1) > 1 }; });
+  const bg = await background(svc, co, sessionId, a.department_id ?? null, qs);
   const profileVals: Record<string, string> = Object.fromEntries(Object.entries(dp?.profile ?? {}).map(([k, v]: [string, any]) => [k, String(v?.value ?? "")]));
   const knownProcs: KnownProcess[] = (procs ?? []).map((p: any) => ({ key: p.process_key, name: p.name, status: p.status, completeness: p.completeness, coverage: p.coverage ?? {}, flow: p.flow }));
   const aiAsked = qs.filter((q: any) => q.generated_by === "ai").length;
@@ -169,7 +175,9 @@ async function turn(userDb: Db, svc: Db, uid: string, sessionId: string) {
     transcript, latestRef: `Q${latestQ.seq}`,
     openClarifications: (clar ?? []).map((c: any) => ({ id: c.id, description: c.description, already_asked: !!c.question_id && ansBy.has(c.question_id) })),
     aiQuestionsAsked: aiAsked, maxAiQuestions: camp.max_ai_questions,
+    companyBlueprint: bg.blueprint, departmentKnowledge: bg.department, colleagueAnswers: bg.colleagues,
   };
+  const ground = [bg.blueprint ?? "", ...bg.department.flatMap((d) => [d.process, ...d.steps]), ...bg.colleagues.map((c) => c.reply)].join(" ");
   const userMsg = buildUserMessageV2(ctx);
   const key = `dturn:${(await sha256Hex(transcript.map((t: any) => t.answerId).sort().join(","))).slice(0, 40)}`;
 
@@ -214,7 +222,7 @@ async function turn(userDb: Db, svc: Db, uid: string, sessionId: string) {
         if (r.errorClass === "rate_limit") { const t = (cd ?? cooldownFor("rate_limit", r.message))!.getTime(); earliest = earliest ? Math.min(earliest, t) : t; }
         if (r.errorClass !== "invalid_response") break; continue;
       }
-      const v = validateTurnV2(r.text, ctx);
+      const v = validateTurnV2(r.text, ctx, ground);
       if (!v.ok) { log("invalid_output", { connection: cand.connectionId, errors: v.errors, attempt, schema_fallback: r.schemaFallback ?? null }); lastErr = { class: "invalid_response", message: "The AI answer was malformed." }; note = `\n\nYour previous output was rejected: ${v.errors.join("; ")}. Return valid JSON matching the schema.`; continue; }
       const refToAnswer = new Map(transcript.map((x: any) => [x.ref, x.answerId]));
       const newContra = dedupeContradictions(v.turn.contradictions, refToAnswer as Map<string, string>, clar ?? []);
@@ -237,7 +245,7 @@ async function turn(userDb: Db, svc: Db, uid: string, sessionId: string) {
       continue; // fallback to the next eligible connection
     }
     await markConnection(svc, co, cand.connectionId, true);
-    const out = await persist(svc, co, sessionId, me.id, run.id, pv.id, latestQ, latestA, qs, ctx, dp, procs ?? [], known, result, aiAsked, camp.max_ai_questions);
+    const out = await persist(svc, co, sessionId, me.id, run.id, pv.id, latestQ, latestA, qs, ctx, dp, procs ?? [], known, result, aiAsked, camp.max_ai_questions, answered.length);
     await svc.from("ai_runs").update({ status: "succeeded", finished_at: new Date().toISOString(), schema_valid: true, output_sha256: await sha256Hex(result.raw),
       invalid_source_ref_count: result.dropped }).eq("company_id", co).eq("id", run.id);
     if (job) await svc.from("ai_jobs").update({ status: "done", completed_at: new Date().toISOString(), connection_id: cand.connectionId }).eq("company_id", co).eq("id", job.id);
@@ -259,7 +267,7 @@ async function turn(userDb: Db, svc: Db, uid: string, sessionId: string) {
 }
 
 async function persist(svc: Db, co: string, sessionId: string, membershipId: string, runId: string, pvId: string, latestQ: any, latestA: any, qs: any[],
-  ctx: ContextV2, dp: any, procRows: any[], known: Record<string, string>, res: any, aiAsked: number, maxQ: number) {
+  ctx: ContextV2, dp: any, procRows: any[], known: Record<string, string>, res: any, aiAsked: number, maxQ: number, answeredCount: number) {
   const t = res.turn; const now = new Date().toISOString();
   await svc.from("interview_answer_analyses").insert({ company_id: co, session_id: sessionId, answer_id: latestA.id, ai_run_id: runId,
     understood_answer: t.understood_answer, analysis: { ...t, next_question: undefined, flow: undefined } });
@@ -287,6 +295,8 @@ async function persist(svc: Db, co: string, sessionId: string, membershipId: str
     if (cur) Object.assign(cur, m); else merged.push(m);
   }
   // live flowchart for the process being discussed (versioned)
+  const actionKey = t.flow?.process_key ?? focus;
+  const prevFlow: Flow | null = actionKey ? (byKey.get(actionKey)?.flow ?? null) : null;
   if (t.flow) {
     const row = byKey.get(t.flow.process_key);
     const flow: Flow = { nodes: t.flow.nodes, edges: t.flow.edges };
@@ -313,9 +323,10 @@ async function persist(svc: Db, co: string, sessionId: string, membershipId: str
     const pk = t.next_question.process_key ?? focus;
     const { error } = await svc.from("interview_questions").insert({ id: qid, company_id: co, session_id: sessionId, seq,
       field_key: pk ? `ai.process.${pk}` : `ai.${t.stage}`, question_text: t.next_question.question, rationale: t.next_question.reason || null,
-      generated_by: "ai", ai_run_id: runId, prompt_version_id: pvId, parent_question_id: latestQ.id });
+      generated_by: "ai", ai_run_id: runId, prompt_version_id: pvId, parent_question_id: latestQ.id, suggestions: t.next_question.suggestions });
     if (error) throw new Error("question_insert_failed");
-    next = { id: qid, seq, text: t.next_question.question, reason: t.next_question.reason, kind: t.next_question.kind, process_key: pk, generated_by: "ai" };
+    next = { id: qid, seq, text: t.next_question.question, reason: t.next_question.reason, kind: t.next_question.kind, process_key: pk, generated_by: "ai",
+      suggestions: t.next_question.suggestions };
     const target = (await svc.from("interview_clarifications").select("id").eq("company_id", co).eq("session_id", sessionId).eq("status", "open").is("question_id", null).limit(1)).data?.[0];
     if (t.next_question.kind === "clarification" && !res.newContra.length && target)
       await svc.from("interview_clarifications").update({ question_id: qid }).eq("company_id", co).eq("id", target.id).is("question_id", null);
@@ -329,7 +340,9 @@ async function persist(svc: Db, co: string, sessionId: string, membershipId: str
   }
   const { data: freshProcs } = await svc.from("discovered_processes").select("*").eq("company_id", co).eq("session_id", sessionId).order("created_at");
   const { data: freshDp } = await svc.from("discovery_profiles").select("*").eq("company_id", co).eq("session_id", sessionId).maybeSingle();
-  return { next_question: next, acknowledgement: t.acknowledgement || null, intent: t.intent, complete: done.complete, complete_reason: done.reason, clarifications,
+  const actionRow = actionKey ? byKey.get(actionKey) : null;
+  const in_action = answerInAction(prevFlow, t.flow ? { nodes: t.flow.nodes, edges: t.flow.edges } : prevFlow, t, actionRow?.name ?? null, actionRow?.departments ?? [], answeredCount);
+  return { next_question: next, acknowledgement: t.acknowledgement || null, intent: t.intent, complete: done.complete, complete_reason: done.reason, clarifications, in_action,
     ...state(freshDp, freshProcs, known, false), progress: progressV2(profVals, known, invConfirmed, responsibilities.length, merged) };
 }
 
@@ -344,6 +357,41 @@ function state(dp: any, procs: any[] | null, known: Record<string, string>, comp
       departments: p.departments, purpose: p.purpose })) };
 }
 function shape(q: any) {
-  return { id: q.id, seq: q.seq, text: q.question_text, reason: q.rationale ?? null, generated_by: q.generated_by,
+  return { id: q.id, seq: q.seq, text: q.question_text, reason: q.rationale ?? null, generated_by: q.generated_by, suggestions: q.suggestions ?? [],
     process_key: String(q.field_key).startsWith("ai.process.") ? String(q.field_key).slice(11) : null };
+}
+
+/** Background for the interviewer (D-084, D-085, D-089): the published blueprint, the steps colleagues in the same department
+ *  described (labels only, member names removed) and replies from colleagues this employee asked for help. */
+async function background(svc: Db, co: string, sessionId: string, deptId: string | null, qs: any[]) {
+  const [{ data: bp }, { data: help }] = await Promise.all([
+    svc.from("blueprint_versions").select("version, content").eq("company_id", co).order("version", { ascending: false }).limit(1).maybeSingle(),
+    svc.from("interview_help_requests").select("question_id, task_id, helper_membership_id").eq("company_id", co).eq("session_id", sessionId),
+  ]);
+  const blueprint = bp ? blueprintSourceText(bp.version, bp.content) : null;
+  let department: { process: string; steps: string[] }[] = [];
+  if (deptId) {
+    const { data: asg } = await svc.from("interview_assignments").select("id").eq("company_id", co).eq("department_id", deptId).limit(500);
+    const { data: ss } = asg?.length ? await svc.from("interview_sessions").select("id").eq("company_id", co).in("assignment_id", asg.map((x: any) => x.id)).neq("id", sessionId).limit(500) : { data: [] };
+    const { data: dps } = ss?.length ? await svc.from("discovered_processes").select("name, flow, status").eq("company_id", co).in("session_id", ss.map((x: any) => x.id))
+      .neq("status", "removed").order("updated_at", { ascending: false }).limit(30) : { data: [] };
+    if (dps?.length) {
+      const { data: ms } = await svc.from("memberships").select("user_id").eq("company_id", co).limit(2000);
+      const { data: ps } = ms?.length ? await svc.from("user_profiles").select("display_name").in("id", ms.map((m: any) => m.user_id)) : { data: [] };
+      const names = nameTokens((ps ?? []).map((p: any) => p.display_name).filter(Boolean));
+      department = dps.filter((d: any) => d.flow?.nodes?.length).slice(0, 12).map((d: any) => ({ process: redactNames(d.name, names),
+        steps: d.flow.nodes.filter((n: any) => n.type !== "start" && n.type !== "end").map((n: any) => redactNames(String(n.label), names)).slice(0, 15) }));
+    }
+  }
+  const colleagues: { ref: string; colleague_role: string; reply: string }[] = [];
+  if (help?.length) {
+    const [{ data: rs }, { data: hm }] = await Promise.all([
+      svc.from("clarification_responses").select("task_id, response_text, created_at").eq("company_id", co).in("task_id", help.map((h: any) => h.task_id)).order("created_at"),
+      svc.from("memberships").select("id, job_title").eq("company_id", co).in("id", help.map((h: any) => h.helper_membership_id)),
+    ]);
+    const seq = new Map(qs.map((q: any) => [q.id, q.seq])); const role = new Map<string, string>((hm ?? []).map((m: any) => [m.id, String(m.job_title || "colleague")]));
+    for (const h of help) for (const r of (rs ?? []).filter((x: any) => x.task_id === h.task_id))
+      colleagues.push({ ref: `Q${seq.get(h.question_id)}`, colleague_role: role.get(h.helper_membership_id) ?? "colleague", reply: r.response_text });
+  }
+  return { blueprint, department, colleagues };
 }

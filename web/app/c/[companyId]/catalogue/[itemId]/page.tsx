@@ -5,7 +5,7 @@ import { fmtDate, memberNames } from "@/lib/names";
 import { BASIS_LABEL, CLASS_HELP, CLASS_LABEL, DOC_STATUS_LABEL, GAP_LABEL, GAP_TONE, KIND_LABEL, PROCESS_LABEL } from "@/lib/catalogue-ui";
 import { STATUS_LABEL as BOARD_STATUS } from "@/lib/board-ui";
 import { compareDescriptions, type DescStep } from "@/lib/compare";
-import { decideClassification, draftWithBoard, improveWithBoard, linkSource, requestClassification, setStatus, unlinkSource } from "../actions";
+import { decideClassification, draftWithBoard, improveWithBoard, linkSource, requestClassification, setStatus, unlinkSource, validateProcess } from "../actions";
 
 export default async function CatalogueItemPage({ params, searchParams }: {
   params: Promise<{ companyId: string; itemId: string }>; searchParams: Promise<Record<string, string | undefined>>;
@@ -50,6 +50,26 @@ export default async function CatalogueItemPage({ params, searchParams }: {
   const { names } = await memberNames(supabase, companyId);
   const personName = persons.map((sid) => { const d = (srcProcs ?? []).find((x) => x.session_id === sid); return d ? names.get(d.membership_id) ?? "A member" : "A member"; });
   const pending = (history ?? []).find((h) => h.status === "pending");
+  // Department-head validation (D-088): history, current state, and what is still open in the conversations behind the item.
+  const [{ data: vHist }, { data: vNow }, { data: canValidate }, { data: openClar }, { data: sessQs }, helpRows] = await Promise.all([
+    supabase.from("process_validations").select("id, decision, note, open_items, decided_by, decided_at").eq("company_id", companyId).eq("item_id", itemId).order("decided_at", { ascending: false }),
+    supabase.rpc("process_validation_status", { p_company: companyId }),
+    supabase.rpc("process_validate_rights", { p_company: companyId }),
+    persons.length ? supabase.from("interview_clarifications").select("id, description").eq("company_id", companyId).eq("status", "open").in("session_id", persons)
+      : Promise.resolve({ data: [] as { id: string; description: string }[] }),
+    persons.length ? supabase.from("interview_questions").select("id, question_text").eq("company_id", companyId).in("session_id", persons)
+      : Promise.resolve({ data: [] as { id: string; question_text: string }[] }),
+    Promise.all(persons.map((sid) => supabase.rpc("interview_help_replies", { p_company: companyId, p_session: sid }).then((r) => r.data ?? []))),
+  ]);
+  const qText = new Map((sessQs ?? []).map((q) => [q.id, q.question_text]));
+  const { data: deferredRows } = qText.size
+    ? await supabase.from("interview_current_answers").select("question_id, answer_kind").eq("company_id", companyId).in("answer_kind", ["deferred", "unknown"]).in("question_id", [...qText.keys()])
+    : { data: [] as { question_id: string | null; answer_kind: string | null }[] };
+  const waiting = helpRows.flat().filter((h) => ["open", "assigned", "escalated"].includes(h.task_status));
+  const openList = [...(openClar ?? []).map((c) => `Contradiction to settle: ${c.description}`),
+    ...(deferredRows ?? []).map((d) => `${d.answer_kind === "unknown" ? "Nobody knew yet (knowledge gap)" : "Saved for later"}: ${qText.get(d.question_id ?? "") ?? "a question"}`),
+    ...waiting.map((h) => `Waiting for a reply from the ${h.helper_role}: ${qText.get(h.question_id) ?? "a question"}`)];
+  const current = (vNow ?? []).find((v) => v.item_id === itemId);
 
   return (
     <>
@@ -173,6 +193,37 @@ export default async function CatalogueItemPage({ params, searchParams }: {
             </select>
             <button type="submit" className="secondary">Add to this item</button>
           </form>)}
+      </section>
+
+      <h2 id="validation">Department validation</h2>
+      <section className="card" data-testid="validation">
+        <p className="muted small">The department head (or process owner) confirms that this company version — built from everyone&rsquo;s description above — is how the work
+          is really done, or sends it back with what must change. Nobody can validate a process only they described.</p>
+        {current ? (
+          <p data-testid="validation-state">
+            {current.decision === "validated" ? <span className={`badge ${current.stale ? "part" : "ok"}`}>{current.stale ? "Validated — but changed since" : "✓ Validated"}</span>
+              : <span className="badge warn">Sent back</span>}{" "}
+            by {names.get(current.decided_by) ?? "a member"} on {fmtDate(current.decided_at)}{current.note ? ` — “${current.note}”` : ""}
+            {current.stale && <span className="small muted"> · A description or a process map changed after this decision; please look again.</span>}
+          </p>
+        ) : <p className="muted" data-testid="validation-state">Not validated yet.</p>}
+        <h3 className="small">Still open in the interviews ({openList.length})</h3>
+        {openList.length ? <ul className="small" data-testid="open-items">{openList.slice(0, 30).map((o, k) => <li key={k}>{o}</li>)}</ul>
+          : <p className="muted small" data-testid="open-items">Nothing open in the interviews you can see.</p>}
+        {canValidate && srcIds.length > 0 && (
+          <form action={validateProcess.bind(null, companyId, itemId)} data-testid="validate-form">
+            <fieldset className="row" style={{ gap: 12, border: 0, padding: 0 }}>
+              <label style={{ fontWeight: 400, display: "flex", gap: 6, alignItems: "center" }}><input type="radio" style={{ width: "auto" }} name="decision" value="validated" defaultChecked /> This is how the work is done</label>
+              <label style={{ fontWeight: 400, display: "flex", gap: 6, alignItems: "center" }}><input type="radio" style={{ width: "auto" }} name="decision" value="changes_requested" /> Send back — something must change</label>
+            </fieldset>
+            <label htmlFor="v-note">Note {openList.length ? "(required while questions are open, or when sending back)" : "(required when sending back)"}</label>
+            <textarea id="v-note" name="note" rows={2} aria-label="Validation note" />
+            <button type="submit" style={{ marginTop: 6 }}>Record decision</button>
+          </form>)}
+        {(vHist ?? []).length > 1 && (
+          <details><summary className="small">Earlier decisions ({(vHist ?? []).length - 1})</summary>
+            <ul className="small">{(vHist ?? []).slice(1).map((v) => <li key={v.id}>{fmtDate(v.decided_at)} · {v.decision === "validated" ? "validated" : "sent back"} by {names.get(v.decided_by) ?? "a member"}{v.note ? ` — ${v.note}` : ""}</li>)}</ul>
+          </details>)}
       </section>
 
       <h2>Classification history</h2>

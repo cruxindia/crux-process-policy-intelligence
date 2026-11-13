@@ -1,8 +1,8 @@
 # Database Schema Reference
 
-**Generated** 2026-11-13T12:02Z from a clean install of `supabase/migrations` (PPI-001…032) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
+**Generated** 2026-11-13T21:00Z from a clean install of `supabase/migrations` (PPI-001…035) by `scripts/gen-schema-ref.sql`. Do not hand-edit; regenerate.
 
-Summary: **73 tables**, **3 views**, **147 RLS policies** in `public`, **82 private helper functions**. All tables RLS-enabled. Same migrations applied to Supabase dev `pahzxpileudulljgaciw` (PG 17).
+Summary: **75 tables**, **3 views**, **149 RLS policies** in `public`, **84 private helper functions**. All tables RLS-enabled. Same migrations applied to Supabase dev `pahzxpileudulljgaciw` (PG 17).
 
 ### `agent_roles`
 RLS: enabled · Policies: `agent_roles_read` (SELECT)
@@ -1144,6 +1144,7 @@ Triggers: audit_interview_answers, interview_answers_append_only, interview_answ
 | `answered_by_membership_id` | uuid | not null |
 | `revision_reason` | text |  |
 | `answered_at` | timestamp with time zone | not null |
+| `from_suggestion` | boolean | not null |
 
 Foreign keys:
 - FOREIGN KEY (company_id, answered_by_membership_id) REFERENCES memberships(company_id, id)
@@ -1255,6 +1256,30 @@ Foreign keys:
 - FOREIGN KEY (company_id, ai_run_id) REFERENCES ai_runs(company_id, id)
 - FOREIGN KEY (company_id, session_id) REFERENCES interview_sessions(company_id, id)
 
+### `interview_help_requests`
+RLS: enabled · Policies: `interview_help_read` (SELECT)
+
+Triggers: audit_interview_help, interview_help_append_only
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `session_id` | uuid | not null |
+| `question_id` | uuid | not null |
+| `task_id` | uuid | not null |
+| `requester_membership_id` | uuid | not null |
+| `helper_membership_id` | uuid | not null |
+| `created_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, helper_membership_id) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id, question_id) REFERENCES interview_questions(company_id, id)
+- FOREIGN KEY (company_id, requester_membership_id) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id, session_id) REFERENCES interview_sessions(company_id, id)
+- FOREIGN KEY (company_id, task_id) REFERENCES clarification_tasks(company_id, id)
+
 ### `interview_questions`
 RLS: enabled · Policies: `iq_insert` (INSERT), `iq_read` (SELECT)
 
@@ -1275,6 +1300,7 @@ Triggers: interview_questions_append_only
 | `prompt_version_id` | uuid |  |
 | `ai_run_id` | uuid |  |
 | `created_at` | timestamp with time zone | not null |
+| `suggestions` | text[] | not null |
 
 Foreign keys:
 - FOREIGN KEY (company_id, ai_run_id) REFERENCES ai_runs(company_id, id)
@@ -1586,6 +1612,28 @@ Foreign keys:
 - FOREIGN KEY (company_id, performer_department_id) REFERENCES departments(company_id, id)
 - FOREIGN KEY (company_id, process_version_id) REFERENCES process_versions(company_id, id) ON DELETE CASCADE
 - FOREIGN KEY (company_id, subprocess_id) REFERENCES processes(company_id, id)
+
+### `process_validations`
+RLS: enabled · Policies: `process_validations_read` (SELECT)
+
+Triggers: audit_process_validations, process_validations_append_only
+
+| Column | Type | Null |
+|---|---|---|
+| `id` | uuid | not null |
+| `company_id` | uuid | not null |
+| `item_id` | uuid | not null |
+| `decision` | text | not null |
+| `note` | text |  |
+| `open_items` | integer | not null |
+| `snapshot` | jsonb | not null |
+| `decided_by` | uuid | not null |
+| `decided_at` | timestamp with time zone | not null |
+
+Foreign keys:
+- FOREIGN KEY (company_id, decided_by) REFERENCES memberships(company_id, id)
+- FOREIGN KEY (company_id) REFERENCES companies(id)
+- FOREIGN KEY (company_id, item_id) REFERENCES catalogue_items(company_id, id)
 
 ### `process_versions`
 RLS: enabled · Policies: `pv_insert` (INSERT), `pv_read` (SELECT), `pv_update` (UPDATE)

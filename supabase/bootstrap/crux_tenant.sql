@@ -24,12 +24,12 @@ begin
     ('DISCOVERY_LEAD', array['interview.manage','interview.review','process.read','knowledge.read','evidence.read','dashboard.read']),
     ('DEPT_HEAD', array['process.read','process.edit','interview.manage','interview.review','evidence.read','evidence.upload','evidence.review',
                         'knowledge.read','knowledge.edit','knowledge.verify','clarification.create','clarification.respond','clarification.manage',
-                        'dispute.raise','document.read','document.draft','classified.confidential_read','dashboard.read']),
+                        'dispute.raise','document.read','document.draft','classified.confidential_read','dashboard.read','process.validate']),
     ('EMPLOYEE', array['process.read','knowledge.read','evidence.upload','clarification.create','clarification.respond','dispute.raise','document.read']),
     ('BE_REVIEWER', array['process.read','knowledge.read','knowledge.verify','evidence.read','interview.review','document.read',
                           'document.review_functional','dispute.raise','clarification.create','dashboard.read']),
     ('PROCESS_OWNER', array['process.read','process.edit','process.approve','knowledge.read','knowledge.edit','knowledge.verify',
-                            'document.read','document.review_owner','dispute.raise']),
+                            'document.read','document.review_owner','dispute.raise','process.validate']),
     ('DOC_APPROVER', array['process.read','knowledge.read','knowledge.approve','document.read','document.approve','document.publish',
                            'dispute.decide','dashboard.read','classified.confidential_read'])) v(code, perms) on v.code = ro.code
   cross join lateral unnest(v.perms) p

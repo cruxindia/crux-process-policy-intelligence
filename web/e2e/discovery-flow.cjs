@@ -35,7 +35,7 @@ const SCRIPT = [
     check('Start conversation opens the AI conversation', true);
     check('opening question asks about the role', /designation|department/i.test(await p.locator('.bubble.bot').last().innerText()));
     check('privacy notice shown (Gemini free)', await p.getByTestId('ai-notice').isVisible());
-    check('quick chips present (not sure / explain / forgot / correct)', (await p.locator('.composer .chip').count()) === 4);
+    check('answer options present (not sure / explain / N/A / ask a colleague / save for later / forgot / correct)', (await p.locator('.composer .chip.ghost:not([data-testid="suggestion"])').count()) === 7);
     const timings = [];
     for (let i = 0; i < SCRIPT.length; i++) {
       const before = await p.locator('.bubble.me').count();
@@ -52,11 +52,11 @@ const SCRIPT = [
     // Ask for an explanation via chip: the AI should rephrase rather than move on.
     const lastQ = await p.locator('.bubble.bot[data-ai="1"]').last().innerText();
     const n0 = await p.locator('.bubble.me').count();
-    await p.getByRole('button', { name: 'Can you explain?' }).click();
+    await p.getByRole('button', { name: 'Explain with an example' }).click();
     await p.waitForFunction((n) => document.querySelectorAll('.bubble.me').length > n, n0, { timeout: 20000 });
     await p.waitForSelector('textarea[aria-label="Your answer"]', { timeout: 120000 });
     const rephrased = await p.locator('.bubble.bot[data-ai="1"]').last().innerText();
-    check('"Can you explain?" gets a new, rephrased question', rephrased !== lastQ, rephrased.slice(0, 120));
+    check('"Explain with an example" gets a new, rephrased question', rephrased !== lastQ, rephrased.slice(0, 120));
 
     // Side panel
     await p.getByRole('tab', { name: /Activities/ }).click();

@@ -2194,6 +2194,7 @@ export type Database = {
           answered_at: string
           answered_by_membership_id: string
           company_id: string
+          from_suggestion: boolean
           id: string
           knowledge_basis: string
           question_id: string
@@ -2209,6 +2210,7 @@ export type Database = {
           answered_at?: string
           answered_by_membership_id: string
           company_id: string
+          from_suggestion?: boolean
           id?: string
           knowledge_basis?: string
           question_id: string
@@ -2224,6 +2226,7 @@ export type Database = {
           answered_at?: string
           answered_by_membership_id?: string
           company_id?: string
+          from_suggestion?: boolean
           id?: string
           knowledge_basis?: string
           question_id?: string
@@ -2593,6 +2596,12 @@ export type Database = {
           },
         ]
       }
+      interview_help_requests: {
+        Row: { company_id: string; created_at: string; helper_membership_id: string; id: string; question_id: string; requester_membership_id: string; session_id: string; task_id: string }
+        Insert: { company_id: string; created_at?: string; helper_membership_id: string; id?: string; question_id: string; requester_membership_id: string; session_id: string; task_id: string }
+        Update: { company_id?: string; created_at?: string; helper_membership_id?: string; id?: string; question_id?: string; requester_membership_id?: string; session_id?: string; task_id?: string }
+        Relationships: []
+      }
       interview_questions: {
         Row: {
           ai_run_id: string | null
@@ -2607,6 +2616,7 @@ export type Database = {
           rationale: string | null
           seq: number
           session_id: string
+          suggestions: string[]
           template_id: string | null
         }
         Insert: {
@@ -2622,6 +2632,7 @@ export type Database = {
           rationale?: string | null
           seq: number
           session_id: string
+          suggestions?: string[]
           template_id?: string | null
         }
         Update: {
@@ -2637,6 +2648,7 @@ export type Database = {
           rationale?: string | null
           seq?: number
           session_id?: string
+          suggestions?: string[]
           template_id?: string | null
         }
         Relationships: [
@@ -3574,6 +3586,12 @@ export type Database = {
           },
         ]
       }
+      process_validations: {
+        Row: { company_id: string; decided_at: string; decided_by: string; decision: string; id: string; item_id: string; note: string | null; open_items: number; snapshot: Json }
+        Insert: { company_id: string; decided_at?: string; decided_by: string; decision: string; id?: string; item_id: string; note?: string | null; open_items?: number; snapshot: Json }
+        Update: { company_id?: string; decided_at?: string; decided_by?: string; decision?: string; id?: string; item_id?: string; note?: string | null; open_items?: number; snapshot?: Json }
+        Relationships: []
+      }
       processes: {
         Row: {
           classification: string
@@ -3978,6 +3996,7 @@ export type Database = {
           answered_at: string | null
           answered_by_membership_id: string | null
           company_id: string | null
+          from_suggestion: boolean | null
           id: string | null
           knowledge_basis: string | null
           question_id: string | null
@@ -4088,6 +4107,11 @@ export type Database = {
       ctq_request_target: { Args: { p_company: string; p_ctq: string; p_target_value: number | null; p_target_text: string | null; p_reason: string }; Returns: undefined }
       ctq_decide_target: { Args: { p_company: string; p_ctq: string; p_decision: string; p_note?: string | null }; Returns: undefined }
       ctq_retire: { Args: { p_company: string; p_ctq: string; p_note: string }; Returns: undefined }
+      interview_ask_colleague: { Args: { p_company: string; p_question: string; p_helper: string; p_note?: string | null }; Returns: string }
+      interview_help_replies: { Args: { p_company: string; p_session: string }; Returns: { question_id: string; helper_membership_id: string; helper_role: string; task_status: string; reply: string | null; replied_at: string | null }[] }
+      process_validate: { Args: { p_company: string; p_item: string; p_decision: string; p_note?: string | null }; Returns: string }
+      process_validate_rights: { Args: { p_company: string }; Returns: boolean }
+      process_validation_status: { Args: { p_company: string }; Returns: { item_id: string; decision: string; note: string | null; decided_by: string; decided_at: string; stale: boolean; open_items: number }[] }
       blueprint_publish: { Args: { p_company: string; p_note: string | null }; Returns: number }
       catalogue_match_suggestions: {
         Args: { p_company: string; p_min?: number }

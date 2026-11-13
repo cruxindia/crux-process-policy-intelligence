@@ -20,8 +20,7 @@ const PROFILE: [string, string][] = [
 const KIND: Record<string, string> = { daily: "Daily", weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly", occasional: "Occasional", exception: "Exceptions",
   for_other_department: "For other departments", informal: "Informal work", should_be_owned_elsewhere: "Should be owned elsewhere", unowned: "Nobody formally owns", automatable: "Could be automated" };
 const STATUS: Record<string, string> = { identified: "Identified", in_discovery: "Being discussed", sufficient: "Well understood" };
-const DIMS: [string, string][] = [["purpose", "Purpose"], ["trigger", "Trigger"], ["roles", "Roles"], ["activities", "Steps"], ["systems", "Systems"], ["tat", "Turnaround"],
-  ["controls", "Controls"], ["exceptions", "Exceptions"], ["dependencies", "Other teams"], ["performance", "Performance"]];
+import { DIMENSIONS, normaliseCoverage } from "@/lib/dimensions";
 
 export default async function WorkSummary({ params, searchParams }: { params: Promise<{ companyId: string; sessionId: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
@@ -115,7 +114,7 @@ export default async function WorkSummary({ params, searchParams }: { params: Pr
         {procs?.map((p) => {
           const flow = (p.flow ?? null) as ProcessFlow | null;
           const sop = draftSop(flow);
-          const cov = (p.coverage ?? {}) as Record<string, string>;
+          const cov = normaliseCoverage(p.coverage);
           return (
             <article key={p.id} className="card proc" id={`p-${p.id}`}>
               <div className="row" style={{ justifyContent: "space-between" }}>
@@ -161,7 +160,7 @@ export default async function WorkSummary({ params, searchParams }: { params: Pr
               )}
               <p className="muted small">{[p.frequency && `Frequency: ${p.frequency}`, p.volume && `Volume: ${p.volume}`, p.involvement && `Role: ${p.involvement}`,
                 p.owner_text && `Owner: ${p.owner_text}`, p.importance && `Importance: ${p.importance}`, p.departments?.length && `Other departments: ${p.departments.join(", ")}`].filter(Boolean).join(" · ")}</p>
-              <div className="dims small">{DIMS.map(([d, l]) => <span key={d} className={`badge ${cov[d] === "sufficient" ? "ok" : cov[d] === "partial" ? "part" : ""}`}>{l}</span>)}</div>
+              <div className="dims small">{DIMENSIONS.map((d) => <span key={d.key} title={d.ask} className={`badge ${cov[d.key] === "sufficient" ? "ok" : cov[d.key] === "partial" ? "part" : cov[d.key] === "not_applicable" ? "na" : ""}`}>{d.label}{cov[d.key] === "not_applicable" ? " · n/a" : ""}</span>)}</div>
               <div className="grid2" style={{ marginTop: 10, alignItems: "start" }}>
                 <div>
                   <h4 className="small">Process map{p.flow_version ? ` · version ${p.flow_version}` : ""}</h4>
