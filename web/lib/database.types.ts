@@ -272,6 +272,14 @@ export type Database = {
         Update: { ai_connection_limit?: number; catalogue_settings?: Json; code?: string; created_at?: string; id?: string; is_demo?: boolean; name?: string; status?: string; status_note?: string | null; timezone?: string; updated_at?: string }
         Relationships: []
       }
+      company_api_keys: {
+        Row: { calls_total: number; company_id: string; created_at: string; created_by_membership_id: string | null; id: string; key_hash: string; key_prefix: string; last_used_at: string | null; name: string; revoked_at: string | null; revoked_by_membership_id: string | null }
+        Insert: { calls_total?: number; company_id: string; created_at?: string; created_by_membership_id?: string | null; id?: string; key_hash: string; key_prefix: string; last_used_at?: string | null; name: string; revoked_at?: string | null; revoked_by_membership_id?: string | null }
+        Update: { calls_total?: number; company_id?: string; created_at?: string; created_by_membership_id?: string | null; id?: string; key_hash?: string; key_prefix?: string; last_used_at?: string | null; name?: string; revoked_at?: string | null; revoked_by_membership_id?: string | null }
+        Relationships: [
+          { foreignKeyName: "company_api_keys_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
+        ]
+      }
       company_billing_profiles: {
         Row: { address: string | null; billing_email: string | null; company_id: string; gstin: string | null; legal_name: string | null; state_code: string | null; updated_at: string }
         Insert: { address?: string | null; billing_email?: string | null; company_id: string; gstin?: string | null; legal_name?: string | null; state_code?: string | null; updated_at?: string }
@@ -394,6 +402,16 @@ export type Database = {
           { foreignKeyName: "document_acknowledgements_company_id_version_id_fkey"; columns: ["company_id", "version_id"]; isOneToOne: false; referencedRelation: "document_versions"; referencedColumns: ["company_id", "id"] }
         ]
       }
+      document_api_calls: {
+        Row: { at: string; company_id: string | null; endpoint: string; id: number; key_id: string | null; release_id: string | null; status: number }
+        Insert: { at?: string; company_id?: string | null; endpoint: string; id?: number; key_id?: string | null; release_id?: string | null; status: number }
+        Update: { at?: string; company_id?: string | null; endpoint?: string; id?: number; key_id?: string | null; release_id?: string | null; status?: number }
+        Relationships: [
+          { foreignKeyName: "document_api_calls_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
+          { foreignKeyName: "document_api_calls_key_id_fkey"; columns: ["key_id"]; isOneToOne: false; referencedRelation: "company_api_keys"; referencedColumns: ["id"] },
+          { foreignKeyName: "document_api_calls_release_id_fkey"; columns: ["release_id"]; isOneToOne: false; referencedRelation: "document_releases"; referencedColumns: ["id"] }
+        ]
+      }
       document_change_requests: {
         Row: { company_id: string; created_at: string; document_id: string; id: string; reason: string; requested_by_membership_id: string; status: string }
         Insert: { company_id: string; created_at?: string; document_id: string; id?: string; reason: string; requested_by_membership_id: string; status?: string }
@@ -410,6 +428,15 @@ export type Database = {
         Relationships: [
           { foreignKeyName: "document_distributions_company_id_membership_id_fkey"; columns: ["company_id", "membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] },
           { foreignKeyName: "document_distributions_company_id_version_id_fkey"; columns: ["company_id", "version_id"]; isOneToOne: false; referencedRelation: "document_versions"; referencedColumns: ["company_id", "id"] }
+        ]
+      }
+      document_releases: {
+        Row: { calls_total: number; case_id: string; company_id: string; id: string; public_embed: boolean; released_at: string; released_by_membership_id: string; revoked_at: string | null; slug: string }
+        Insert: { calls_total?: number; case_id: string; company_id: string; id?: string; public_embed?: boolean; released_at?: string; released_by_membership_id: string; revoked_at?: string | null; slug: string }
+        Update: { calls_total?: number; case_id?: string; company_id?: string; id?: string; public_embed?: boolean; released_at?: string; released_by_membership_id?: string; revoked_at?: string | null; slug?: string }
+        Relationships: [
+          { foreignKeyName: "document_releases_company_id_case_id_fkey"; columns: ["company_id", "case_id"]; isOneToOne: false; referencedRelation: "board_cases"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "document_releases_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
         ]
       }
       document_types: {
@@ -846,7 +873,11 @@ export type Database = {
       catalogue_unlink_source: { Args: { p_company: string | null; p_discovered: string | null }; Returns: undefined }
       clear_password_marker: { Args: never; Returns: undefined }
       company_billing_estimate: { Args: { p_company: string | null }; Returns: Json }
+      company_create_api_key: { Args: { p_company: string | null; p_name: string | null }; Returns: Json }
       company_dispute_invoice: { Args: { p_company: string | null; p_invoice: string | null; p_reason: string | null }; Returns: string }
+      company_release_document: { Args: { p_company: string | null; p_case: string | null; p_slug: string | null; p_public_embed?: boolean | null }; Returns: string }
+      company_revoke_api_key: { Args: { p_company: string | null; p_key: string | null }; Returns: undefined }
+      company_revoke_release: { Args: { p_company: string | null; p_release: string | null }; Returns: undefined }
       company_save_billing_profile: { Args: { p_company: string | null; p_legal_name: string | null; p_gstin: string | null; p_address: string | null; p_state_code: string | null; p_email: string | null }; Returns: undefined }
       ctq_decide_target: { Args: { p_company: string | null; p_ctq: string | null; p_decision: string | null; p_note?: string | null }; Returns: undefined }
       ctq_request_target: { Args: { p_company: string | null; p_ctq: string | null; p_target_value: number | null; p_target_text: string | null; p_reason: string | null }; Returns: undefined }

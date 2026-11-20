@@ -218,3 +218,7 @@ main.wide, .wide-page { max-width: 1240px; }
   body { background: #fff; color: #000; } main { max-width: none; padding: 0; }
   .invoice { border: none; padding: 0; } .console { display: block; }
 }
+
+/* code samples (integrations) */
+pre.code { white-space: pre-wrap; word-break: break-all; background: rgba(127,127,127,.08); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-x: auto; margin: 8px 0; }
