@@ -16,12 +16,15 @@ export default async function CompanyLayout({ children, params }: { children: Re
   const items: NavItem[] = [
     { href: base, label: "Home" },
     { href: `${base}/tasks`, label: "My work", count: (tickets ?? 0) + (requests ?? 0) },
+    ...(has("dashboard.read") ? [{ href: `${base}/dashboard`, label: "Dashboard" }] : []),
     ...(has("interview.review") ? [{ href: `${base}/review`, label: "Review" }] : []),
     ...(has("interview.manage") ? [{ href: `${base}/discovery`, label: "Discovery" }] : []),
     { href: `${base}/catalogue`, label: "Processes" },
     { href: `${base}/blueprint`, label: "Blueprint" },
     ...(has("document.draft", "document.read", "interview.review", "process.edit", "org.manage") ? [{ href: `${base}/board`, label: "Expert board" }] : []),
     { href: `${base}/requests`, label: "Requests" },
+    { href: `${base}/projects`, label: "Projects" },
+    ...(has("report.read") ? [{ href: `${base}/reports`, label: "Reports" }] : []),
     ...(has("org.manage") ? [{ href: `${base}/integrations`, label: "Websites & apps" }, { href: `${base}/billing`, label: "Billing" }] : []),
     ...(has("org.manage", "membership.manage", "role.manage", "process.edit") ? [{ href: `${base}/admin`, label: "Admin" }] : []),
   ];

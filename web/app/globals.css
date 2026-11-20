@@ -222,3 +222,11 @@ main.wide, .wide-page { max-width: 1240px; }
 /* code samples (integrations) */
 pre.code { white-space: pre-wrap; word-break: break-all; background: rgba(127,127,127,.08); border: 1px solid var(--border);
   border-radius: 8px; padding: 10px 12px; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-x: auto; margin: 8px 0; }
+
+/* dashboards (PPI-042) */
+.hero-strip { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 18px; border-radius: 12px; margin: 8px 0 4px;
+  background: linear-gradient(120deg, rgba(15, 91, 216, .10), rgba(27, 122, 61, .10)); border: 1px solid var(--border); }
+.hero-big { font-size: 1.25rem; font-weight: 700; }
+.champions { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.champion { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.champion-rank { font-size: 1.6rem; line-height: 1; }

@@ -112,3 +112,6 @@ select id, 'extract.process_steps', 1, 'Extract structured process steps with so
 insert into public.role_permissions (company_id, role_id, permission_code)
 select r.company_id, r.id, 'ticket.manage' from public.roles r where r.code in ('COMPANY_ADMIN', 'DISCOVERY_LEAD', 'DEPT_HEAD')
 on conflict do nothing;
+
+-- PPI-042: STAKEHOLDER role, report.read and project.manage grants (the migration runs before this seed creates companies).
+select private.ensure_reporting_roles(id) from public.companies;

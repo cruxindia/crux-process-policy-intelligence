@@ -761,6 +761,25 @@ export type Database = {
           { foreignKeyName: "processes_company_id_owner_membership_id_fkey"; columns: ["company_id", "owner_membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] }
         ]
       }
+      project_milestones: {
+        Row: { company_id: string; created_at: string; done_at: string | null; due_on: string | null; id: string; owner_membership_id: string | null; project_id: string; sort_order: number; title: string }
+        Insert: { company_id: string; created_at?: string; done_at?: string | null; due_on?: string | null; id?: string; owner_membership_id?: string | null; project_id: string; sort_order?: number; title: string }
+        Update: { company_id?: string; created_at?: string; done_at?: string | null; due_on?: string | null; id?: string; owner_membership_id?: string | null; project_id?: string; sort_order?: number; title?: string }
+        Relationships: [
+          { foreignKeyName: "project_milestones_company_id_owner_membership_id_fkey"; columns: ["company_id", "owner_membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "project_milestones_company_id_project_id_fkey"; columns: ["company_id", "project_id"]; isOneToOne: false; referencedRelation: "projects"; referencedColumns: ["company_id", "id"] }
+        ]
+      }
+      projects: {
+        Row: { code: string; company_id: string; created_at: string; created_by_membership_id: string | null; department_ids: string[]; id: string; manager_membership_id: string | null; name: string; objective: string | null; sponsor_membership_id: string | null; starts_on: string | null; status: string; target_end_on: string | null; updated_at: string }
+        Insert: { code: string; company_id: string; created_at?: string; created_by_membership_id?: string | null; department_ids?: string[]; id?: string; manager_membership_id?: string | null; name: string; objective?: string | null; sponsor_membership_id?: string | null; starts_on?: string | null; status?: string; target_end_on?: string | null; updated_at?: string }
+        Update: { code?: string; company_id?: string; created_at?: string; created_by_membership_id?: string | null; department_ids?: string[]; id?: string; manager_membership_id?: string | null; name?: string; objective?: string | null; sponsor_membership_id?: string | null; starts_on?: string | null; status?: string; target_end_on?: string | null; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "projects_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
+          { foreignKeyName: "projects_company_id_manager_membership_id_fkey"; columns: ["company_id", "manager_membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "projects_company_id_sponsor_membership_id_fkey"; columns: ["company_id", "sponsor_membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] }
+        ]
+      }
       prompt_versions: {
         Row: { company_id: string; created_at: string; id: string; output_schema: Json; prompt_key: string; purpose: string; status: string; template_sha256: string; version: number }
         Insert: { company_id: string; created_at?: string; id?: string; output_schema: Json; prompt_key: string; purpose: string; status?: string; template_sha256: string; version: number }
@@ -874,6 +893,7 @@ export type Database = {
       clear_password_marker: { Args: never; Returns: undefined }
       company_billing_estimate: { Args: { p_company: string | null }; Returns: Json }
       company_create_api_key: { Args: { p_company: string | null; p_name: string | null }; Returns: Json }
+      company_dashboard: { Args: { p_company: string | null; p_project?: string | null }; Returns: Json }
       company_dispute_invoice: { Args: { p_company: string | null; p_invoice: string | null; p_reason: string | null }; Returns: string }
       company_release_document: { Args: { p_company: string | null; p_case: string | null; p_slug: string | null; p_public_embed?: boolean | null }; Returns: string }
       company_revoke_api_key: { Args: { p_company: string | null; p_key: string | null }; Returns: undefined }
@@ -890,6 +910,7 @@ export type Database = {
       join_link_info: { Args: { p_token: string | null }; Returns: Json }
       load_starter_templates: { Args: { p_company: string | null }; Returns: number }
       member_contacts: { Args: { p_company: string | null }; Returns: { membership_id: string; mobile: string; email: string }[] }
+      mis_report: { Args: { p_company: string | null; p_report: string | null; p_from?: string | null; p_to?: string | null }; Returns: Json }
       mobile_login_id: { Args: { p_mobile: string | null }; Returns: string }
       my_contact: { Args: never; Returns: Json }
       my_discovery_assignment: { Args: { p_company: string | null }; Returns: string }
@@ -905,6 +926,7 @@ export type Database = {
       platform_create_company: { Args: { p_code: string | null; p_name: string | null; p_admin_email: string | null; p_admin_name: string | null; p_admin_job?: string | null }; Returns: Json }
       platform_generate_invoices: { Args: { p_month: string | null }; Returns: Json }
       platform_invoice_action: { Args: { p_invoice: string | null; p_action: string | null; p_note?: string | null }; Returns: string }
+      platform_mis: { Args: { p_report: string | null; p_from?: string | null; p_to?: string | null }; Returns: Json }
       platform_save_billing_settings: { Args: { p: Json | null }; Returns: undefined }
       platform_save_plan: { Args: { p_id: string | null; p_code: string | null; p_name: string | null; p_description: string | null; p_monthly_fee: number | null; p_included_people: number | null; p_price_per_extra_person: number | null; p_included_ai_runs: number | null; p_price_per_100_ai_runs: number | null; p_features: string[] | null; p_company?: string | null; p_status?: string | null }; Returns: string }
       platform_set_company_status: { Args: { p_company: string | null; p_status: string | null; p_note?: string | null }; Returns: undefined }
@@ -914,6 +936,8 @@ export type Database = {
       process_validate: { Args: { p_company: string | null; p_item: string | null; p_decision: string | null; p_note?: string | null }; Returns: string }
       process_validate_rights: { Args: { p_company: string | null }; Returns: boolean }
       process_validation_status: { Args: { p_company: string | null }; Returns: { item_id: string; decision: string; note: string; decided_by: string; decided_at: string; stale: boolean; open_items: number }[] }
+      project_milestone_save: { Args: { p_company: string | null; p_project: string | null; p_id: string | null; p_title: string | null; p_due: string | null; p_owner: string | null; p_done: boolean | null }; Returns: string }
+      project_save: { Args: { p_company: string | null; p_id: string | null; p_code: string | null; p_name: string | null; p_objective: string | null; p_manager: string | null; p_sponsor: string | null; p_departments: string[] | null; p_starts: string | null; p_target_end: string | null; p_status: string | null }; Returns: string }
       promote_discovered_process: { Args: { p_company: string | null; p_discovered: string | null; p_code: string | null; p_owner_department: string | null; p_classification?: string | null; p_existing_process?: string | null }; Returns: string }
       register_with_join_link: { Args: { p_token: string | null; p_mobile: string | null; p_full_name: string | null; p_password: string | null; p_email?: string | null }; Returns: Json }
       reissue_temporary_password: { Args: { p_company: string | null; p_membership: string | null }; Returns: string }
