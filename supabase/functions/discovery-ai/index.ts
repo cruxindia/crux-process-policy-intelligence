@@ -13,6 +13,7 @@ import {
 import { blueprintSourceText } from "../_shared/blueprint-text.ts";
 import { nameTokens, redactNames } from "../_shared/names.ts";
 import { cooldownFor, healthFor, HEALTH_LABEL, rankConnections, savedMessage, type Conn } from "../_shared/routing.ts";
+import { poolCandidates } from "../_shared/pool.ts";
 
 const ALLOWED = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://crux-ppi.netlify.app,http://localhost:3000").split(",");
 const cors = (o: string | null) => ({ "access-control-allow-origin": o && ALLOWED.includes(o) ? o : ALLOWED[0]!,
@@ -197,6 +198,7 @@ async function turn(userDb: Db, svc: Db, uid: string, sessionId: string) {
   const ranked = rankConnections(conns, { departmentId: a.department_id ?? null, processId: a.process_id ?? null, category: "discovery", stickyKey: me.id });
   const cands: Candidate[] = [];
   for (const c of ranked) { if (cands.length >= 3) break; const p = await providerFor(svc, co, c); if (p) cands.push({ provider: p, connectionId: c.id, label: c.name }); }  // this person's slot + 2 fallbacks
+  cands.push(...await poolCandidates(svc, co, "internal"));   // platform pool (one key per provider; PPI-040)
   const def = envDefault(); if (def) cands.push(def);
   const cooling = conns.filter((c) => c.status === "active" && c.cooldown_until && Date.parse(c.cooldown_until) > Date.now()).map((c) => Date.parse(c.cooldown_until!));
 

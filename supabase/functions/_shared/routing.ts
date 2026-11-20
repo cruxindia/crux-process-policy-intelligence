@@ -11,7 +11,7 @@ export type Conn = {
 export type Need = { departmentId: string | null; processId: string | null; category: string; stickyKey?: string };
 
 /** FNV-1a: deterministic spread of people/cases across equal connections (same person -> same project). */
-const spread = (s: string) => {
+export const spread = (s: string) => {
   let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
   h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; h ^= h >>> 16; // murmur3 finaliser
   return h >>> 0;

@@ -12,6 +12,7 @@ export default async function PlatformLayout({ children }: { children: React.Rea
           { href: "/platform/companies", label: "Companies" },
           { href: "/platform/tickets", label: "Tickets" },
           { href: "/platform/billing", label: "Billing" },
+          { href: "/platform/ai", label: "AI pool" },
         ]} />
         <div style={{ minWidth: 0 }}>{children}</div>
       </div>

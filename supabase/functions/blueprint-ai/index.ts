@@ -8,6 +8,7 @@ import { BLUEPRINT_PROMPT_KEY, BLUEPRINT_SCHEMA, BLUEPRINT_SYSTEM, buildBlueprin
   type LeaderAnswer } from "../_shared/blueprint.ts";
 import { nameTokens, redactNames } from "../_shared/names.ts";
 import { cooldownFor, rankConnections, type Conn } from "../_shared/routing.ts";
+import { poolCandidates } from "../_shared/pool.ts";
 
 const ALLOWED = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://crux-ppi.netlify.app,http://localhost:3000").split(",");
 const cors = (o: string | null) => ({ "access-control-allow-origin": o && ALLOWED.includes(o) ? o : ALLOWED[0]!,
@@ -70,6 +71,7 @@ async function candidates(svc: Db, co: string, sticky: string): Promise<{ provid
     const { data: key } = await svc.rpc("ai_connection_get_key", { p_company: co, p_connection: c.id });
     if (key) list.push({ provider: new GeminiProvider(String(key), c.model, c.policy_provider), connectionId: c.id });
   }
+  list.push(...await poolCandidates(svc, co, "confidential"));   // platform pool (one key per provider; PPI-040)
   const def = providerFromEnv((k) => Deno.env.get(k));
   if (!(def instanceof GeminiProvider) || Deno.env.get("GEMINI_API_KEY")) list.push({ provider: def, connectionId: null });
   return list;

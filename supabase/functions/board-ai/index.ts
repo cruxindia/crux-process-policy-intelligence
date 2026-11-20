@@ -6,6 +6,7 @@ import { GeminiProvider, OllamaProvider, providerFromEnv, type AiProvider } from
 import { BOARD_PROMPT_KEY, BOARD_SCHEMA, BOARD_SYSTEM, MAX_REVISIONS, buildPlan, buildSources, buildTurnMessage, descriptionsByPerson, lintDocument, nameTokens, preservationIssues, redactNames, revisionSteps, validateTurn,
   type CaseKind, type DocType, type PriorTurn, type Step } from "../_shared/board.ts";
 import { cooldownFor, rankConnections, type Conn } from "../_shared/routing.ts";
+import { poolCandidates } from "../_shared/pool.ts";
 import { compareDescriptions, comparisonAnnex } from "../_shared/compare.ts";
 import { blueprintSourceText } from "../_shared/blueprint-text.ts";
 
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
 type Role = { id: string; code: string; version: number; title: string; charter: string; charter_sha256: string; team_code: string };
 type Cand = { provider: AiProvider; connectionId: string | null; label: string };
 
-async function candidatesFor(svc: Db, co: string, team: string, caseId: string): Promise<{ list: Cand[]; restingUntil: number | null }> {
+async function candidatesFor(svc: Db, co: string, team: string, caseId: string, classification: string): Promise<{ list: Cand[]; restingUntil: number | null }> {
   const [{ data: cs }, { data: as }] = await Promise.all([
     svc.from("ai_provider_connections").select("id, name, provider, policy_provider, model, base_url, priority, status, cooldown_until, vault_secret_id").eq("company_id", co),
     svc.from("ai_connection_assignments").select("connection_id, department_id, process_id, interview_category, active").eq("company_id", co),
@@ -77,6 +78,7 @@ async function candidatesFor(svc: Db, co: string, team: string, caseId: string):
     const { data: key } = await svc.rpc("ai_connection_get_key", { p_company: co, p_connection: c.id });
     if (key) list.push({ provider: new GeminiProvider(String(key), c.model, c.policy_provider), connectionId: c.id, label: c.name });
   }
+  list.push(...await poolCandidates(svc, co, classification));   // platform pool (one key per provider; PPI-040)
   const def = providerFromEnv((k) => Deno.env.get(k));
   if (!(def instanceof GeminiProvider) || Deno.env.get("GEMINI_API_KEY")) list.push({ provider: def, connectionId: null, label: "Server default" });
   const resting = conns.filter((c) => c.status === "active" && c.cooldown_until && Date.parse(c.cooldown_until) > Date.now()).map((c) => Date.parse(c.cooldown_until!));
@@ -154,7 +156,7 @@ async function runCase(svc: Db, co: string, caseId: string) {
       step, sources, prior, draft, feedback, checks);
     const system = `${BOARD_SYSTEM}\n\nYOUR CHARTER (${role.code} v${role.version} — ${role.title})\n${role.charter}`;
 
-    const { list, restingUntil } = await candidatesFor(svc, co, role.team_code, caseId);
+    const { list, restingUntil } = await candidatesFor(svc, co, role.team_code, caseId, cs.classification);
     let done = false; let lastErr = ""; let rateLimited = false;
     for (const cand of list) {
       const key = `board:${caseId}:${next}:${revisions}`;
