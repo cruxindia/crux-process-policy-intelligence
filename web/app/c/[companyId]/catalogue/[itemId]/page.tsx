@@ -82,7 +82,7 @@ export default async function CatalogueItemPage({ params, searchParams }: {
 
       <div className="grid2" style={{ alignItems: "start" }}>
         <section className="card" data-testid="item-summary">
-          <div><span className={`badge ${GAP_TONE[it.gap_type] ?? ""}`}>{GAP_LABEL[it.gap_type]}</span></div>
+          <div><span className={`badge ${GAP_TONE[it.gap_type ?? ""] ?? ""}`}>{GAP_LABEL[it.gap_type ?? ""]}</span></div>
           <dl className="kv small">
             <dt>Classification</dt><dd>{CLASS_LABEL[it.classification]}{it.basis && ` · ${BASIS_LABEL[it.basis] ?? it.basis}`}{it.basis_reference && ` — ${it.basis_reference}`}
               {it.classification_reason && <div className="muted">“{it.classification_reason}” — {names.get(it.classified_by ?? "") ?? "a member"}{it.approved_by && `, approved by ${names.get(it.approved_by) ?? "a member"}`}</div>}</dd>

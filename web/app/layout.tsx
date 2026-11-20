@@ -15,6 +15,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Mobile-number accounts use an internal login address; show the number instead.
   const m = rawEmail ? /^91(\d{10})@mobile\.crux-ppi\.invalid$/.exec(rawEmail) : null;
   const email = m ? `+91 ${m[1]}` : rawEmail;
+  const { data: owner } = email ? await supabase.rpc("am_platform_admin") : { data: false };
 
   return (
     <html lang="en">
@@ -23,6 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Link href="/" className="brand">Process &amp; Policy Intelligence</Link>
           {email && (
             <form action="/auth/signout" method="post" className="row">
+              {owner && <Link href="/platform" className="small" data-testid="platform-link">Platform console</Link>}
               <span className="muted small">{email}</span>
               <Link href="/account/password" className="small">Password</Link>
               <button className="secondary" type="submit">Sign out</button>

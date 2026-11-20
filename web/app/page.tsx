@@ -8,6 +8,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const { supabase, userId } = await requireUser();
   const { data: mustChange } = await supabase.rpc("password_change_required");
   if (mustChange) redirect("/account/password");
+  const { data: owner } = await supabase.rpc("am_platform_admin");
   // Every active member gets the company's AI-led discovery conversation (PPI-027) — also people who joined earlier.
   const { data: active } = await supabase.from("memberships").select("company_id").eq("user_id", userId).eq("status", "active");
   let staff = false;
@@ -24,7 +25,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   if (!sp.e && !sp.pw) {
     const { data: act } = await supabase.from("memberships").select("company_id").eq("user_id", userId).eq("status", "active");
     const { count: invited } = await supabase.from("memberships").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "invited");
-    if (act?.length === 1 && !invited) redirect(`/c/${act[0]!.company_id}`);
+    if (act?.length === 1 && !invited && !owner) redirect(`/c/${act[0]!.company_id}`);
+    if (!act?.length && !invited && owner) redirect("/platform");
   }
   const { data: memberships, error } = await supabase
     .from("memberships")
@@ -35,6 +37,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
 
   return (
     <>
+      {owner && <div className="card row"><div className="grow"><strong>Platform console</strong><div className="muted small">All companies, billing, AI keys and tickets</div></div><Link className="button" href="/platform">Open</Link></div>}
       <h1>Your organisations</h1>
       <p className="muted">Choose where to work. Invitations must be accepted before any access applies.</p>
       {sp.e && <div className="notice error">{sp.e}</div>}

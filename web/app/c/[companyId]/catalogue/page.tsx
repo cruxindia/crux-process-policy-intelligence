@@ -33,7 +33,7 @@ export default async function CataloguePage({ params, searchParams }: {
   const inbox = (unmatched ?? []) as { discovered_process_id: string; process_name: string; session_id: string; item_id: string | null; item_code: string | null; item_title: string | null; score: number | null }[];
   const all = (items ?? []).filter((i) => i.status !== "retired");
   const counts = new Map<string, number>();
-  for (const i of all) counts.set(i.gap_type, (counts.get(i.gap_type) ?? 0) + 1);
+  for (const i of all) counts.set(i.gap_type ?? "", (counts.get(i.gap_type ?? "") ?? 0) + 1);
   const shown = all.filter((i) => (!sp.kind || i.kind === sp.kind) && (!sp.fn || i.function_id === sp.fn) && (!sp.gap || i.gap_type === sp.gap)
     && (!sp.q || `${i.code} ${i.title}`.toLowerCase().includes(sp.q.toLowerCase())));
   const itemBy = new Map(all.map((i) => [i.id, i]));
@@ -94,7 +94,7 @@ export default async function CataloguePage({ params, searchParams }: {
                   <td className="small">{PROCESS_LABEL[i.process_status]}</td>
                   <td className="num small">{contributors.get(i.id) ?? "—"}</td>
                   <td className="small">{DOC_STATUS_LABEL[i.document_status]}</td>
-                  <td><span className={`badge ${GAP_TONE[i.gap_type] ?? ""}`}>{GAP_LABEL[i.gap_type]}</span></td>
+                  <td><span className={`badge ${GAP_TONE[i.gap_type ?? ""] ?? ""}`}>{GAP_LABEL[i.gap_type ?? ""]}</span></td>
                 </tr>
               ))}
               {!shown.length && <tr><td colSpan={7} className="muted">Nothing matches.</td></tr>}

@@ -119,6 +119,25 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 - **Next:** M4 cross-department intelligence (contradictions across departments, as-is / should-be, decision register, in-app reminders via pg_cron).
 - **Out of M3 (later modules):** voice answers, Hindi/Marathi UI, milestones/team progress (M5), cross-department contradiction engine (M4).
 
+## 12F. Platform & agency release (owner request 20-Nov-2026)
+
+**Objective:** run the product as a multi-company agency platform: platform owner (super admin) and per-company admins, a task/ticket engine, billing, a multi-provider AI key pool, a document API for client systems, role dashboards and MIS, a UI that makes every contributor feel their input matters, and a 100-employee demo company used to test every layer.
+
+**Scope and order (each stage ships live with tests before the next starts):**
+| Stage | Deliverable | Acceptance |
+|---|---|---|
+| P1 | Super admin (platform owner) + company admins; platform console: companies, create company + first admin | DB tests: super admin sees all companies' metadata, never interview content; company admin limited to own company |
+| P2 | Tasks & tickets engine (blueprint §7B–C, master prompt §6.13): ticket IDs, kinds, due date, priority, thread, reminders on working days, escalation, one daily digest, unified "My work" inbox, support tickets to the platform | DB + E2E; reminders/escalation via pg_cron (hosted) |
+| P3 | Billing: packages, custom package, usage metering, auto monthly invoices, GST, invoice view/print/download, company dispute → ticket | DB tests for calculation; E2E |
+| P4 | AI key pool: bulk upload (super admin), providers Gemini / Groq / OpenRouter / Cerebras / Mistral / GitHub Models / OpenAI-compatible, test, health, compliance flags, routing | unit + live test per provider with a key the owner supplies |
+| P5 | Document API + website embed: company API keys (hashed, shown once), only documents explicitly released for external use, never confidential | DB + API tests |
+| P6 | Dashboards (super admin, company admin, project manager, stakeholder) + MIS reports with CSV export; engagement projects with managers | E2E |
+| P7 | UI/UX overhaul: contribution and impact visible to every person, guided next steps, recognition | visual review, phone + desktop, accessibility checks |
+| P8 | Demo company (fictional, 100 employees, full data incl. conversations and outcomes) + full-run test at every layer; issues found → fixed and logged | demo login works; test log in TEST_RESULTS |
+
+**Constraints:** prices are the owner's decision (D-081): billing ships with editable draft prices; Claude never enters, stores or tests the owner's keys; keys only in Vault; free-tier terms respected (D-095); confidentiality of client content holds for the platform owner too (D-091).
+**Decisions:** D-091…D-100 (decision log).
+
 ## 13. Decision / change log
 | Date | Change | By |
 |---|---|---|

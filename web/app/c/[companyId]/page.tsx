@@ -28,7 +28,8 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
     supabase.from("clarification_tasks").select("id, code, question_text, due_at").eq("company_id", companyId)
       .eq("assignee_membership_id", membership.id).in("status", ["open", "assigned", "escalated"]).order("created_at"),
   ]);
-  const link = (t: string | null, id: string | null) => t === "dispute" ? `/c/${companyId}/disputes/${id}` : `/c/${companyId}/requests/${id}`;
+  const link = (t: string | null, id: string | null) => t === "dispute" ? `/c/${companyId}/disputes/${id}` : t === "ticket" ? `/c/${companyId}/tasks/${id}`
+    : t === "digest" ? `/c/${companyId}/tasks` : `/c/${companyId}/requests/${id}`;
 
   const canManage = permissions.has("interview.manage");
   const canAdmin = ["org.manage", "membership.manage", "role.manage", "process.edit"].some((x) => permissions.has(x));

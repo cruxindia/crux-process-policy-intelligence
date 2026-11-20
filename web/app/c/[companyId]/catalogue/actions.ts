@@ -40,9 +40,9 @@ async function sourceIds(supabase: Awaited<ReturnType<typeof requireMembership>>
   return (data ?? []).map((r) => r.discovered_process_id as string);
 }
 
-function itemBrief(it: { code: string; title: string; function_name: string; ownership_note: string | null; classification: string; basis: string | null;
+function itemBrief(it: { code: string; title: string; function_name: string | null; ownership_note: string | null; classification: string; basis: string | null;
   basis_reference: string | null; process_note: string | null }, n: number) {
-  return [`Catalogue item ${it.code}: ${it.title} (${it.function_name}).`, it.ownership_note && `Expected ownership: ${it.ownership_note}.`,
+  return [`Catalogue item ${it.code}: ${it.title} (${it.function_name ?? "function not set"}).`, it.ownership_note && `Expected ownership: ${it.ownership_note}.`,
     it.classification !== "unassessed" && `Classified ${it.classification}${it.basis ? ` (basis: ${it.basis}${it.basis_reference ? ` — ${it.basis_reference}` : ""})` : ""}.`,
     it.process_note && `How it is done today: ${it.process_note}`,
     n > 1 && `The ${n} interview sources describe the SAME company work as told by different people: produce ONE company document that reconciles them; list genuine differences under "Variations and open points".`,

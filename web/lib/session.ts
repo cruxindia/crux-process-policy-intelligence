@@ -39,3 +39,11 @@ export function explain(error: DbError): string {
   if (error.code === "42501" && !m) return "You do not have permission to do that.";  // our own guards explain themselves
   return m?.[1] ?? error.message;
 }
+
+/** The platform owner ("super admin", D-091). Everyone else gets a 404 — the console's existence is not advertised. */
+export async function requirePlatformAdmin() {
+  const { supabase, userId } = await requireUser();
+  const { data: ok } = await supabase.rpc("am_platform_admin");
+  if (!ok) notFound();
+  return { supabase, userId };
+}

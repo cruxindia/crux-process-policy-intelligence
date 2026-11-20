@@ -107,3 +107,8 @@ insert into public.prompt_versions (company_id, prompt_key, version, purpose, te
 select id, 'extract.process_steps', 1, 'Extract structured process steps with source IDs',
        encode(extensions.digest('synthetic template v1', 'sha256'), 'hex'),
        '{"type":"object","required":["claims"]}'::jsonb, 'active' from public.companies;
+
+-- PPI-037: task/ticket managers (same rule as the migration, which ran before these roles existed).
+insert into public.role_permissions (company_id, role_id, permission_code)
+select r.company_id, r.id, 'ticket.manage' from public.roles r where r.code in ('COMPANY_ADMIN', 'DISCOVERY_LEAD', 'DEPT_HEAD')
+on conflict do nothing;
