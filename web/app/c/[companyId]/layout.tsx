@@ -22,6 +22,7 @@ export default async function CompanyLayout({ children, params }: { children: Re
     { href: `${base}/blueprint`, label: "Blueprint" },
     ...(has("document.draft", "document.read", "interview.review", "process.edit", "org.manage") ? [{ href: `${base}/board`, label: "Expert board" }] : []),
     { href: `${base}/requests`, label: "Requests" },
+    ...(has("org.manage") ? [{ href: `${base}/billing`, label: "Billing" }] : []),
     ...(has("org.manage", "membership.manage", "role.manage", "process.edit") ? [{ href: `${base}/admin`, label: "Admin" }] : []),
   ];
   return (

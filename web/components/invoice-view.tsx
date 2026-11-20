@@ -1,0 +1,58 @@
+import type { Json } from "@/lib/database.types";
+import { PrintButton } from "./print-button";
+
+export type Invoice = { id: string; number: string | null; status: string; disputed: boolean; proforma: boolean; period_start: string; period_end: string;
+  lines: Json; subtotal: number; discount: number; taxable: number; cgst: number; sgst: number; igst: number; total: number; supplier: Json; recipient: Json;
+  usage: Json; issued_at: string | null; due_on: string | null; paid_at: string | null; void_reason: string | null };
+
+export const inr = (n: number | string) => "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const d = (s: string | null) => s ? new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+type Party = { legal_name?: string; gstin?: string; address?: string; state_code?: string; sac?: string; email?: string };
+type Line = { label: string; qty: number; rate: number; amount: number };
+
+/** Printable GST invoice (A4). "Proforma" until the platform billing profile is complete; "Draft" before issue. */
+export function InvoiceView({ inv }: { inv: Invoice }) {
+  const s = (inv.supplier ?? {}) as Party; const r = (inv.recipient ?? {}) as Party; const u = (inv.usage ?? {}) as Record<string, number>;
+  const lines = (inv.lines ?? []) as Line[];
+  const title = inv.status === "draft" ? "Draft invoice" : inv.proforma ? "Proforma invoice" : "Tax invoice";
+  return (
+    <article className="invoice" data-testid="invoice">
+      <div className="row no-print" style={{ justifyContent: "flex-end" }}><PrintButton /></div>
+      <header className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div><h1 style={{ margin: 0 }}>{title}</h1>
+          <div className="mono">{inv.number ?? "Number assigned when issued"}</div>
+          {inv.status === "void" && <div className="badge danger">VOID — {inv.void_reason}</div>}
+          {inv.status === "paid" && <div className="badge ok">PAID {d(inv.paid_at)}</div>}
+          {inv.disputed && <div className="badge warn">Under dispute</div>}</div>
+        <dl className="kv small" style={{ minWidth: 240 }}>
+          <div><dt>Invoice date</dt><dd>{d(inv.issued_at)}</dd></div>
+          <div><dt>Period</dt><dd>{d(inv.period_start)} – {d(inv.period_end)}</dd></div>
+          <div><dt>Due</dt><dd>{d(inv.due_on)}</dd></div>
+        </dl>
+      </header>
+      <div className="grid2" style={{ marginTop: 16 }}>
+        <div><div className="small muted">From</div><strong>{s.legal_name || "Platform owner (billing profile not completed)"}</strong>
+          <div className="small">{s.address}</div><div className="small">GSTIN: {s.gstin || "—"} · State {s.state_code || "—"}</div></div>
+        <div><div className="small muted">Bill to</div><strong>{r.legal_name}</strong><div className="small">{r.address}</div>
+          <div className="small">GSTIN: {r.gstin || "Unregistered"} · Place of supply: state {r.state_code || "—"}</div></div>
+      </div>
+      <div className="table-wrap" style={{ marginTop: 16 }}>
+        <table>
+          <thead><tr><th>Description</th><th>SAC</th><th className="num">Qty</th><th className="num">Rate</th><th className="num">Amount</th></tr></thead>
+          <tbody>
+            {lines.map((l, k) => <tr key={k}><td style={{ whiteSpace: "normal" }}>{l.label}</td><td className="small">{s.sac || "—"}</td><td className="num">{l.qty}</td><td className="num">{inr(l.rate)}</td><td className="num">{inr(l.amount)}</td></tr>)}
+            <tr><td colSpan={4} className="num">Subtotal</td><td className="num">{inr(inv.subtotal)}</td></tr>
+            {Number(inv.discount) > 0 && <tr><td colSpan={4} className="num">Discount</td><td className="num">− {inr(inv.discount)}</td></tr>}
+            <tr><td colSpan={4} className="num">Taxable value</td><td className="num">{inr(inv.taxable)}</td></tr>
+            {Number(inv.igst) > 0 ? <tr><td colSpan={4} className="num">IGST</td><td className="num">{inr(inv.igst)}</td></tr>
+              : <><tr><td colSpan={4} className="num">CGST</td><td className="num">{inr(inv.cgst)}</td></tr><tr><td colSpan={4} className="num">SGST</td><td className="num">{inr(inv.sgst)}</td></tr></>}
+            <tr><td colSpan={4} className="num"><strong>Total</strong></td><td className="num"><strong>{inr(inv.total)}</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted">Usage measured for the period: {u.active_people ?? 0} people took part · {u.ai_runs ?? 0} AI runs · {u.documents_approved ?? 0} documents approved.
+        “People who took part” = members who answered, raised or worked a task, or replied to a request during the period.</p>
+      {inv.proforma && inv.status !== "draft" && <p className="small muted">Proforma: the supplier&rsquo;s tax details are not complete yet; a tax invoice follows once they are.</p>}
+    </article>
+  );
+}

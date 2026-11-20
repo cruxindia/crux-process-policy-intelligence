@@ -208,3 +208,13 @@ main.wide, .wide-page { max-width: 1240px; }
 .company-nav.compact { margin-top: -16px; }
 .company-nav.compact .company-name { display: none; }
 @media (max-width: 640px) { .company-nav .company-name { display: none; } }
+/* P3 — invoices (screen + print) */
+.invoice { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
+.meter { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; margin: 8px 0; }
+.meter .bar { grid-column: 1 / -1; margin: 0; }
+.meter .bar > div.over { background: var(--warn); }
+@media print {
+  header.top, .company-nav, .console-nav, .no-print, nav { display: none !important; }
+  body { background: #fff; color: #000; } main { max-width: none; padding: 0; }
+  .invoice { border: none; padding: 0; } .console { display: block; }
+}
