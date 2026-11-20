@@ -199,7 +199,7 @@ main.wide, .wide-page { max-width: 1240px; }
 .badge.danger { color: var(--danger); border-color: currentColor; }
 .once { border: 2px solid var(--warn); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .02em; }
-.company-nav { display: flex; align-items: center; gap: 2px; overflow-x: auto; margin: -12px 0 18px; padding: 4px 0 8px; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+.company-nav { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin: -12px 0 18px; padding: 4px 0 8px; border-bottom: 1px solid var(--border); position: relative; z-index: 20; }
 .company-nav .company-name { font-weight: 700; margin-right: 10px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .company-nav a { padding: 6px 10px; border-radius: 999px; color: var(--muted); text-decoration: none; white-space: nowrap; font-size: .92rem; }
 .company-nav a:hover { color: var(--text); background: color-mix(in srgb, var(--accent) 8%, transparent); }
@@ -230,3 +230,36 @@ pre.code { white-space: pre-wrap; word-break: break-all; background: rgba(127,12
 .champions { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .champion { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .champion-rank { font-size: 1.6rem; line-height: 1; }
+
+/* "More" menu in the company navigation (P7) */
+.nav-more { position: relative; }
+.nav-more > summary { list-style: none; cursor: pointer; padding: 6px 10px; border-radius: 999px; color: var(--muted); font-size: .92rem; white-space: nowrap; user-select: none; }
+.nav-more > summary::-webkit-details-marker { display: none; }
+.nav-more > summary:hover, .nav-more[open] > summary { color: var(--text); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.nav-more > summary.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); font-weight: 600; }
+.nav-more-menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 280px; max-width: min(340px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 12px 32px rgba(15, 23, 42, .14); padding: 6px; display: grid; gap: 2px; }
+.nav-more-menu a { display: grid; gap: 1px; padding: 8px 10px; border-radius: 8px; color: var(--text); text-decoration: none; white-space: normal; }
+.nav-more-menu a:hover, .nav-more-menu a.on { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.nav-more-menu a.on { color: var(--accent); font-weight: 600; }
+.nav-more-menu .hint { font-size: .78rem; color: var(--muted); font-weight: 400; }
+@media (max-width: 640px) { .nav-more { position: static; } .nav-more-menu { left: 0; right: 0; max-width: none; } }
+
+/* welcome + contribution (P7) */
+.welcome { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 20px 22px; border-radius: 14px; margin-bottom: 14px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 13%, var(--surface)), color-mix(in srgb, var(--ok) 10%, var(--surface))); border: 1px solid var(--border); }
+.button.big { padding: 12px 20px; font-size: 1.02rem; font-weight: 600; border-radius: 10px; }
+.impact { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; margin-bottom: 14px; }
+.impact > div { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.impact-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.impact-tiles div { display: grid; padding: 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.impact-tiles strong { font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.impact-tiles span { font-size: .78rem; color: var(--muted); }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.earned { padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); font-size: .85rem; font-weight: 600; cursor: help; }
+@media (max-width: 760px) { .impact { grid-template-columns: 1fr; } .impact-tiles { grid-template-columns: repeat(2, 1fr); } .welcome .button.big { width: 100%; text-align: center; } }
+@media (max-width: 640px) {
+  header.top { flex-wrap: wrap; row-gap: 6px; }
+  header.top form.row { gap: 8px; }
+  header.top form .muted.small { display: none; }   /* the signed-in address takes too much room on phones */
+}

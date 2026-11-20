@@ -15,15 +15,17 @@ const results = []; const check = (n, c, d = '') => results.push(`${c ? 'PASS' :
     await p.goto(BASE + '/'); await p.waitForLoadState('networkidle');
     check('administrator lands on the company home (not forced into a chat)', new URL(p.url()).pathname === `/c/${CO}`, p.url());
     const card = p.getByTestId('discovery-card');
-    check('home shows "Let\'s understand the work you do" for an existing member', await card.isVisible() && /understand the work you do/.test(await card.innerText()));
-    check('admin and review entry points still visible', (await p.getByRole('link', { name: /Administration/ }).count()) === 1);
+    const cta = p.getByTestId('next-action');
+    check('home offers the discovery conversation (welcome action, or the card once started)', (await card.count()) === 1 ? /understand the work you do/.test(await card.innerText())
+      : /conversation/i.test(await cta.innerText()));
+    check('admin and review entry points still reachable (More menu)', (await p.getByTestId('nav-more').locator('a', { hasText: 'Administration' }).count()) === 1);
     await p.screenshot({ path: `${OUT}/50-existing-member-home.png` });
-    await card.getByRole('link', { name: /Start conversation|Continue conversation/ }).click();
+    await ((await card.count()) === 1 ? card.getByRole('link', { name: /Start conversation|Continue conversation/ }) : cta).click();
     await p.waitForURL(/\/interviews\//, { timeout: 30000 }); await p.waitForSelector('.welcome, .disc', { timeout: 30000 });
     const started = (await p.locator('.welcome').count()) > 0 || (await p.locator('.disc').count()) > 0;
     check('one click opens the discovery conversation', started, p.url());
     await p.goto(BASE + `/c/${CO}`); await p.waitForLoadState('networkidle');
-    check('visiting again does not create duplicates (one card)', (await p.getByTestId('discovery-card').count()) === 1);
+    check('visiting again does not create duplicates (at most one card)', (await p.getByTestId('discovery-card').count()) <= 1);
     // Manager view: per-person discovery progress with links to each summary.
     await p.goto(BASE + `/c/${CO}/discovery`); await p.waitForLoadState('networkidle');
     const t = p.getByTestId('discovery-progress').first();

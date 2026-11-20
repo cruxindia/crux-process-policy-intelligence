@@ -19,7 +19,7 @@ const results = []; const check = (n, c, d = '') => results.push(`${c ? 'PASS' :
     await p.goto(BASE + '/login'); await p.fill('#email', 'e2e.lead@example.invalid'); await p.fill('#password', process.env.E2E_PASSWORD);
     await p.getByRole('button', { name: 'Sign in', exact: true }).click(); await p.waitForLoadState('networkidle');
     await p.goto(`${BASE}/c/${CO}`);
-    check('home shows the Expert board link', await p.getByRole('link', { name: 'Expert board' }).count() === 1);
+    check('navigation shows the Expert board link', await p.getByRole('link', { name: 'Expert board' }).count() === 1);
     await p.getByRole('link', { name: 'Expert board' }).click(); await p.waitForURL(/\/board$/);
     check('board page lists cases and offers "Draft a new document"', await p.getByText('Draft a new document').count() === 1 && await p.locator('table a').count() > 0);
 

@@ -20,7 +20,7 @@ const results = []; const check = (n, c, d = '') => results.push(`${c ? 'PASS' :
     await p.goto(BASE + '/login'); await p.fill('#email', 'e2e.lead@example.invalid'); await p.fill('#password', process.env.E2E_PASSWORD);
     await p.getByRole('button', { name: 'Sign in', exact: true }).click(); await p.waitForLoadState('networkidle');
     await p.goto(`${BASE}/c/${CO}`);
-    await p.getByRole('link', { name: 'Catalogue' }).click(); await p.waitForSelector('[data-testid="catalogue-table"]');
+    await p.getByRole('navigation').getByRole('link', { name: 'Processes' }).click(); await p.waitForSelector('[data-testid="catalogue-table"]');
     const rows = await p.locator('[data-testid="catalogue-table"] tbody tr').count();
     check('catalogue lists the blueprint baseline', rows >= 148, `${rows} items`);
     check('gap summary is shown', await p.locator('[data-testid="gap-summary"] a').count() >= 1);

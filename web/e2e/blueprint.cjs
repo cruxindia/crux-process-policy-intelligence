@@ -41,7 +41,7 @@ const ANSWERS = {
     await p.goto(BASE + '/login'); await p.fill('#email', 'e2e.lead@example.invalid'); await p.fill('#password', process.env.E2E_PASSWORD);
     await p.getByRole('button', { name: 'Sign in', exact: true }).click(); await p.waitForLoadState('networkidle');
     await p.goto(`${BASE}/c/${CO}`);
-    await p.getByRole('link', { name: 'Company blueprint' }).click(); await p.waitForURL(/\/blueprint/);
+    await p.getByTestId('nav-more').locator('summary').click(); await p.getByRole('menuitem', { name: /Company blueprint/ }).click(); await p.waitForURL(/\/blueprint/);
     check('blueprint page opens from home', await p.locator('h1', { hasText: 'Company Operating Blueprint' }).count() === 1);
 
     // 1. Leadership interview: invite the MD (the synthetic lead)

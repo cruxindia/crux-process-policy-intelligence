@@ -16,7 +16,9 @@ const results = []; const check = (n, c, d = '') => results.push(`${c ? 'PASS' :
     await l.goto(BASE + '/login'); await l.fill('#email', 'e2e.lead@example.invalid'); await l.fill('#password', process.env.E2E_PASSWORD);
     await l.getByRole('button', { name: 'Sign in', exact: true }).click(); await l.waitForLoadState('networkidle');
     await l.goto(`${BASE}/c/${CO}/integrations`);
-    check('"Websites & apps" in the company navigation', (await l.getByRole('navigation').getByRole('link', { name: 'Websites & apps' }).count()) === 1);
+    await l.getByTestId('nav-more').locator('summary').click();
+    check('"Websites & apps" in the company navigation (More menu)', (await l.getByTestId('nav-more').getByRole('menuitem', { name: /Websites & apps/ }).count()) === 1);
+    await l.keyboard.press('Escape');
     const docs = await l.getByTestId('int-docs').innerText();
     check('confidential documents are marked "Never shared"', /Never shared/.test(docs));
 

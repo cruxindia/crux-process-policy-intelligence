@@ -914,6 +914,7 @@ export type Database = {
       mobile_login_id: { Args: { p_mobile: string | null }; Returns: string }
       my_contact: { Args: never; Returns: Json }
       my_discovery_assignment: { Args: { p_company: string | null }; Returns: string }
+      my_impact: { Args: { p_company: string | null }; Returns: Json }
       my_permissions: { Args: { p_company: string | null }; Returns: string[] }
       normalise_mobile: { Args: { p: string | null }; Returns: string }
       open_board_case: { Args: { p_company: string | null; p_kind: string | null; p_doc_type: string | null; p_title: string | null; p_brief: string | null; p_process_ids: string[] | null; p_classification?: string | null }; Returns: string }
