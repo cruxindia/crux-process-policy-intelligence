@@ -1,34 +1,36 @@
 import "server-only";
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+// Each helper is memoised per request (React cache): the root layout, the company layout and the page share one lookup
+// instead of repeating the same round trips to the database (P8 full-run finding: 4-6 s pages from repeated checks).
+
 /** Signed-in user's id (validated JWT) and a client acting as them. */
-export async function requireUser() {
+export const requireUser = cache(async function requireUser() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const userId = data?.claims?.sub;
   if (!userId) redirect("/login");
   return { supabase, userId };
-}
+});
 
 /** The caller's active membership in a company, plus the permission codes they hold there (for UI only). */
-export async function requireMembership(companyId: string) {
+export const requireMembership = cache(async function requireMembership(companyId: string) {
   if (!/^[0-9a-f-]{36}$/i.test(companyId)) notFound();
   const { supabase, userId } = await requireUser();
-  const { data: membership } = await supabase
-    .from("memberships")
-    .select("id, status, job_title, primary_department_id, company_id, companies(name, code)")
-    .eq("company_id", companyId)
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .maybeSingle();
+  // Three independent lookups in parallel (one round trip instead of three).
+  const [{ data: membership }, { data: mustChange }, { data: perms }] = await Promise.all([
+    supabase.from("memberships").select("id, status, job_title, primary_department_id, company_id, companies(name, code)")
+      .eq("company_id", companyId).eq("user_id", userId).eq("status", "active").maybeSingle(),
+    supabase.rpc("password_change_required"),
+    supabase.rpc("my_permissions", { p_company: companyId }),
+  ]);
   if (!membership) notFound();
   // A reset (temporary) password must be replaced before anything else.
-  const { data: mustChange } = await supabase.rpc("password_change_required");
   if (mustChange) redirect("/account/password");
-  const { data: perms } = await supabase.rpc("my_permissions", { p_company: companyId });
   return { supabase, userId, membership, permissions: new Set<string>(perms ?? []) };
-}
+});
 
 export type DbError = { message: string; code?: string } | null;
 
@@ -41,9 +43,9 @@ export function explain(error: DbError): string {
 }
 
 /** The platform owner ("super admin", D-091). Everyone else gets a 404 — the console's existence is not advertised. */
-export async function requirePlatformAdmin() {
+export const requirePlatformAdmin = cache(async function requirePlatformAdmin() {
   const { supabase, userId } = await requireUser();
   const { data: ok } = await supabase.rpc("am_platform_admin");
   if (!ok) notFound();
   return { supabase, userId };
-}
+});

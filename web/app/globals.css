@@ -263,3 +263,10 @@ pre.code { white-space: pre-wrap; word-break: break-all; background: rgba(127,12
   header.top form.row { gap: 8px; }
   header.top form .muted.small { display: none; }   /* the signed-in address takes too much room on phones */
 }
+@media (max-width: 640px) {   /* P8 full-run: fact lists and invoice headers must not push the page sideways on phones */
+  dl.kv { grid-template-columns: minmax(0, 1fr); }
+  dl.kv dd, dl.kv dt { overflow-wrap: anywhere; min-width: 0; }
+  dl.kv .badge { white-space: normal; }
+  .invoice dl.kv { min-width: 0 !important; }
+}
+.nav-more:not([open]) > .nav-more-menu { display: none; }

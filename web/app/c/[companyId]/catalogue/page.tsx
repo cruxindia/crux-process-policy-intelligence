@@ -15,15 +15,13 @@ export default async function CataloguePage({ params, searchParams }: {
   const canLink = canManage || permissions.has("process.edit");
   const tab = sp.tab === "functions" ? "functions" : sp.tab === "approvals" ? "approvals" : sp.tab === "inbox" ? "inbox" : "items";
 
-  const [{ data: items }, { data: fns }, { data: depts }, { data: pending }] = await Promise.all([
+  const [{ data: items }, { data: fns }, { data: depts }, { data: pending }, { data: srcCounts }, { data: unmatched }, { data: vals }] = await Promise.all([
     supabase.from("catalogue_gaps").select("id, kind, code, title, function_id, function_name, classification, pending_class, process_status, document_status, gap_type, status")
       .eq("company_id", companyId).order("code"),
     supabase.from("catalogue_functions").select("id, code, name, department_id, sort_order").eq("company_id", companyId).eq("status", "active").order("sort_order"),
     supabase.from("departments").select("id, code, name").eq("company_id", companyId).eq("status", "active").order("code"),
     supabase.from("catalogue_classification_requests").select("id, item_id, from_class, to_class, basis, basis_reference, reason, requested_by, requested_at")
       .eq("company_id", companyId).eq("status", "pending").order("requested_at"),
-  ]);
-  const [{ data: srcCounts }, { data: unmatched }, { data: vals }] = await Promise.all([
     supabase.rpc("catalogue_source_counts", { p_company: companyId }),
     supabase.rpc("catalogue_match_suggestions", { p_company: companyId }),
     supabase.rpc("process_validation_status", { p_company: companyId }),

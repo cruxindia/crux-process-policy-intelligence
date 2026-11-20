@@ -35,8 +35,8 @@ reset role;
 
 select is((select count(*)::int from public.roles where company_id = tests.company('NEWCO')),
           (select count(*)::int from public.roles where company_id = tests.company('ALPHA')
-             and code in ('COMPANY_ADMIN','DISCOVERY_LEAD','DEPT_HEAD','EMPLOYEE','BE_REVIEWER','PROCESS_OWNER','DOC_APPROVER')),
-          'standard roles copied from the template');
+             and code in ('COMPANY_ADMIN','DISCOVERY_LEAD','DEPT_HEAD','EMPLOYEE','BE_REVIEWER','PROCESS_OWNER','DOC_APPROVER')) + 1,
+          'standard roles copied from the template, plus STAKEHOLDER (PPI-044)');
 select ok(exists (select 1 from public.memberships m join public.role_assignments ra on ra.membership_id = m.id join public.roles r on r.id = ra.role_id
                   join auth.users u on u.id = m.user_id
                    where m.company_id = tests.company('NEWCO') and u.email = 'newco.admin@example.invalid' and r.code = 'COMPANY_ADMIN' and m.status = 'invited'),
