@@ -1,0 +1,26 @@
+# Render Blueprint (D-117): free web service for the Next.js app in web/. No card needed on the Free plan.
+# Free instances sleep after 15 minutes without visitors; the next visit wakes them in about a minute.
+# Only the two public Supabase values are needed (the publishable key is meant for browsers; no secrets here).
+services:
+  - type: web
+    name: crux-ppi
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: web
+    buildCommand: npm ci && npm run build
+    startCommand: npm start -- -p $PORT
+    healthCheckPath: /login
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - web/**
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://pahzxpileudulljgaciw.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_L2ykSIC91lAxg1Verk-8yQ_rP9-p80F

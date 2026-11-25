@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f5bd8">
+<title>Offline · CRUX PPI</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: #fff; color: #1a1f2b; padding: 16px; box-sizing: border-box; }
+  @media (prefers-color-scheme: dark) { body { background: #0b1220; color: #e6e9ef; } }
+  .card { max-width: 420px; text-align: center; }
+  img { width: 72px; height: 72px; border-radius: 16px; }
+  button { margin-top: 16px; padding: 10px 18px; border-radius: 6px; border: 0; background: #0f5bd8; color: #fff; font: inherit; font-weight: 500; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img src="/icons/icon-192.png" alt="">
+    <h1 style="font-size:1.3rem">You're offline</h1>
+    <p>The platform needs an internet connection. Nothing you saved is lost. If the server was asleep, it can take up to a minute to wake up.</p>
+    <button onclick="location.reload()">Try again</button>
+  </div>
+</body>
+</html>
