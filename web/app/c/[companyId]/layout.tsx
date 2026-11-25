@@ -5,17 +5,19 @@ import { CompanyNav, type NavItem } from "@/components/company-nav";
 export default async function CompanyLayout({ children, params }: { children: React.ReactNode; params: Promise<{ companyId: string }> }) {
   const { companyId } = await params;
   const { supabase, membership, permissions: p } = await requireMembership(companyId);
-  const [{ count: tickets }, { count: requests }] = await Promise.all([
+  const [{ count: tickets }, { count: requests }, { count: reviews }] = await Promise.all([
     supabase.from("tickets").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("assignee_membership_id", membership.id)
       .in("status", ["open", "in_progress", "waiting"]),
     supabase.from("clarification_tasks").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("assignee_membership_id", membership.id)
       .in("status", ["open", "assigned", "escalated"]),
+    supabase.from("doc_stakeholders").select("department_code", { count: "exact", head: true }).eq("company_id", companyId).eq("membership_id", membership.id),
   ]);
   const base = `/c/${companyId}`;
   const has = (...x: string[]) => x.some((k) => p.has(k));
   const items: NavItem[] = [
     { href: base, label: "Home" },
     { href: `${base}/tasks`, label: "My work", count: (tickets ?? 0) + (requests ?? 0) },
+    ...(reviews ? [{ href: `${base}/my-review`, label: "My review" }] : []),
     ...(has("dashboard.read") ? [{ href: `${base}/dashboard`, label: "Dashboard" }] : []),
     ...(has("org.manage") ? [{ href: `${base}/documents`, label: "Documents" }] : []),
     { href: `${base}/catalogue`, label: "Processes" },

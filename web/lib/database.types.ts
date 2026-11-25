@@ -456,6 +456,16 @@ export type Database = {
           { foreignKeyName: "doc_register_links_company_id_register_item_id_fkey"; columns: ["company_id", "register_item_id"]; isOneToOne: false; referencedRelation: "register_items"; referencedColumns: ["company_id", "id"] }
         ]
       }
+      doc_stakeholders: {
+        Row: { added_by: string | null; company_id: string; created_at: string; department_code: string; membership_id: string }
+        Insert: { added_by?: string | null; company_id: string; created_at?: string; department_code: string; membership_id: string }
+        Update: { added_by?: string | null; company_id?: string; created_at?: string; department_code?: string; membership_id?: string }
+        Relationships: [
+          { foreignKeyName: "doc_stakeholders_company_id_added_by_fkey"; columns: ["company_id", "added_by"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "doc_stakeholders_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
+          { foreignKeyName: "doc_stakeholders_company_id_membership_id_fkey"; columns: ["company_id", "membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] }
+        ]
+      }
       document_acknowledgements: {
         Row: { acknowledged_at: string; company_id: string; id: string; membership_id: string; version_id: string }
         Insert: { acknowledged_at?: string; company_id: string; id?: string; membership_id: string; version_id: string }
@@ -1022,7 +1032,10 @@ export type Database = {
       ctq_save: { Args: { p_company: string | null; p_id: string | null; p_name: string | null; p_voice: string | null; p_measure: string | null; p_unit: string | null; p_direction: string | null; p_baseline: string | null; p_expectation?: string | null }; Returns: string }
       decide_board_case: { Args: { p_company: string | null; p_case: string | null; p_decision: string | null; p_note?: string | null }; Returns: undefined }
       doc_assessment_finalize: { Args: { p_company: string | null }; Returns: Json }
+      doc_departments: { Args: { p_company: string | null; p_create?: boolean | null }; Returns: Json }
       doc_finding_decide: { Args: { p_company: string | null; p_finding: string | null; p_status: string | null; p_note?: string | null }; Returns: undefined }
+      doc_stakeholder_add: { Args: { p_company: string | null; p_dept: string | null; p_membership: string | null }; Returns: undefined }
+      doc_stakeholder_remove: { Args: { p_company: string | null; p_dept: string | null; p_membership: string | null }; Returns: undefined }
       intake_add: { Args: { p_company: string | null; p_batch: string | null; p_docs: Json | null }; Returns: Json }
       intake_begin: { Args: { p_company: string | null; p_label: string | null }; Returns: string }
       intake_known: { Args: { p_company: string | null; p_hashes: string[] | null }; Returns: string[] }
@@ -1038,6 +1051,7 @@ export type Database = {
       mobile_login_id: { Args: { p_mobile: string | null }; Returns: string }
       my_contact: { Args: never; Returns: Json }
       my_discovery_assignment: { Args: { p_company: string | null }; Returns: string }
+      my_doc_reviews: { Args: { p_company: string | null }; Returns: Json }
       my_impact: { Args: { p_company: string | null }; Returns: Json }
       my_permissions: { Args: { p_company: string | null }; Returns: string[] }
       normalise_mobile: { Args: { p: string | null }; Returns: string }

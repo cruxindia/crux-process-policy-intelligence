@@ -2,12 +2,15 @@ import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { DEPARTMENTS } from "@/lib/doc-classify";
 import { Uploader } from "./uploader";
-import { adoptBaseline, finalise, setCategory } from "./actions";
+import { adoptBaseline, finalise, removeStakeholder, setCategory, setupDepartments } from "./actions";
+import { StakeholderForm } from "./stakeholder-form";
 import { Analyse } from "./analyse";
 
 const CAT: Record<string, [string, string]> = { governing: ["Rule document", "ok"], record: ["Record", ""], sensitive: ["Personal / legal — not read", "warn"] };
 const AN: Record<string, string> = { not_needed: "—", queued: "Waiting for analysis", running: "Being analysed", done: "Analysed", failed: "Analysis failed", waiting_provider: "Waiting for an approved AI" };
 const STATUS: Record<string, string> = { not_assessed: "Not assessed yet", found: "Found", partial: "Partly covered", outdated: "Outdated", missing: "Missing", not_applicable: "Not applicable", extra: "Extra" };
+
+type DeptRow = { code: string; name: string; department_id: string | null; files: number; rule_documents: number; open_findings: number; stakeholders: { membership_id: string; name: string; job_title: string | null }[] };
 
 /** Documents (SOW 12G Q3-Q5): the company's existing documents, read on the uploader's computer, checked against the baseline. */
 export default async function Documents({ params, searchParams }: { params: Promise<{ companyId: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
@@ -15,18 +18,18 @@ export default async function Documents({ params, searchParams }: { params: Prom
   const { supabase, permissions } = await requireMembership(companyId);
   if (!permissions.has("org.manage")) notFound();
   const cat = ["governing", "record", "sensitive"].includes(sp.cat ?? "") ? sp.cat! : "governing";
-  const [{ data: docs }, { data: list }, { data: versions }, { data: adopted }, { data: reg }] = await Promise.all([
+  const [{ data: docs }, { data: list }, { data: versions }, { data: adopted }, { data: reg }, { data: deptRows }, { data: members }] = await Promise.all([
     supabase.from("source_documents").select("category, department_code, read_status, analysis_status").eq("company_id", companyId).limit(20000),
     supabase.from("source_documents").select("id, file_name, folder, category, doc_type, department_code, reason, read_status, unreadable_reason, analysis_status, text_chars")
       .eq("company_id", companyId).eq("category", cat).order("folder").order("file_name").limit(500),
     supabase.from("baseline_versions").select("id, title, version, as_of").eq("status", "active").order("activated_at", { ascending: false }),
     supabase.from("company_baselines").select("version_id").eq("company_id", companyId),
     supabase.from("register_items").select("kind, status").eq("company_id", companyId).limit(5000),
+    supabase.rpc("doc_departments", { p_company: companyId }),
+    supabase.from("memberships").select("id, user_profiles(display_name)").eq("company_id", companyId).eq("status", "active").limit(2000),
   ]);
   const all = docs ?? [];
   const n = (f: (d: (typeof all)[number]) => boolean) => all.filter(f).length;
-  const depts = Object.entries(DEPARTMENTS).map(([code, name]) => ({ code, name, n: n((d) => d.department_code === code), rules: n((d) => d.department_code === code && d.category === "governing") }))
-    .filter((d) => d.n > 0).sort((a, b) => b.n - a.n);
   const adoptedIds = new Set((adopted ?? []).map((a) => a.version_id));
   const regDocs = (reg ?? []).filter((r) => r.kind === "document");
   const regBy = (s: string) => regDocs.filter((r) => r.status === s).length;
@@ -74,13 +77,24 @@ export default async function Documents({ params, searchParams }: { params: Prom
         </div>
       </div>
 
-      {depts.length > 0 && (
-        <div className="card" data-testid="doc-depts">
-          <h2 style={{ marginTop: 0 }}>Departments found in your documents</h2>
-          <table><thead><tr><th>Department</th><th>Files</th><th>Rule documents</th></tr></thead>
-            <tbody>{depts.map((d) => <tr key={d.code}><td>{d.name}</td><td>{d.n}</td><td>{d.rules}</td></tr>)}</tbody></table>
-          <p className="small muted">{n((d) => !d.department_code)} files could not be placed in a department from their name yet; analysis places rule documents.</p>
-        </div>)}
+      {(deptRows as DeptRow[] | null)?.length ? (
+        <div className="card" id="stakeholders" data-testid="stakeholders">
+          <h2 style={{ marginTop: 0 }}>Departments and who reviews them</h2>
+          <p className="small muted" style={{ maxWidth: 760 }}>These departments appear in your documents. Name the people who know each area: they will see how the work is written today, the flowcharts,
+            gaps, loose ends, risks and suggested fixes for their department, confirm or correct them, and then have their interview.</p>
+          {(deptRows as DeptRow[]).some((d) => !d.department_id) && <form action={setupDepartments.bind(null, companyId)} style={{ marginBottom: 10 }}>
+            <button type="submit">Create these departments</button></form>}
+          <table className="small"><thead><tr><th>Department</th><th>Files</th><th>Open findings</th><th>Reviewers</th></tr></thead><tbody>
+            {(deptRows as DeptRow[]).map((d) => (
+              <tr key={d.code} className={d.stakeholders.length ? undefined : "needs"}><td><strong>{d.name}</strong>{!d.stakeholders.length && <div><span className="badge warn">Name a reviewer</span></div>}</td>
+                <td>{d.files} ({d.rule_documents} rules)</td><td>{d.open_findings}</td>
+                <td>{d.stakeholders.map((p) => (
+                  <form key={p.membership_id} action={removeStakeholder.bind(null, companyId, d.code, p.membership_id)} className="row" style={{ gap: 4 }}>
+                    <span>{p.name}{p.job_title ? ` · ${p.job_title}` : ""}</span><button type="submit" className="link small" aria-label={`Remove ${p.name}`}>remove</button></form>))}
+                  <StakeholderForm companyId={companyId} dept={d.code} departmentId={d.department_id}
+                    people={(members ?? []).map((m) => ({ id: m.id, name: (m.user_profiles as { display_name?: string } | null)?.display_name ?? "Unnamed" })).sort((a, b) => a.name.localeCompare(b.name))} /></td></tr>))}
+          </tbody></table>
+        </div>) : null}
 
       <div className="card" id="list" data-testid="doc-list">
         <div className="row" style={{ justifyContent: "space-between" }}>

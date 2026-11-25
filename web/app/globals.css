@@ -280,3 +280,7 @@ pre.code { white-space: pre-wrap; word-break: break-all; background: rgba(127,12
 .findings blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid var(--border); color: var(--muted); }
 details.asis { border-top: 1px solid var(--border); padding: 8px 0; }
 details.asis > summary { cursor: pointer; }
+.stake-form { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 6px; }
+.stake-form input, .stake-form select { width: auto; min-width: 120px; flex: 1 1 120px; }
+tr.needs td:first-child { border-left: 3px solid var(--warn); }
+button.link { background: none; border: 0; color: var(--accent); padding: 0; text-decoration: underline; cursor: pointer; }
