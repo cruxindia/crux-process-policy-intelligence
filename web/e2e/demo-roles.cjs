@@ -7,7 +7,7 @@ const results = []; const check = (n, c, d = '') => results.push(`${c ? 'PASS' :
   const b = await chromium.launch(); const errs = [];
   try {
     const p = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage(); p.on('pageerror', (x) => errs.push(x.message));
-    await p.goto(BASE + '/login'); await p.fill('#email', 'e2e.lead@example.invalid'); await p.fill('#password', process.env.E2E_PASSWORD);
+    await p.goto(BASE + '/login'); await p.fill('#email', process.env.LOGIN_EMAIL || 'e2e.lead@example.invalid'); await p.fill('#password', process.env.LOGIN_PW || process.env.E2E_PASSWORD);
     await p.getByRole('button', { name: 'Sign in', exact: true }).click(); await p.waitForLoadState('networkidle');
     const st = async (u) => (await p.goto(BASE + u, { waitUntil: 'networkidle' })).status();
     if (ROLE === 'dept_head_ops') {

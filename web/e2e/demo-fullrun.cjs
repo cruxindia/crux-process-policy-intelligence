@@ -26,7 +26,7 @@ const results = []; const check = (n, c, d = '') => results.push(`${c ? 'PASS' :
     const p = await ctx.newPage(); let errs = [];
     p.on('pageerror', (x) => errs.push(x.message));
     p.on('response', (r) => { if (r.status() >= 500 && r.url().startsWith(BASE)) errs.push(`HTTP ${r.status()} ${r.url().replace(BASE, '')}`); });
-    await p.goto(BASE + '/login'); await p.fill('#email', 'e2e.lead@example.invalid'); await p.fill('#password', process.env.E2E_PASSWORD);
+    await p.goto(BASE + '/login'); await p.fill('#email', process.env.LOGIN_EMAIL || 'e2e.lead@example.invalid'); await p.fill('#password', process.env.LOGIN_PW || process.env.E2E_PASSWORD);
     await p.getByRole('button', { name: 'Sign in', exact: true }).click(); await p.waitForLoadState('networkidle');
     for (const [name, url] of PAGES) {
       errs = [];
