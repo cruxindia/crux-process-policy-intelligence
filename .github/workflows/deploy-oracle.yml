@@ -1,0 +1,51 @@
+name: deploy-oracle
+# Builds the web app and ships it to the Oracle Always Free VM (D-104). Runs on demand, and on pushes to main once the
+# repository secrets ORACLE_HOST and ORACLE_SSH_KEY exist. No paid service is involved.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/deploy-oracle.yml"]
+permissions:
+  contents: read
+concurrency: { group: deploy-oracle, cancel-in-progress: false }
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm   # same CPU family as the Ampere VM
+    env:
+      HAS_TARGET: ${{ secrets.ORACLE_HOST != '' && secrets.ORACLE_SSH_KEY != '' }}
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Public by design (they are in every browser bundle): the project URL and publishable key.
+      NEXT_PUBLIC_SUPABASE_URL: https://pahzxpileudulljgaciw.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - name: skip when the VM is not set up yet
+        if: env.HAS_TARGET != 'true'
+        run: echo "ORACLE_HOST / ORACLE_SSH_KEY secrets not set; nothing to deploy." 
+      - uses: actions/checkout@v4
+        if: env.HAS_TARGET == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_TARGET == 'true'
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - name: build
+        if: env.HAS_TARGET == 'true'
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          tar -C .next/standalone -czf ../release.tgz .
+      - name: ship and switch
+        if: env.HAS_TARGET == 'true'
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        run: |
+          install -m 600 /dev/null ~/.ssh_key && printf '%s\n' "$KEY" > ~/.ssh_key
+          REL=$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}
+          scp -i ~/.ssh_key -o StrictHostKeyChecking=accept-new release.tgz ubuntu@$HOST:/tmp/release.tgz
+          ssh -i ~/.ssh_key ubuntu@$HOST "set -e; mkdir -p /opt/ppi/releases/$REL && tar -xzf /tmp/release.tgz -C /opt/ppi/releases/$REL \
+            && mkdir -p /opt/ppi/releases/$REL/.next/cache && ln -sfn /opt/ppi/releases/$REL /opt/ppi/current && sudo systemctl restart ppi-web \
+            && sleep 4 && curl -fsS -o /dev/null http://127.0.0.1:3000/login && ls -1dt /opt/ppi/releases/* | tail -n +6 | xargs -r rm -rf"
+          rm -f ~/.ssh_key

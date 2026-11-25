@@ -1,0 +1,25 @@
+# systemd unit for the web app on the Oracle Always Free VM (D-104). Installed by setup-vm.sh.
+[Unit]
+Description=Process & Policy Intelligence web app (Next.js standalone)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ppi
+Group=ppi
+WorkingDirectory=/opt/ppi/current
+EnvironmentFile=/etc/ppi/web.env
+Environment=NODE_ENV=production PORT=3000 HOSTNAME=127.0.0.1 NEXT_TELEMETRY_DISABLED=1
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+# hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/ppi/current/.next/cache
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target

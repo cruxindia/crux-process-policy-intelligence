@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  output: "standalone",   // self-contained server for the Oracle VM (D-104): node .next/standalone/server.js
   async headers() {
     return [
       {
