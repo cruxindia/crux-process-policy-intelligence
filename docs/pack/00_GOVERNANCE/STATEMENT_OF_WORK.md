@@ -138,6 +138,33 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 **Constraints:** prices are the owner's decision (D-081): billing ships with editable draft prices; Claude never enters, stores or tests the owner's keys; keys only in Vault; free-tier terms respected (D-095); confidentiality of client content holds for the platform owner too (D-091).
 **Decisions:** D-091…D-100 (decision log).
 
+## 12G. Document-first discovery + zero-cost running (owner request 25-Nov-2026)
+
+**Objective:** a company first brings its existing documents (SOPs, policies, forms, letters — in large quantity). The platform builds the as-is picture from them: a document register matched to a complete baseline, the processes with flowcharts, what each document is missing, missing documents, duplicates/conflicting versions, loose ends, risks and suggested mitigations. It then finds the departments, asks the company admin to name the stakeholders per department, and starts each stakeholder's interview from those findings. Stakeholders see their as-is process, flowcharts, gaps, loose ends, risks and mitigations and confirm or correct them. No expected document may go unnoticed. Everything runs at zero cost.
+
+**Inputs:** the audit-readiness master v4.2 (34 sheets: 174 expected documents, 43 end-to-end processes, 32 laws, 366 dependencies, 50 workflows, 78 audit tests, 44 applicability questions, handover playbooks and task library, partner lifecycle gates, case status matrix); the owner's sample Drive folder (≥ 700 files, ≥ 0.9 GB seen; 89 photos, 70 PDFs, zip/rar archives; about 10% governing documents — policies, role SOPs, KRAs, forms — and about 90% records: appointment/warning letters, undertakings, board resolutions, bank and legal correspondence, minutes).
+
+**Facts that shape the design (verified 25-Nov):**
+- Netlify Free never bills; it pauses all sites at 300 credits per month (15 per production deploy).
+- Supabase: this project is in a Pro organisation (about $10 a month extra compute). The Free plan gives 2 projects, 500 MB of database, 1 GB of files and a pause after 1 week idle. The database is 40 MB.
+- Oracle Always Free: Ampere 2 OCPU / 12 GB since Jun-2026, Mumbai region.
+- Gemini API free tier: Google uses submitted content to improve products, human reviewers may read it, and the terms say "do not submit sensitive, confidential, or personal information". Groq retains no inference data by default (training is not stated).
+
+| Stage | Deliverable | Acceptance |
+|---|---|---|
+| Q1 | Hosting at zero cost: web app on Oracle Always Free (Mumbai); Supabase project moved to a Free organisation (owner transfers); Netlify retired after cut-over | all E2E suites pass on the new URL; typical page < 2 s from India; no paid line items |
+| Q2 | Billing completion: prices confirmed (done 25-Nov); supplier profile (legal name, GSTIN, address, state, SAC) from the owner; bank details typed by the owner | invoices no longer proforma |
+| Q3 | Baseline library: master v4.2 imported as a versioned platform baseline; each company gets a register seeded from it (every expected document/process "Not assessed") | import counts reconcile sheet-by-sheet; DB tests |
+| Q4 | Bulk intake: folder or zip upload in the browser (thousands of files, resumable, duplicate-safe by SHA-256). Text is extracted **in the browser** (docx, xlsx, pptx, pdf, images/scans via OCR, zip). Originals stay in the company's Drive; only text and metadata reach the server | 700-file sample processed; unreadable files listed with the reason |
+| Q5 | Classification before any AI: governing documents (policy, SOP, JD, KRA, form, template, circular, agreement template) vs records (letters, minutes, correspondence, IDs, photos) vs sensitive records (legal disputes, police, pay, loans, health). Records give metadata and evidence counts only; their content never goes to AI | classification test set; no record text stored |
+| Q6 | Document analysis (governing documents only, through providers whose policy allows the classification; Gemini free never receives document content): purpose, owner, roles, steps → as-is flowchart, controls, approvals, KPIs; match to baseline IDs; content gaps vs the baseline's "what it should contain"; duplicate/conflicting versions; missing documents (applicability-aware); loose ends; risks + suggested mitigations | findings cite the document; coverage matrix with zero unmatched baseline rows unexplained |
+| Q7 | Departments and stakeholders: departments detected from documents + baseline; admin tasks "name the stakeholders for <department>"; invites | admin sees one task per department |
+| Q8 | Findings-led interviews and stakeholder review: interview context seeded with the department's findings; stakeholder page shows as-is process, flowcharts, gaps, loose ends, risks, mitigations; confirm/correct each finding; confirmed findings feed the expert board for new/updated documents | E2E as a stakeholder |
+| Q9 | Full test at every layer + demo company refreshed with documents | test log |
+
+**Constraints:** zero running cost (owner, 25-Nov); personal and legal-sensitive content never goes to an AI provider; free AI tiers used only within their terms; the owner creates accounts and handles keys (Oracle, Supabase organisation, Groq); bank numbers typed by the owner only.
+**Decisions:** D-104…D-108.
+
 ## 13. Decision / change log
 | Date | Change | By |
 |---|---|---|
