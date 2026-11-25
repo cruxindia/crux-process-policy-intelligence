@@ -1,6 +1,6 @@
 -- PPI-048: analysis queue, findings decisions, finalisation (missing documents, duplicates), AI data approvals.
 begin;
-select plan(14);
+select plan(17);
 select private.ensure_pool_policies(tests.company('ALPHA'));
 insert into auth.users (id, email) values (tests.uid('platform_owner'), 'platform_owner@example.invalid') on conflict do nothing;
 insert into private.platform_admins (user_id, note) values (tests.uid('platform_owner'), 'test') on conflict do nothing;
@@ -43,8 +43,11 @@ select is((select count(*)::int from public.doc_findings where company_id = test
 select is((public.doc_assessment_finalize(tests.company('ALPHA')) ->> 'duplicate_groups')::int, 0, 'running it again adds nothing');
 select throws_like($$ select public.doc_finding_decide(tests.company('ALPHA'), (select id from public.doc_findings where kind = 'gap'), 'rejected', '') $$, '%say why%', 'rejecting needs a reason');
 select lives_ok($$ select public.doc_finding_decide(tests.company('ALPHA'), (select id from public.doc_findings where kind = 'gap'), 'confirmed') $$, 'a finding is confirmed');
-select throws_like($$ select public.ai_policy_set(tests.company('ALPHA'), 'gemini_free', 'confidential', 'we accept the terms') $$, '%train%', 'a provider that trains on inputs cannot receive confidential data');
-select is(public.ai_policy_set(tests.company('ALPHA'), 'groq_free', 'confidential', 'Zero data retention is enabled'), 'Saved.', 'a non-training provider can be approved for confidential');
+select throws_like($$ select public.ai_policy_set(tests.company('ALPHA'), 'gemini_free', 'confidential', 'we accept the training terms', true) $$, '%never receive confidential%', 'a provider that trains on inputs never receives confidential data');
+select throws_like($$ select public.ai_policy_set(tests.company('ALPHA'), 'gemini_free', 'internal', 'rule documents may go to Gemini free') $$, '%tick that you accept%', 'internal data to a training provider needs explicit acceptance');
+select is(public.ai_policy_set(tests.company('ALPHA'), 'gemini_free', 'internal', 'Owner accepts training use for rule documents', true), 'Saved.', 'with acceptance it is recorded');
+select is((select training_accepted_by_membership_id from public.ai_provider_policies where company_id = tests.company('ALPHA') and provider = 'gemini_free'), tests.mid('a_admin'), 'who accepted is recorded');
+select is(public.ai_policy_set(tests.company('ALPHA'), 'groq_free', 'confidential', 'Zero data retention is switched on'), 'Saved.', 'a non-training provider can be approved for confidential');
 reset role;
 select tests.login('a_ops_emp'); set local role authenticated;
 select is((select count(*)::int from public.doc_findings where company_id = tests.company('ALPHA')), 0, 'employees do not see findings yet');

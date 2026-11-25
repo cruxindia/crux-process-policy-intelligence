@@ -19,7 +19,6 @@ export default async function PlatformBilling({ searchParams }: { searchParams: 
   const name = new Map((cos ?? []).map((c) => [c.company_id, c.name]));
   const mrr = rows.reduce((t, r) => t + Number(r.monthly_fee ?? 0) * (1 - Number(r.discount_pct ?? 0) / 100), 0);
   const cfg = (settings ?? {}) as Record<string, string>;
-  const incomplete = ["billing_legal_name", "billing_gstin", "billing_address", "billing_state_code"].some((k) => !cfg[k]);
   const draftPrices = (plans ?? []).some((p) => p.is_draft_price);
   const lastMonth = new Date(); lastMonth.setDate(1); lastMonth.setMonth(lastMonth.getMonth() - 1);
   return (
@@ -27,16 +26,15 @@ export default async function PlatformBilling({ searchParams }: { searchParams: 
       <h1>Billing</h1>
       {sp.e && <div className="notice error">{sp.e}</div>}
       {sp.ok && <div className="notice ok">{sp.ok}</div>}
-      {(incomplete || draftPrices) && (
+      {draftPrices && (
         <div className="notice" data-testid="billing-setup">
           <strong>Before the first real invoice:</strong>
           <ul style={{ margin: "6px 0 0" }}>
             {draftPrices && <li>The example packages still have <strong>draft prices</strong> — set your prices in <Link href="/platform/billing/plans">Packages</Link>.</li>}
-            {incomplete && <li>Your <Link href="/platform/billing/settings">billing profile</Link> (legal name, GSTIN, address, state) is incomplete — invoices stay “proforma” until it is.</li>}
           </ul>
         </div>)}
       <div className="kpis">
-        <div className="kpi"><div className="kpi-label">Monthly recurring (base fees)</div><div className="kpi-value">{inr(mrr)}</div><div className="kpi-sub">before usage and GST</div></div>
+        <div className="kpi"><div className="kpi-label">Monthly recurring (base fees)</div><div className="kpi-value">{inr(mrr)}</div><div className="kpi-sub">before usage</div></div>
         <div className="kpi"><div className="kpi-label">Outstanding</div><div className="kpi-value">{inr(rows.reduce((t, r) => t + Number(r.outstanding), 0))}</div></div>
         <div className={`kpi ${rows.some((r) => Number(r.overdue) > 0) ? "attn" : ""}`}><div className="kpi-label">Overdue</div><div className="kpi-value">{inr(rows.reduce((t, r) => t + Number(r.overdue), 0))}</div></div>
         <div className={`kpi ${rows.some((r) => r.disputed) ? "attn" : ""}`}><div className="kpi-label">Disputed invoices</div><div className="kpi-value">{rows.reduce((t, r) => t + r.disputed, 0)}</div></div>
@@ -86,7 +84,7 @@ export default async function PlatformBilling({ searchParams }: { searchParams: 
               <td>{name.get(i.company_id) ?? "—"}</td><td>{new Date(i.period_start).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}</td>
               <td className="num">{inr(i.total)}</td>
               <td><span className={`badge ${i.status === "paid" ? "ok" : i.status === "issued" ? "part" : i.status === "void" ? "" : "warn"}`}>{STATUS[i.status]}</span>
-                {i.disputed && <> <span className="badge danger">disputed</span></>}{i.proforma && i.status !== "draft" && <> <span className="badge">proforma</span></>}</td>
+                {i.disputed && <> <span className="badge danger">disputed</span></>}</td>
               <td className="small">{i.due_on ?? "—"}</td>
             </tr>))}
           </tbody>

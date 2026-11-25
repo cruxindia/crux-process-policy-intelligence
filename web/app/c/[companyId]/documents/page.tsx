@@ -67,10 +67,10 @@ export default async function Documents({ params, searchParams }: { params: Prom
 
       <div className="card" data-testid="analysis">
         <h2 style={{ marginTop: 0 }}>Analysis</h2>
-        <p className="small muted" style={{ maxWidth: 760 }}>Each rule document is read by an AI approved for confidential data: the process it describes (drawn as a flowchart), which checklist items it covers,
+        <p className="small muted" style={{ maxWidth: 760 }}>Each rule document is read by an AI your administrator approved for company documents (personal and legal records are never sent): the process it describes (drawn as a flowchart), which checklist items it covers,
           what it is missing, loose ends, risks with suggested fixes, and questions for the people who run the work. Nothing is final until a person confirms it.</p>
         <Analyse companyId={companyId} queued={n((d) => d.category === "governing" && d.read_status === "read" && ["queued", "running", "waiting_provider"].includes(d.analysis_status))} />
-        {n((d) => d.analysis_status === "waiting_provider") > 0 && <p className="notice small">{n((d) => d.analysis_status === "waiting_provider")} documents are waiting for an AI approved for confidential data — approve one under Administration → AI connections → Data approvals.</p>}
+        {n((d) => d.analysis_status === "waiting_provider") > 0 && <p className="notice small">{n((d) => d.analysis_status === "waiting_provider")} documents are waiting for an approved AI — approve one under Administration → AI connections → Data approvals.</p>}
         <div className="row" style={{ gap: 10, marginTop: 10 }}>
           <a className="button secondary" href={`/c/${companyId}/documents/findings`}>See findings</a>
           {adoptedIds.size > 0 && <form action={finalise.bind(null, companyId)}><button type="submit" className="secondary">Check against the checklist</button></form>}

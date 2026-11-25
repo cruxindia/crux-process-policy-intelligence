@@ -995,7 +995,7 @@ export type Database = {
       accept_membership: { Args: { p_company: string | null }; Returns: string }
       admin_reset_password: { Args: { p_company: string | null; p_membership: string | null }; Returns: string }
       adopt_baseline: { Args: { p_company: string | null; p_version: string | null }; Returns: Json }
-      ai_policy_set: { Args: { p_company: string | null; p_provider: string | null; p_max: string | null; p_reason: string | null }; Returns: string }
+      ai_policy_set: { Args: { p_company: string | null; p_provider: string | null; p_max: string | null; p_reason: string | null; p_accept_training?: boolean | null }; Returns: string }
       am_platform_admin: { Args: never; Returns: boolean }
       baseline_add_rows: { Args: { p_version: string | null; p_sheet: string | null; p_rows: Json | null }; Returns: number }
       baseline_begin: { Args: { p_code: string | null; p_version: string | null; p_title: string | null; p_as_of: string | null; p_source_name: string | null; p_source_sha256: string | null; p_sheet_meta: Json | null }; Returns: string }

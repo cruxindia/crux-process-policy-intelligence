@@ -1,8 +1,10 @@
 // doc-ai — Supabase Edge Function (Deno). Analyses a company's rule documents one at a time (SOW 12G Q6).
 //   {action:"next", company_id}  company administrators; analyses the next queued document and returns what is left.
-// Document text is "confidential": the ai_runs policy check refuses any provider not approved for it (free tiers that train
-// on inputs are capped at "internal" by the database), so such providers are skipped. Names of the company's people are
-// replaced by "the employee" before anything is sent. Logs hold metadata only.
+// Rule documents (policies, SOPs, role documents, forms) are sent as "internal" data (owner decision D-111, 25-Nov-2026);
+// personal and legal records never reach this function. The ai_runs policy check refuses any provider the company has not
+// approved for internal data — a provider that trains on inputs only after an administrator recorded that they accept it.
+// Names of the company's people are replaced before anything is sent. Logs hold metadata only.
+const DOC_CLASSIFICATION = "internal";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { GeminiProvider, OllamaProvider, providerFromEnv, type AiProvider } from "../_shared/ai-provider.ts";
 import { DOC_PROMPT_KEY, DOC_SCHEMA, DOC_SYSTEM, buildDocMessage, controlFieldFinding, rankCandidates, validateDocAnalysis, type Candidate } from "../_shared/doc-analysis.ts";
@@ -66,7 +68,7 @@ async function candidates(svc: Db, co: string): Promise<{ provider: AiProvider; 
     const { data: key } = await svc.rpc("ai_connection_get_key", { p_company: co, p_connection: c.id });
     if (key) out.push({ provider: new GeminiProvider(String(key), c.model, c.policy_provider), connectionId: c.id, label: c.name });
   }
-  out.push(...await poolCandidates(svc, co, "confidential"));
+  out.push(...await poolCandidates(svc, co, DOC_CLASSIFICATION));
   const def = providerFromEnv((k) => Deno.env.get(k));
   if (!(def instanceof GeminiProvider) || Deno.env.get("GEMINI_API_KEY")) out.push({ provider: def, connectionId: null, label: "Server default" });
   return out;
@@ -102,13 +104,13 @@ async function next(svc: Db, co: string, requester: string) {
   const cands = rankCandidates(fileName, text, all, doc.department_code, 10);
   const userMsg = buildDocMessage({ fileName, folder: doc.folder, docType: doc.doc_type, department: doc.department_code }, text, cands);
 
-  let lastErr = "no AI provider is approved for confidential documents"; let policyBlocked = 0; let tried = 0;
+  let lastErr = "no AI provider is approved for company documents"; let policyBlocked = 0; let tried = 0;
   const provs = await candidates(svc, co);
   for (const cand of provs) {
     tried++;
     const key = `doc:${docId}:${cand.connectionId ?? cand.label}`;
     const { data: air, error: airErr } = await svc.from("ai_runs").insert({ company_id: co, capability: "document_analysis", provider: cand.provider.name, model: cand.provider.model,
-      prompt_version_id: pv.id, connection_id: cand.connectionId, data_classification: "confidential", requested_by_membership_id: requester,
+      prompt_version_id: pv.id, connection_id: cand.connectionId, data_classification: DOC_CLASSIFICATION, requested_by_membership_id: requester,
       input_sha256: await sha256Hex(DOC_SYSTEM + userMsg), status: "running", idempotency_key: `${key}:${crypto.randomUUID()}` }).select("id").single();
     if (airErr) { if (/PPI_AI_POLICY/.test(airErr.message ?? "")) policyBlocked++; log("run_rejected", { code: airErr.code, policy: /PPI_AI_POLICY/.test(airErr.message ?? "") }); continue; }
     let note = ""; let done = false;
@@ -137,10 +139,10 @@ async function next(svc: Db, co: string, requester: string) {
   // Nothing could take it: leave it waiting (not failed) so it runs once an approved AI is available.
   const noProvider = !tried || policyBlocked === tried;
   await release({ analysis_status: noProvider ? "waiting_provider" : "queued", analysis_error: noProvider
-    ? "No AI connection is approved for confidential documents. In Administration → AI connections, approve one (for example Groq) for confidential data."
+    ? "No AI connection is approved for company documents. In Administration → AI connections → Data approvals, approve one for internal data."
     : `Paused: ${lastErr}` });
   return { ok: true, done: null, waiting: noProvider ? "provider" : "retry", message: noProvider
-    ? "No AI connection is approved for confidential documents yet. Approve one in Administration → AI connections; the documents wait safely until then."
+    ? "No AI connection is approved for company documents yet. Approve one in Administration → AI connections → Data approvals; the documents wait safely until then."
     : `The AI could not finish just now (${lastErr}). Everything is saved; try again in a few minutes.`, remaining: await remaining(svc, co) };
 }
 

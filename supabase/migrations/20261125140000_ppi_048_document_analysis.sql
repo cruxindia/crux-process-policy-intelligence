@@ -186,25 +186,32 @@ end $$;
 revoke all on function public.doc_finding_decide(uuid, uuid, text, text), public.doc_assessment_finalize(uuid) from public, anon;
 grant execute on function public.doc_finding_decide(uuid, uuid, text, text), public.doc_assessment_finalize(uuid) to authenticated;
 
-/** Company admin decides which data an AI provider may receive. Providers that may train on inputs stay capped by the
- *  table's own check (public, or internal with a recorded acceptance); "restricted" is never granted here. Audited. */
-create or replace function public.ai_policy_set(p_company uuid, p_provider text, p_max text, p_reason text) returns text
+/** Company admin decides which data an AI provider may receive. Providers that may train on inputs can receive "internal"
+ *  data only when the admin records that they accept this (who, when, why — the table's own check enforces it); they never
+ *  receive confidential or restricted data. Audited. */
+create or replace function public.ai_policy_set(p_company uuid, p_provider text, p_max text, p_reason text, p_accept_training boolean default false) returns text
 language plpgsql security definer set search_path = '' as $$
 declare v_me uuid; v_train boolean;
 begin
   if not private.has_permission(p_company, 'org.manage') then raise exception 'PPI_FORBIDDEN: company administrators only' using errcode = '42501'; end if;
   if p_max not in ('public', 'internal', 'confidential') then raise exception 'PPI_BAD_REQUEST: choose public, internal or confidential' using errcode = 'P0001'; end if;
-  if length(coalesce(trim(p_reason), '')) < 10 then raise exception 'PPI_BAD_REQUEST: give a reason (at least 10 characters)' using errcode = 'P0001'; end if;
+  if length(coalesce(trim(p_reason), '')) < 20 then raise exception 'PPI_BAD_REQUEST: give a reason (at least 20 characters)' using errcode = 'P0001'; end if;
   select may_train_on_inputs into v_train from public.ai_provider_policies where company_id = p_company and provider = p_provider;
   if v_train is null then raise exception 'PPI_NOT_FOUND: provider policy' using errcode = 'P0002'; end if;
-  if v_train and p_max <> 'public' then
-    raise exception 'PPI_AI_POLICY: % may use what it receives to train its models, so it can only receive public data here', p_provider using errcode = 'P0001';
+  if v_train and p_max = 'confidential' then
+    raise exception 'PPI_AI_POLICY: % may use what it receives to train its models, so it can never receive confidential data', p_provider using errcode = 'P0001';
+  end if;
+  if v_train and p_max = 'internal' and not p_accept_training then
+    raise exception 'PPI_AI_POLICY: % may use what it receives to train its models; tick that you accept this to allow internal data', p_provider using errcode = 'P0001';
   end if;
   select id into v_me from public.memberships where company_id = p_company and user_id = auth.uid() and status = 'active';
   update public.ai_provider_policies set max_classification = p_max, status = 'active',
+    training_accepted_by_membership_id = case when v_train and p_max = 'internal' then v_me else training_accepted_by_membership_id end,
+    training_accepted_on = case when v_train and p_max = 'internal' then (now() at time zone 'Asia/Kolkata')::date else training_accepted_on end,
+    training_acceptance_note = case when v_train and p_max = 'internal' then left(trim(p_reason), 500) else training_acceptance_note end,
     notes = left(coalesce(notes, '') || E'\n' || to_char(now() at time zone 'Asia/Kolkata', 'YYYY-MM-DD') || ': set to ' || p_max || ' — ' || trim(p_reason), 2000)
    where company_id = p_company and provider = p_provider;
   return 'Saved.';
 end $$;
-revoke all on function public.ai_policy_set(uuid, text, text, text) from public, anon;
-grant execute on function public.ai_policy_set(uuid, text, text, text) to authenticated;
+revoke all on function public.ai_policy_set(uuid, text, text, text, boolean) from public, anon;
+grant execute on function public.ai_policy_set(uuid, text, text, text, boolean) to authenticated;

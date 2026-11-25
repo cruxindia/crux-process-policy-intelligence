@@ -86,18 +86,19 @@ export default async function AiAdmin({ params, searchParams }: { params: Promis
 
       <div className="card" id="approvals" data-testid="data-approvals">
         <h2 style={{ marginTop: 0 }}>Data approvals</h2>
-        <p className="small muted" style={{ maxWidth: 760 }}>Which data each AI provider may receive. Interviews are &ldquo;internal&rdquo;; your existing documents and the expert board&rsquo;s drafts are
-          &ldquo;confidential&rdquo;. Providers that may use what they receive to train their models (for example free Gemini) can only receive public data here.
-          Before approving a provider for confidential data, check its data settings (for Groq: switch on Zero Data Retention in Data Controls).</p>
+        <p className="small muted" style={{ maxWidth: 760 }}>Which data each AI provider may receive. Interviews and your rule documents (policies, SOPs, role documents, forms) are
+          &ldquo;internal&rdquo;; the expert board&rsquo;s drafts are &ldquo;confidential&rdquo;. Personal and legal records are never sent to any AI. Providers marked &ldquo;trains on inputs&rdquo;
+          (for example free Gemini or OpenRouter free models) may use what they receive to improve their models and let people review it: they can receive internal data only if you accept that.</p>
         <table className="small"><thead><tr><th>Provider</th><th>Trains on inputs?</th><th>May receive</th><th>Change</th></tr></thead><tbody>
           {(pols ?? []).map((p) => (
             <tr key={p.provider}><td className="mono">{p.provider}{p.status !== "active" && <span className="badge warn" style={{ marginLeft: 6 }}>off</span>}</td>
               <td>{p.may_train_on_inputs ? "Yes" : "No"}</td><td><strong>{p.max_classification}</strong></td>
-              <td>{p.may_train_on_inputs ? <span className="muted">Public data only</span> : (
-                <form action={setPolicy.bind(null, companyId, p.provider)} className="row" style={{ gap: 4 }}>
-                  <select name="max" defaultValue={p.max_classification} aria-label={`Data for ${p.provider}`}><option value="public">public</option><option value="internal">internal</option><option value="confidential">confidential</option></select>
-                  <input name="reason" required minLength={10} placeholder="Why (e.g. zero retention switched on)" style={{ minWidth: 200 }} />
-                  <button type="submit" className="secondary">Save</button></form>)}</td></tr>))}
+              <td><form action={setPolicy.bind(null, companyId, p.provider)} className="row" style={{ gap: 4 }}>
+                  <select name="max" defaultValue={p.max_classification} aria-label={`Data for ${p.provider}`}><option value="public">public</option><option value="internal">internal</option>
+                    {!p.may_train_on_inputs && <option value="confidential">confidential</option>}</select>
+                  <input name="reason" required minLength={20} placeholder="Why (at least 20 characters)" style={{ minWidth: 200 }} />
+                  {p.may_train_on_inputs && <label className="row small" style={{ gap: 4 }}><input type="checkbox" name="accept" /> I accept it may train on this data</label>}
+                  <button type="submit" className="secondary">Save</button></form></td></tr>))}
         </tbody></table>
       </div>
 

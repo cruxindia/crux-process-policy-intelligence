@@ -60,7 +60,7 @@ export async function setAssignmentActive(companyId: string, id: string, active:
 /** Data approvals: which classification of data a provider may receive (audited; training providers stay public-only). */
 export async function setPolicy(companyId: string, provider: string, form: FormData) {
   const { supabase } = await requireMembership(companyId);
-  const { error } = await supabase.rpc("ai_policy_set", { p_company: companyId, p_provider: provider, p_max: s(form, "max"), p_reason: s(form, "reason") });
+  const { error } = await supabase.rpc("ai_policy_set", { p_company: companyId, p_provider: provider, p_max: s(form, "max"), p_reason: s(form, "reason"), p_accept_training: form.get("accept") === "on" });
   if (error) fail(companyId, explain(error));
   ok(companyId, `${provider} may now receive data up to "${s(form, "max")}".`);
 }
