@@ -163,7 +163,9 @@ See ASSUMPTIONS_AND_OPEN_QUESTIONS (AQ-001–AQ-021) and REPOSITORY_AUDIT §8 it
 | Q9 | Full test at every layer + demo company refreshed with documents | test log |
 
 **Constraints:** zero running cost (owner, 25-Nov); personal and legal-sensitive content never goes to an AI provider; free AI tiers used only within their terms; the owner creates accounts and handles keys (Oracle, Supabase organisation, Groq); bank numbers typed by the owner only.
-**Decisions:** D-104…D-108.
+**Decisions:** D-104…D-110.
+
+**Status 25-Nov:** Q2 prices done (GSTIN pending from owner). Q3 done on hosted (baseline imported, reconciled). Q4–Q8 built and tested locally (DB 610/610, unit 96/96, standalone build OK); hosted apply + deploy blocked on Supabase connector access to the new organisation. Q1 kit ready (deploy/oracle, deploy-oracle workflow); waits on Oracle account + VM. Document analysis needs a provider approved for confidential data (owner: add a Groq key, approve it). Q9 pending.
 
 ## 13. Decision / change log
 | Date | Change | By |
