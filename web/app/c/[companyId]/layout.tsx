@@ -17,6 +17,7 @@ export default async function CompanyLayout({ children, params }: { children: Re
     { href: base, label: "Home" },
     { href: `${base}/tasks`, label: "My work", count: (tickets ?? 0) + (requests ?? 0) },
     ...(has("dashboard.read") ? [{ href: `${base}/dashboard`, label: "Dashboard" }] : []),
+    ...(has("org.manage") ? [{ href: `${base}/documents`, label: "Documents" }] : []),
     { href: `${base}/catalogue`, label: "Processes" },
     ...(has("document.draft", "document.read", "interview.review", "process.edit", "org.manage") ? [{ href: `${base}/board`, label: "Expert board" }] : []),
     ...(has("interview.review") ? [{ href: `${base}/review`, label: "Review answers", more: true, hint: "Check and confirm what people said" }] : []),

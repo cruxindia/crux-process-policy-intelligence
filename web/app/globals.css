@@ -270,3 +270,13 @@ pre.code { white-space: pre-wrap; word-break: break-all; background: rgba(127,12
   .invoice dl.kv { min-width: 0 !important; }
 }
 .nav-more:not([open]) > .nav-more-menu { display: none; }
+/* bulk intake progress */
+.progress { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+/* findings from documents */
+.findings { list-style: none; padding: 0; margin: 0; }
+.findings > li { border-top: 1px solid var(--border); padding: 10px 0; }
+.findings > li.decided { opacity: .75; }
+.findings blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid var(--border); color: var(--muted); }
+details.asis { border-top: 1px solid var(--border); padding: 8px 0; }
+details.asis > summary { cursor: pointer; }

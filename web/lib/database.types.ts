@@ -424,6 +424,38 @@ export type Database = {
           { foreignKeyName: "disputes_company_id_raised_by_membership_id_fkey"; columns: ["company_id", "raised_by_membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] }
         ]
       }
+      doc_findings: {
+        Row: { analysis_id: string | null; company_id: string; created_at: string; decided_at: string | null; decided_by: string | null; decision_note: string | null; department_code: string | null; detail: string | null; document_id: string | null; evidence: string | null; id: string; kind: string; mitigation: string | null; register_item_id: string | null; severity: string; source: string; status: string; title: string }
+        Insert: { analysis_id?: string | null; company_id: string; created_at?: string; decided_at?: string | null; decided_by?: string | null; decision_note?: string | null; department_code?: string | null; detail?: string | null; document_id?: string | null; evidence?: string | null; id?: string; kind: string; mitigation?: string | null; register_item_id?: string | null; severity?: string; source?: string; status?: string; title: string }
+        Update: { analysis_id?: string | null; company_id?: string; created_at?: string; decided_at?: string | null; decided_by?: string | null; decision_note?: string | null; department_code?: string | null; detail?: string | null; document_id?: string | null; evidence?: string | null; id?: string; kind?: string; mitigation?: string | null; register_item_id?: string | null; severity?: string; source?: string; status?: string; title?: string }
+        Relationships: [
+          { foreignKeyName: "doc_findings_company_id_analysis_id_fkey"; columns: ["company_id", "analysis_id"]; isOneToOne: false; referencedRelation: "document_analyses"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "doc_findings_company_id_decided_by_fkey"; columns: ["company_id", "decided_by"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "doc_findings_company_id_document_id_fkey"; columns: ["company_id", "document_id"]; isOneToOne: false; referencedRelation: "source_documents"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "doc_findings_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
+          { foreignKeyName: "doc_findings_company_id_register_item_id_fkey"; columns: ["company_id", "register_item_id"]; isOneToOne: false; referencedRelation: "register_items"; referencedColumns: ["company_id", "id"] }
+        ]
+      }
+      doc_processes: {
+        Row: { analysis_id: string; approvals: string[]; company_id: string; controls: string[]; created_at: string; department_code: string | null; document_id: string; flow: Json; id: string; name: string; owner_role: string | null; purpose: string | null; records: string[]; sla: string[]; trigger_text: string | null }
+        Insert: { analysis_id: string; approvals?: string[]; company_id: string; controls?: string[]; created_at?: string; department_code?: string | null; document_id: string; flow?: Json; id?: string; name: string; owner_role?: string | null; purpose?: string | null; records?: string[]; sla?: string[]; trigger_text?: string | null }
+        Update: { analysis_id?: string; approvals?: string[]; company_id?: string; controls?: string[]; created_at?: string; department_code?: string | null; document_id?: string; flow?: Json; id?: string; name?: string; owner_role?: string | null; purpose?: string | null; records?: string[]; sla?: string[]; trigger_text?: string | null }
+        Relationships: [
+          { foreignKeyName: "doc_processes_company_id_analysis_id_fkey"; columns: ["company_id", "analysis_id"]; isOneToOne: false; referencedRelation: "document_analyses"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "doc_processes_company_id_document_id_fkey"; columns: ["company_id", "document_id"]; isOneToOne: false; referencedRelation: "source_documents"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "doc_processes_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
+        ]
+      }
+      doc_register_links: {
+        Row: { by_ai: boolean; company_id: string; coverage: string; created_at: string; document_id: string; register_item_id: string; why: string | null }
+        Insert: { by_ai?: boolean; company_id: string; coverage: string; created_at?: string; document_id: string; register_item_id: string; why?: string | null }
+        Update: { by_ai?: boolean; company_id?: string; coverage?: string; created_at?: string; document_id?: string; register_item_id?: string; why?: string | null }
+        Relationships: [
+          { foreignKeyName: "doc_register_links_company_id_document_id_fkey"; columns: ["company_id", "document_id"]; isOneToOne: false; referencedRelation: "source_documents"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "doc_register_links_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
+          { foreignKeyName: "doc_register_links_company_id_register_item_id_fkey"; columns: ["company_id", "register_item_id"]; isOneToOne: false; referencedRelation: "register_items"; referencedColumns: ["company_id", "id"] }
+        ]
+      }
       document_acknowledgements: {
         Row: { acknowledged_at: string; company_id: string; id: string; membership_id: string; version_id: string }
         Insert: { acknowledged_at?: string; company_id: string; id?: string; membership_id: string; version_id: string }
@@ -431,6 +463,16 @@ export type Database = {
         Relationships: [
           { foreignKeyName: "document_acknowledgements_company_id_membership_id_fkey"; columns: ["company_id", "membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] },
           { foreignKeyName: "document_acknowledgements_company_id_version_id_fkey"; columns: ["company_id", "version_id"]; isOneToOne: false; referencedRelation: "document_versions"; referencedColumns: ["company_id", "id"] }
+        ]
+      }
+      document_analyses: {
+        Row: { ai_run_id: string | null; company_id: string; created_at: string; document_id: string; id: string; result: Json }
+        Insert: { ai_run_id?: string | null; company_id: string; created_at?: string; document_id: string; id?: string; result: Json }
+        Update: { ai_run_id?: string | null; company_id?: string; created_at?: string; document_id?: string; id?: string; result?: Json }
+        Relationships: [
+          { foreignKeyName: "document_analyses_company_id_ai_run_id_fkey"; columns: ["company_id", "ai_run_id"]; isOneToOne: false; referencedRelation: "ai_runs"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "document_analyses_company_id_document_id_fkey"; columns: ["company_id", "document_id"]; isOneToOne: false; referencedRelation: "source_documents"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "document_analyses_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
         ]
       }
       document_api_calls: {
@@ -522,6 +564,15 @@ export type Database = {
           { foreignKeyName: "evidence_files_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
           { foreignKeyName: "evidence_files_company_id_process_id_fkey"; columns: ["company_id", "process_id"]; isOneToOne: false; referencedRelation: "processes"; referencedColumns: ["company_id", "id"] },
           { foreignKeyName: "evidence_files_company_id_uploaded_by_membership_id_fkey"; columns: ["company_id", "uploaded_by_membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] }
+        ]
+      }
+      intake_batches: {
+        Row: { company_id: string; created_at: string; created_by: string; id: string; label: string }
+        Insert: { company_id: string; created_at?: string; created_by: string; id?: string; label: string }
+        Update: { company_id?: string; created_at?: string; created_by?: string; id?: string; label?: string }
+        Relationships: [
+          { foreignKeyName: "intake_batches_company_id_created_by_fkey"; columns: ["company_id", "created_by"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "intake_batches_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
         ]
       }
       interview_answer_analyses: {
@@ -868,6 +919,25 @@ export type Database = {
           { foreignKeyName: "roles_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
         ]
       }
+      source_document_texts: {
+        Row: { body: string; company_id: string; created_at: string; document_id: string }
+        Insert: { body: string; company_id: string; created_at?: string; document_id: string }
+        Update: { body?: string; company_id?: string; created_at?: string; document_id?: string }
+        Relationships: [
+          { foreignKeyName: "source_document_texts_company_id_document_id_fkey"; columns: ["company_id", "document_id"]; isOneToOne: false; referencedRelation: "source_documents"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "source_document_texts_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
+        ]
+      }
+      source_documents: {
+        Row: { analysis_error: string | null; analysis_status: string; batch_id: string | null; category: string; company_id: string; created_at: string; department_code: string | null; doc_type: string; ext: string; file_modified_at: string | null; file_name: string; folder: string; id: string; pages: number | null; read_status: string; reason: string | null; sha256: string; size_bytes: number; text_chars: number; unreadable_reason: string | null; updated_at: string; uploaded_by: string }
+        Insert: { analysis_error?: string | null; analysis_status?: string; batch_id?: string | null; category: string; company_id: string; created_at?: string; department_code?: string | null; doc_type?: string; ext?: string; file_modified_at?: string | null; file_name: string; folder?: string; id?: string; pages?: number | null; read_status?: string; reason?: string | null; sha256: string; size_bytes?: number; text_chars?: number; unreadable_reason?: string | null; updated_at?: string; uploaded_by: string }
+        Update: { analysis_error?: string | null; analysis_status?: string; batch_id?: string | null; category?: string; company_id?: string; created_at?: string; department_code?: string | null; doc_type?: string; ext?: string; file_modified_at?: string | null; file_name?: string; folder?: string; id?: string; pages?: number | null; read_status?: string; reason?: string | null; sha256?: string; size_bytes?: number; text_chars?: number; unreadable_reason?: string | null; updated_at?: string; uploaded_by?: string }
+        Relationships: [
+          { foreignKeyName: "source_documents_company_id_batch_id_fkey"; columns: ["company_id", "batch_id"]; isOneToOne: false; referencedRelation: "intake_batches"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "source_documents_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
+          { foreignKeyName: "source_documents_company_id_uploaded_by_fkey"; columns: ["company_id", "uploaded_by"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] }
+        ]
+      }
       ticket_comments: {
         Row: { author_is_platform: boolean; author_membership_id: string | null; body: string; company_id: string; created_at: string; id: string; kind: string; ticket_id: string }
         Insert: { author_is_platform?: boolean; author_membership_id?: string | null; body: string; company_id: string; created_at?: string; id?: string; kind?: string; ticket_id: string }
@@ -915,6 +985,7 @@ export type Database = {
       accept_membership: { Args: { p_company: string | null }; Returns: string }
       admin_reset_password: { Args: { p_company: string | null; p_membership: string | null }; Returns: string }
       adopt_baseline: { Args: { p_company: string | null; p_version: string | null }; Returns: Json }
+      ai_policy_set: { Args: { p_company: string | null; p_provider: string | null; p_max: string | null; p_reason: string | null }; Returns: string }
       am_platform_admin: { Args: never; Returns: boolean }
       baseline_add_rows: { Args: { p_version: string | null; p_sheet: string | null; p_rows: Json | null }; Returns: number }
       baseline_begin: { Args: { p_code: string | null; p_version: string | null; p_title: string | null; p_as_of: string | null; p_source_name: string | null; p_source_sha256: string | null; p_sheet_meta: Json | null }; Returns: string }
@@ -950,6 +1021,13 @@ export type Database = {
       ctq_retire: { Args: { p_company: string | null; p_ctq: string | null; p_note: string | null }; Returns: undefined }
       ctq_save: { Args: { p_company: string | null; p_id: string | null; p_name: string | null; p_voice: string | null; p_measure: string | null; p_unit: string | null; p_direction: string | null; p_baseline: string | null; p_expectation?: string | null }; Returns: string }
       decide_board_case: { Args: { p_company: string | null; p_case: string | null; p_decision: string | null; p_note?: string | null }; Returns: undefined }
+      doc_assessment_finalize: { Args: { p_company: string | null }; Returns: Json }
+      doc_finding_decide: { Args: { p_company: string | null; p_finding: string | null; p_status: string | null; p_note?: string | null }; Returns: undefined }
+      intake_add: { Args: { p_company: string | null; p_batch: string | null; p_docs: Json | null }; Returns: Json }
+      intake_begin: { Args: { p_company: string | null; p_label: string | null }; Returns: string }
+      intake_known: { Args: { p_company: string | null; p_hashes: string[] | null }; Returns: string[] }
+      intake_put_text: { Args: { p_company: string | null; p_document: string | null; p_body: string | null }; Returns: undefined }
+      intake_set_category: { Args: { p_company: string | null; p_document: string | null; p_category: string | null; p_doc_type?: string | null; p_department?: string | null }; Returns: string }
       interview_ask_colleague: { Args: { p_company: string | null; p_question: string | null; p_helper: string | null; p_note?: string | null }; Returns: string }
       interview_help_replies: { Args: { p_company: string | null; p_session: string | null }; Returns: { question_id: string; helper_membership_id: string; helper_role: string; task_status: string; reply: string; replied_at: string }[] }
       invite_member: { Args: { p_company: string | null; p_email: string | null; p_display_name: string | null; p_job_title?: string | null; p_department?: string | null; p_role_code?: string | null; p_scope_department?: string | null }; Returns: Json }

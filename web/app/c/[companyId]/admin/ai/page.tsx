@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/session";
 import { fmtDate } from "@/lib/names";
-import { addAssignment, addConnection, setAssignmentActive, updateConnection } from "./actions";
+import { addAssignment, addConnection, setAssignmentActive, setPolicy, updateConnection } from "./actions";
 import { KeyForm, TestButton } from "./connection-tools";
 
 const HEALTH: Record<string, [string, string]> = {
@@ -28,7 +28,7 @@ export default async function AiAdmin({ params, searchParams }: { params: Promis
     supabase.from("ai_connection_assignments").select("id, connection_id, department_id, process_id, interview_category, active").eq("company_id", companyId),
     supabase.from("departments").select("id, code, name").eq("company_id", companyId).order("code"),
     supabase.from("processes").select("id, code, name").eq("company_id", companyId).order("code"),
-    supabase.from("ai_provider_policies").select("provider, max_classification").eq("company_id", companyId).order("provider"),
+    supabase.from("ai_provider_policies").select("provider, max_classification, may_train_on_inputs, status, notes").eq("company_id", companyId).order("provider"),
     supabase.from("companies").select("ai_connection_limit").eq("id", companyId).single(),
     supabase.from("ai_jobs").select("id, task_type, status, run_after, retry_count, error_class, created_at, completed_at, connection_id").eq("company_id", companyId)
       .order("created_at", { ascending: false }).limit(50),
@@ -82,6 +82,23 @@ export default async function AiAdmin({ params, searchParams }: { params: Promis
       <div className="card row" style={{ justifyContent: "space-between" }}>
         <div><strong>Server default key</strong><div className="muted small">Used when no connection is assigned or available (Edge Function secret GEMINI_API_KEY).</div></div>
         <TestButton companyId={companyId} label="Test default" />
+      </div>
+
+      <div className="card" id="approvals" data-testid="data-approvals">
+        <h2 style={{ marginTop: 0 }}>Data approvals</h2>
+        <p className="small muted" style={{ maxWidth: 760 }}>Which data each AI provider may receive. Interviews are &ldquo;internal&rdquo;; your existing documents and the expert board&rsquo;s drafts are
+          &ldquo;confidential&rdquo;. Providers that may use what they receive to train their models (for example free Gemini) can only receive public data here.
+          Before approving a provider for confidential data, check its data settings (for Groq: switch on Zero Data Retention in Data Controls).</p>
+        <table className="small"><thead><tr><th>Provider</th><th>Trains on inputs?</th><th>May receive</th><th>Change</th></tr></thead><tbody>
+          {(pols ?? []).map((p) => (
+            <tr key={p.provider}><td className="mono">{p.provider}{p.status !== "active" && <span className="badge warn" style={{ marginLeft: 6 }}>off</span>}</td>
+              <td>{p.may_train_on_inputs ? "Yes" : "No"}</td><td><strong>{p.max_classification}</strong></td>
+              <td>{p.may_train_on_inputs ? <span className="muted">Public data only</span> : (
+                <form action={setPolicy.bind(null, companyId, p.provider)} className="row" style={{ gap: 4 }}>
+                  <select name="max" defaultValue={p.max_classification} aria-label={`Data for ${p.provider}`}><option value="public">public</option><option value="internal">internal</option><option value="confidential">confidential</option></select>
+                  <input name="reason" required minLength={10} placeholder="Why (e.g. zero retention switched on)" style={{ minWidth: 200 }} />
+                  <button type="submit" className="secondary">Save</button></form>)}</td></tr>))}
+        </tbody></table>
       </div>
 
       <h2>Connections ({conns?.length ?? 0} of {co?.ai_connection_limit ?? 10})</h2>
