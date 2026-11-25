@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  output: "standalone",   // self-contained server for the Oracle VM (D-104): node .next/standalone/server.js
+  // Oracle (D-104) dropped: it needs a payment card (owner, 25-Nov). Hosting stays on Netlify Free (D-114); its runtime builds the server itself.
+  // For a self-hosted VM later, add output: "standalone" (deploy/oracle).
   async headers() {
     return [
       {

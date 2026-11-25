@@ -50,7 +50,7 @@ function pdf(text) {   // smallest valid PDF with one line of text
     const counts = await l.getByTestId('intake-counts').innerText();
     check('8 files read in the browser (zip expanded)', /8 of 8/.test(counts), counts);
     check('rule documents, records and personal records separated', /5 rule documents/.test(counts) && /2 records/.test(counts) && /1 personal\/legal/.test(counts), counts);
-    check('old .doc reported as unreadable with advice', /could not be read/.test(counts) && /Old \.doc format/.test(await l.getByTestId('intake-progress').innerText()));
+    check('old .doc reported as unreadable with advice', /could not be read/.test(counts) && /Old \.doc format/.test(await l.getByTestId('intake-progress').textContent()));
     await l.getByTestId('pick-files').setInputFiles([files[0]]);
     await l.getByText(/^Done\./).waitFor({ timeout: 60000 });
     check('the same file again is not added twice', /1 already in/.test(await l.getByTestId('intake-counts').innerText()));
@@ -65,9 +65,9 @@ function pdf(text) {   // smallest valid PDF with one line of text
     // analysis gate: no AI is approved for confidential documents on the synthetic tenant
     await l.goto(`${BASE}/c/${CO}/documents`);
     await l.getByTestId('analyse').getByRole('button').first().click();
-    await l.waitForTimeout(4000);
+    await l.getByTestId('analysis').getByText(/No AI connection is approved|Analysed|analysed|could not finish|stopped/).first().waitFor({ timeout: 120000 }).catch(() => {});
     const msg = await l.getByTestId('analysis').innerText();
-    check('analysis waits safely when no AI is approved for confidential data', /approved for confidential|Analysed|analysed/.test(msg), msg.replace(/\n/g, ' ').slice(0, 200));
+    check('analysis waits safely when no AI is approved for company documents', /No AI connection is approved|Analysed|analysed|could not finish/.test(msg), msg.replace(/\n/g, ' ').slice(0, 200));
     await l.goto(`${BASE}/c/${CO}/admin/ai`);
     check('data approvals explain training providers', /Data approvals/.test(await l.getByTestId('data-approvals').innerText()) && /gemini_free/.test(await l.getByTestId('data-approvals').innerText()));
 

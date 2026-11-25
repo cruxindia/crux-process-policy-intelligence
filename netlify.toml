@@ -3,6 +3,9 @@
   base = "web"
   command = "npm run build"
   publish = ".next"
+  # Free plan (D-114): 300 credits a month, 15 per production deploy, hard cap (never billed; sites pause when used up).
+  # Build only commits whose message contains [deploy], so routine pushes cost nothing. Exit 0 = skip, 1 = build.
+  ignore = "git log -1 --pretty=%B | grep -qF '[deploy]' && exit 1 || exit 0"
 
 [build.environment]
   NODE_VERSION = "22"

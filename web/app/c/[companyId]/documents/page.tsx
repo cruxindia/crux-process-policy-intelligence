@@ -26,8 +26,12 @@ export default async function Documents({ params, searchParams }: { params: Prom
     supabase.from("company_baselines").select("version_id").eq("company_id", companyId),
     supabase.from("register_items").select("kind, status").eq("company_id", companyId).limit(5000),
     supabase.rpc("doc_departments", { p_company: companyId }),
-    supabase.from("memberships").select("id, user_profiles(display_name)").eq("company_id", companyId).eq("status", "active").limit(2000),
+    supabase.from("memberships").select("id, user_id").eq("company_id", companyId).eq("status", "active").limit(2000),
   ]);
+  // memberships.user_id points at auth.users, so names come from user_profiles in a second lookup (no PostgREST embed).
+  const uids = [...new Set((members ?? []).map((m) => m.user_id))];
+  const { data: profiles } = uids.length ? await supabase.from("user_profiles").select("id, display_name").in("id", uids) : { data: [] };
+  const nameOf = new Map((profiles ?? []).map((x) => [x.id, x.display_name]));
   const all = docs ?? [];
   const n = (f: (d: (typeof all)[number]) => boolean) => all.filter(f).length;
   const adoptedIds = new Set((adopted ?? []).map((a) => a.version_id));
@@ -92,7 +96,7 @@ export default async function Documents({ params, searchParams }: { params: Prom
                   <form key={p.membership_id} action={removeStakeholder.bind(null, companyId, d.code, p.membership_id)} className="row" style={{ gap: 4 }}>
                     <span>{p.name}{p.job_title ? ` · ${p.job_title}` : ""}</span><button type="submit" className="link small" aria-label={`Remove ${p.name}`}>remove</button></form>))}
                   <StakeholderForm companyId={companyId} dept={d.code} departmentId={d.department_id}
-                    people={(members ?? []).map((m) => ({ id: m.id, name: (m.user_profiles as { display_name?: string } | null)?.display_name ?? "Unnamed" })).sort((a, b) => a.name.localeCompare(b.name))} /></td></tr>))}
+                    people={(members ?? []).map((m) => ({ id: m.id, name: nameOf.get(m.user_id) ?? "Unnamed" })).sort((a, b) => a.name.localeCompare(b.name))} /></td></tr>))}
           </tbody></table>
         </div>) : null}
 

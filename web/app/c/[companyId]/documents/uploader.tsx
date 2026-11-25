@@ -51,7 +51,8 @@ export function Uploader({ companyId }: { companyId: string }) {
           let c = classify(e.name, e.folder);
           const buf = await e.bytes();
           // Read text for rule documents, and for unclear names (to see whether they are written like a policy). Records with clear names are only fingerprinted.
-          const read = READABLE.has(extOf(e.name)) && (c.category === "governing" || (c.category === "record" && c.docType === "other"));
+          // Rule documents always go through extract(), so an old .doc/.xls or an image is reported as "could not be read" instead of silently skipped.
+          const read = c.category === "governing" || (READABLE.has(extOf(e.name)) && c.category === "record" && c.docType === "other");
           const x = await extract(buf, e.name, read);
           if (x.text && c.category === "record") c = classify(e.name, e.folder, x.text.slice(0, 12000));
           prepared.push({ e, c, sha256: x.sha256, text: mayShareText(c) ? x.text : null, pages: x.pages, unreadable: mayShareText(c) ? x.unreadable : null });

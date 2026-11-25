@@ -30,7 +30,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   }
   const { data: memberships, error } = await supabase
     .from("memberships")
-    .select("id, status, job_title, company_id, companies(name, code)")
+    .select("id, status, job_title, company_id, companies!memberships_company_id_fkey(name, code)")
     .eq("user_id", userId)
     .in("status", ["invited", "active"])
     .order("created_at");

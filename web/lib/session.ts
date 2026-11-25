@@ -21,7 +21,7 @@ export const requireMembership = cache(async function requireMembership(companyI
   const { supabase, userId } = await requireUser();
   // Three independent lookups in parallel (one round trip instead of three).
   const [{ data: membership }, { data: mustChange }, { data: perms }] = await Promise.all([
-    supabase.from("memberships").select("id, status, job_title, primary_department_id, company_id, companies(name, code)")
+    supabase.from("memberships").select("id, status, job_title, primary_department_id, company_id, companies!memberships_company_id_fkey(name, code)")
       .eq("company_id", companyId).eq("user_id", userId).eq("status", "active").maybeSingle(),
     supabase.rpc("password_change_required"),
     supabase.rpc("my_permissions", { p_company: companyId }),

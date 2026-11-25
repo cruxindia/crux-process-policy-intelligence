@@ -20,7 +20,10 @@ const month = ist.toISOString().slice(0, 7);
 
     // ---- platform owner: package + invoice ----
     await l.goto(BASE + '/platform/billing?test=1');
-    check('set-up checklist shown while prices are draft / profile incomplete', (await l.getByTestId('billing-setup').count()) === 1);
+    // The notice appears only while any package still has a draft price (D-112: no supplier tax profile is required).
+    const draftPrices = /Draft price|draft price/i.test(await l.goto(BASE + '/platform/billing/plans').then(() => l.locator('main').innerText()));
+    await l.goto(BASE + '/platform/billing?test=1');
+    check('set-up notice shown only while prices are draft', (await l.getByTestId('billing-setup').count()) === (draftPrices ? 1 : 0), draftPrices ? 'draft prices present' : 'prices set');
     const row = l.locator('[data-testid="billing-companies"] tr', { hasText: 'E2E Synthetic Co' }).first();
     await row.locator('select[name="plan"]').selectOption({ label: 'Starter' });
     await row.locator('input[name="starts"]').fill(`${month}-01`);
@@ -31,7 +34,7 @@ const month = ist.toISOString().slice(0, 7);
     await l.locator('[data-testid="invoices-table"] tr', { hasText: 'E2E Synthetic Co' }).filter({ hasText: 'Draft' }).first().getByRole('link').first().click();
     await l.getByTestId('invoice').waitFor();
     const draft = await l.getByTestId('invoice').innerText();
-    check('draft shows the Starter fee line and GST', /Starter package — monthly fee/.test(draft) && /(IGST|CGST)/.test(draft), draft.split('\n').slice(0, 3).join(' / '));
+    check('draft shows the Starter fee line, cost only (no tax lines while the GST rate is 0)', /Starter package — monthly fee/.test(draft) && !/(IGST|CGST|SGST)/.test(draft), draft.split('\n').slice(0, 3).join(' / '));
     await l.getByRole('button', { name: 'Issue invoice' }).click(); await l.waitForURL(/ok=Issued/);
     const number = (new URL(l.url()).searchParams.get('ok') ?? '').match(/Issued as (\S+)/)?.[1] ?? '';
     check('issued with a financial-year number', /^PPI\/\d\d-\d\d\/\d{4}$/.test(number), number);

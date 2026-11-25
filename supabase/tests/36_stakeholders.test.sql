@@ -1,6 +1,6 @@
 -- PPI-049: departments from documents, stakeholders per department, department-scoped review.
 begin;
-select plan(11);
+select plan(12);
 select tests.login('a_admin'); set local role authenticated;
 select public.intake_add(tests.company('ALPHA'), null, jsonb_build_array(
   jsonb_build_object('sha256', repeat('7', 64), 'file_name', 'Travel Policy.docx', 'category', 'governing', 'department_code', 'FIN'),
@@ -21,6 +21,9 @@ select is(jsonb_array_length(public.doc_departments(tests.company('ALPHA'), true
 select ok(exists (select 1 from public.departments where company_id = tests.company('ALPHA') and code = 'FIN'), 'a missing company department is created');
 select lives_ok($$ select public.doc_stakeholder_add(tests.company('ALPHA'), 'FIN', tests.mid('a_ops_emp')) $$, 'the admin names a stakeholder for Finance');
 select is((select (d->'stakeholders'->0->>'membership_id')::uuid from jsonb_array_elements(public.doc_departments(tests.company('ALPHA'))) d where d->>'code' = 'FIN'), tests.mid('a_ops_emp'), 'and sees them listed');
+select lives_ok($$ select public.doc_stakeholder_add(tests.company('ALPHA'), 'HR',
+  (public.invite_member(tests.company('ALPHA'), 'new.reviewer@example.invalid', 'New Reviewer', 'HR Head')->>'membership_id')::uuid) $$,
+  'a person invited from the form (not signed in yet) can be named a stakeholder');
 reset role;
 
 select tests.login('a_ops_emp'); set local role authenticated;
