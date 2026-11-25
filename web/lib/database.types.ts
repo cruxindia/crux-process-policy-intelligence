@@ -131,6 +131,28 @@ export type Database = {
           { foreignKeyName: "background_jobs_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
         ]
       }
+      baseline_items: {
+        Row: { code: string | null; data: Json; department: string | null; id: number; row_no: number; sheet: string; title: string | null; version_id: string }
+        Insert: { code?: string | null; data: Json; department?: string | null; id?: number; row_no: number; sheet: string; title?: string | null; version_id: string }
+        Update: { code?: string | null; data?: Json; department?: string | null; id?: number; row_no?: number; sheet?: string; title?: string | null; version_id?: string }
+        Relationships: [
+          { foreignKeyName: "baseline_items_version_id_fkey"; columns: ["version_id"]; isOneToOne: false; referencedRelation: "baseline_versions"; referencedColumns: ["id"] }
+        ]
+      }
+      baseline_links: {
+        Row: { data: Json; from_code: string; id: number; relation: string; to_code: string; version_id: string }
+        Insert: { data?: Json; from_code: string; id?: number; relation: string; to_code: string; version_id: string }
+        Update: { data?: Json; from_code?: string; id?: number; relation?: string; to_code?: string; version_id?: string }
+        Relationships: [
+          { foreignKeyName: "baseline_links_version_id_fkey"; columns: ["version_id"]; isOneToOne: false; referencedRelation: "baseline_versions"; referencedColumns: ["id"] }
+        ]
+      }
+      baseline_versions: {
+        Row: { activated_at: string | null; as_of: string | null; code: string; counts: Json; id: string; imported_at: string; imported_by: string | null; sheet_meta: Json; source_name: string | null; source_sha256: string | null; status: string; title: string; version: string }
+        Insert: { activated_at?: string | null; as_of?: string | null; code: string; counts?: Json; id?: string; imported_at?: string; imported_by?: string | null; sheet_meta?: Json; source_name?: string | null; source_sha256?: string | null; status?: string; title: string; version: string }
+        Update: { activated_at?: string | null; as_of?: string | null; code?: string; counts?: Json; id?: string; imported_at?: string; imported_by?: string | null; sheet_meta?: Json; source_name?: string | null; source_sha256?: string | null; status?: string; title?: string; version?: string }
+        Relationships: []
+      }
       billing_plans: {
         Row: { code: string; company_id: string | null; created_at: string; description: string | null; features: string[]; id: string; included_ai_runs: number; included_people: number; is_draft_price: boolean; monthly_fee: number; name: string; price_per_100_ai_runs: number; price_per_extra_person: number; sort_order: number; status: string; updated_at: string }
         Insert: { code: string; company_id?: string | null; created_at?: string; description?: string | null; features?: string[]; id?: string; included_ai_runs?: number; included_people?: number; is_draft_price?: boolean; monthly_fee?: number; name: string; price_per_100_ai_runs?: number; price_per_extra_person?: number; sort_order?: number; status?: string; updated_at?: string }
@@ -278,6 +300,15 @@ export type Database = {
         Update: { calls_total?: number; company_id?: string; created_at?: string; created_by_membership_id?: string | null; id?: string; key_hash?: string; key_prefix?: string; last_used_at?: string | null; name?: string; revoked_at?: string | null; revoked_by_membership_id?: string | null }
         Relationships: [
           { foreignKeyName: "company_api_keys_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
+        ]
+      }
+      company_baselines: {
+        Row: { adopted_at: string; adopted_by: string | null; company_id: string; version_id: string }
+        Insert: { adopted_at?: string; adopted_by?: string | null; company_id: string; version_id: string }
+        Update: { adopted_at?: string; adopted_by?: string | null; company_id?: string; version_id?: string }
+        Relationships: [
+          { foreignKeyName: "company_baselines_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
+          { foreignKeyName: "company_baselines_version_id_fkey"; columns: ["version_id"]; isOneToOne: false; referencedRelation: "baseline_versions"; referencedColumns: ["id"] }
         ]
       }
       company_billing_profiles: {
@@ -796,6 +827,17 @@ export type Database = {
           { foreignKeyName: "question_templates_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] }
         ]
       }
+      register_items: {
+        Row: { code: string; company_id: string; criticality: string | null; department_id: string | null; department_label: string | null; evidence_count: number; id: string; kind: string; not_applicable_reason: string | null; note: string | null; owner_membership_id: string | null; status: string; title: string; updated_at: string; updated_by: string | null; version_id: string | null }
+        Insert: { code: string; company_id: string; criticality?: string | null; department_id?: string | null; department_label?: string | null; evidence_count?: number; id?: string; kind: string; not_applicable_reason?: string | null; note?: string | null; owner_membership_id?: string | null; status?: string; title: string; updated_at?: string; updated_by?: string | null; version_id?: string | null }
+        Update: { code?: string; company_id?: string; criticality?: string | null; department_id?: string | null; department_label?: string | null; evidence_count?: number; id?: string; kind?: string; not_applicable_reason?: string | null; note?: string | null; owner_membership_id?: string | null; status?: string; title?: string; updated_at?: string; updated_by?: string | null; version_id?: string | null }
+        Relationships: [
+          { foreignKeyName: "register_items_company_id_department_id_fkey"; columns: ["company_id", "department_id"]; isOneToOne: false; referencedRelation: "departments"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "register_items_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
+          { foreignKeyName: "register_items_company_id_owner_membership_id_fkey"; columns: ["company_id", "owner_membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] },
+          { foreignKeyName: "register_items_version_id_fkey"; columns: ["version_id"]; isOneToOne: false; referencedRelation: "baseline_versions"; referencedColumns: ["id"] }
+        ]
+      }
       role_assignments: {
         Row: { company_id: string; created_at: string; delegated_from_id: string | null; delegation_reason: string | null; granted_by_membership_id: string | null; id: string; membership_id: string; role_id: string; scope_department_id: string | null; scope_process_id: string | null; scope_type: string; status: string; valid_from: string; valid_to: string | null }
         Insert: { company_id: string; created_at?: string; delegated_from_id?: string | null; delegation_reason?: string | null; granted_by_membership_id?: string | null; id?: string; membership_id: string; role_id: string; scope_department_id?: string | null; scope_process_id?: string | null; scope_type: string; status?: string; valid_from?: string; valid_to?: string | null }
@@ -872,7 +914,11 @@ export type Database = {
     Functions: {
       accept_membership: { Args: { p_company: string | null }; Returns: string }
       admin_reset_password: { Args: { p_company: string | null; p_membership: string | null }; Returns: string }
+      adopt_baseline: { Args: { p_company: string | null; p_version: string | null }; Returns: Json }
       am_platform_admin: { Args: never; Returns: boolean }
+      baseline_add_rows: { Args: { p_version: string | null; p_sheet: string | null; p_rows: Json | null }; Returns: number }
+      baseline_begin: { Args: { p_code: string | null; p_version: string | null; p_title: string | null; p_as_of: string | null; p_source_name: string | null; p_source_sha256: string | null; p_sheet_meta: Json | null }; Returns: string }
+      baseline_finish: { Args: { p_version: string | null }; Returns: Json }
       blueprint_add_entry: { Args: { p_company: string | null; p_section: string | null; p_statement: string | null }; Returns: string }
       blueprint_answer_question: { Args: { p_company: string | null; p_question: string | null; p_answer: string | null }; Returns: undefined }
       blueprint_assign_question: { Args: { p_company: string | null; p_question: string | null; p_member: string | null; p_dismiss?: boolean | null }; Returns: undefined }
@@ -940,6 +986,7 @@ export type Database = {
       project_milestone_save: { Args: { p_company: string | null; p_project: string | null; p_id: string | null; p_title: string | null; p_due: string | null; p_owner: string | null; p_done: boolean | null }; Returns: string }
       project_save: { Args: { p_company: string | null; p_id: string | null; p_code: string | null; p_name: string | null; p_objective: string | null; p_manager: string | null; p_sponsor: string | null; p_departments: string[] | null; p_starts: string | null; p_target_end: string | null; p_status: string | null }; Returns: string }
       promote_discovered_process: { Args: { p_company: string | null; p_discovered: string | null; p_code: string | null; p_owner_department: string | null; p_classification?: string | null; p_existing_process?: string | null }; Returns: string }
+      register_set_status: { Args: { p_company: string | null; p_item: string | null; p_status: string | null; p_reason?: string | null; p_owner?: string | null; p_note?: string | null }; Returns: undefined }
       register_with_join_link: { Args: { p_token: string | null; p_mobile: string | null; p_full_name: string | null; p_password: string | null; p_email?: string | null }; Returns: Json }
       reissue_temporary_password: { Args: { p_company: string | null; p_membership: string | null }; Returns: string }
       set_join_interview_mode: { Args: { p_company: string | null; p_adaptive: boolean | null }; Returns: string }

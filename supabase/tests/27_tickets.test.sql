@@ -48,7 +48,7 @@ reset role;
 
 select tests.login('a_ops_head'); set local role authenticated;
 select is((select count(*)::int from public.tickets where company_id = tests.company('ALPHA') and assignee_department_id = tests.dept('ALPHA','OPS')), 1, 'the OPS head sees OPS tickets');
-select lives_ok($$ select public.ticket_assign(tests.company('ALPHA'), (select id from ids where k = 'peer'), tests.mid('a_ops_emp'), now() - interval '1 day') $$, 'and re-assigns (here with a past due date)');
+select lives_ok($$ select public.ticket_assign(tests.company('ALPHA'), (select id from ids where k = 'peer'), tests.mid('a_ops_emp'), timestamptz '2026-11-19 18:00+05:30') $$, 'and re-assigns (here with a past due date)');
 reset role;
 
 -- support ticket: the platform owner sees and answers it; other companies never see it
@@ -63,7 +63,7 @@ select is((select count(*)::int from public.tickets where kind = 'action'), 0, '
 reset role;
 
 -- daily run: reminder, escalation of the overdue ticket to the OPS head, one digest per person
-update public.tickets set created_at = now() - interval '2 days' where id = (select id from ids where k = 'peer');
+update public.tickets set created_at = timestamptz '2026-11-17 10:00+05:30' where id = (select id from ids where k = 'peer');
 select is((private.run_ticket_reminders('2026-11-23 09:30+05:30') ->> 'escalated')::int, 1, 'the overdue ticket is escalated');
 select is((select escalated_to_membership_id from public.tickets where id = (select id from ids where k = 'peer')), tests.mid('a_ops_head'),
           'to the head of the assignee''s department, with a reminder number');
