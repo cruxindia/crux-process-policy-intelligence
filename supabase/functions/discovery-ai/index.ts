@@ -176,9 +176,10 @@ async function turn(userDb: Db, svc: Db, uid: string, sessionId: string) {
     transcript, latestRef: `Q${latestQ.seq}`,
     openClarifications: (clar ?? []).map((c: any) => ({ id: c.id, description: c.description, already_asked: !!c.question_id && ansBy.has(c.question_id) })),
     aiQuestionsAsked: aiAsked, maxAiQuestions: camp.max_ai_questions,
-    companyBlueprint: bg.blueprint, departmentKnowledge: bg.department, colleagueAnswers: bg.colleagues,
+    companyBlueprint: bg.blueprint, departmentKnowledge: bg.department, colleagueAnswers: bg.colleagues, documentedByCompany: bg.documented,
   };
-  const ground = [bg.blueprint ?? "", ...bg.department.flatMap((d) => [d.process, ...d.steps]), ...bg.colleagues.map((c) => c.reply)].join(" ");
+  const ground = [bg.blueprint ?? "", ...bg.department.flatMap((d) => [d.process, ...d.steps]), ...bg.colleagues.map((c) => c.reply),
+    ...(bg.documented?.processes ?? []).flatMap((p) => [p.name, ...p.steps])].join(" ");
   const userMsg = buildUserMessageV2(ctx);
   const key = `dturn:${(await sha256Hex(transcript.map((t: any) => t.answerId).sort().join(","))).slice(0, 40)}`;
 
@@ -395,5 +396,25 @@ async function background(svc: Db, co: string, sessionId: string, deptId: string
     for (const h of help) for (const r of (rs ?? []).filter((x: any) => x.task_id === h.task_id))
       colleagues.push({ ref: `Q${seq.get(h.question_id)}`, colleague_role: role.get(h.helper_membership_id) ?? "colleague", reply: r.response_text });
   }
-  return { blueprint, department, colleagues };
+  // What the company's own documents say about this department, and the open points found in them (SOW 12G Q8).
+  let documented: { processes: { name: string; steps: string[]; source: string }[]; open_points: string[] } | null = null;
+  if (deptId) {
+    const { data: d } = await svc.from("departments").select("code").eq("company_id", co).eq("id", deptId).maybeSingle();
+    if (d?.code) {
+      const [{ data: dp }, { data: fs }] = await Promise.all([
+        svc.from("doc_processes").select("name, flow, document_id").eq("company_id", co).eq("department_code", d.code).limit(8),
+        svc.from("doc_findings").select("kind, title").eq("company_id", co).eq("department_code", d.code).eq("status", "open")
+          .in("kind", ["gap", "loose_end", "question", "risk"]).order("severity").limit(15),
+      ]);
+      const ids = [...new Set((dp ?? []).map((p: any) => p.document_id))];
+      const { data: docs } = ids.length ? await svc.from("source_documents").select("id, doc_type").eq("company_id", co).in("id", ids) : { data: [] };
+      const kind = new Map((docs ?? []).map((x: any) => [x.id, String(x.doc_type).replace(/_/g, " ")]));
+      if ((dp ?? []).length || (fs ?? []).length) documented = {
+        processes: (dp ?? []).map((p: any) => ({ name: p.name, source: `company ${kind.get(p.document_id) ?? "document"}`,
+          steps: (p.flow?.nodes ?? []).filter((n: any) => n.type !== "start" && n.type !== "end").map((n: any) => String(n.label)) })),
+        open_points: (fs ?? []).map((f: any) => `${f.kind.replace("_", " ")}: ${f.title}`),
+      };
+    }
+  }
+  return { blueprint, department, colleagues, documented };
 }

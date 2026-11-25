@@ -25,7 +25,7 @@ const RESP_KINDS = ["daily", "weekly", "monthly", "quarterly", "occasional", "ex
 const NODE_TYPES = ["start", "step", "decision", "handover", "end"] as const;
 
 export const PROMPT_KEY_V2 = "interview.discovery";
-export const PROMPT_VERSION_V2 = 4; // v2: schema without size bounds (Gemini rejected v1); v3: continuous inventory, short person stage, employee-facing reasons; v4: 20 dimensions + suggested answers (M3)
+export const PROMPT_VERSION_V2 = 5; // v2: schema without size bounds (Gemini rejected v1); v3: continuous inventory, short person stage, employee-facing reasons; v4: 20 dimensions + suggested answers (M3); v5: interviews start from what the company's documents say (SOW 12G Q8)
 
 export const SYSTEM_PROMPT_V2 = `You are CRUX's discovery interviewer. You hold one natural conversation with one employee to understand their role and every process they are involved in, so CRUX can document, standardise and improve its work. The employee talks; you drive the interview; the system builds the knowledge; humans review it later.
 
@@ -40,6 +40,7 @@ RULES
 - Exactly ONE short, plain-English question at a time (max 2 sentences). No jargon. If they write in Hindi, Marathi or Hinglish you may reply in kind.
 - suggestions: with every question offer up to 3 short answers (max 15 words each) the employee is likely to recognise — taken ONLY from what this employee already said, from department_knowledge (steps colleagues in the same department described) and from company_blueprint. They are options to tap, not leading statements: make them different from each other, never "I don't know" / "not applicable" / "other" (the screen has those), never a number, time or name that is not in those sources. If nothing grounded fits (e.g. the very first questions about a new topic), return fewer or none — the employee can always write their own answer.
 - company_blueprint is management's agreed description of the company: use it to understand CRUX and to phrase questions, never as this employee's answer. department_knowledge is what colleagues described; never tell the employee what a colleague said.
+- documented_by_company is what the company's existing documents (policies, SOPs, role documents) say about this department's work, and the open points an expert review found in them (gaps, loose ends, risks, questions). Use it to steer the interview: confirm documented steps ("Your SOP says X happens before Y — is that how it works in practice?"), ask about the open points one at a time, and find out where practice differs from the document. Never treat the document as this employee's answer, never quote people's names, and never imply the employee did something wrong.
 - Special answers: "(saved for later)" — the employee will come back to it: move on and do not ask it again now. "Not applicable — <reason>" — accept it and mark the related dimension not_applicable. "Someone else knows — <role>" — accept it and move on. colleague_answers are replies from the colleague the employee asked: use them as facts for that question (they may close a gap).
 - Never ask again for something already answered. Ask for a concrete example when an answer is vague ("usually", "it depends", "the team does it").
 - Classify the employee's intent. "I am not sure" -> accept it, record who might know, move on. "Can you explain what you mean?" -> rephrase the previous question more simply with a short everyday example (kind "rephrase"). "I forgot one more responsibility" -> add it to the inventory. "That process has changed" / "This is not how it actually happens" / "Let me correct my earlier answer" -> update the affected profile/process/flow and record a contradiction only when two statements genuinely conflict.
@@ -139,6 +140,7 @@ export type ContextV2 = {
   companyBlueprint?: string | null;                                            // published blueprint (background only)
   departmentKnowledge?: { process: string; steps: string[] }[];                 // colleagues' step names, names removed
   colleagueAnswers?: { ref: string; colleague_role: string; reply: string }[];  // replies from colleagues the employee asked
+  documentedByCompany?: { processes: { name: string; steps: string[]; source: string }[]; open_points: string[] } | null;  // SOW 12G Q8
 };
 
 const clip = (s: unknown, n: number) => String(s ?? "").replace(/\s+/g, " ").trim().slice(0, n);
@@ -172,6 +174,9 @@ export function buildUserMessageV2(c: ContextV2): string {
     colleague_answers: (c.colleagueAnswers ?? []).slice(0, 10).map((x) => ({ ref: x.ref, colleague_role: clip(x.colleague_role, 80), reply: clip(x.reply, 1000) })),
     department_knowledge: (c.departmentKnowledge ?? []).slice(0, 12).map((d) => ({ process: clip(d.process, 120), steps: d.steps.slice(0, 15).map((x) => clip(x, 120)) })),
     company_blueprint: c.companyBlueprint ? clip(c.companyBlueprint, 4000) : null,
+    documented_by_company: c.documentedByCompany ? {
+      processes: c.documentedByCompany.processes.slice(0, 8).map((p) => ({ name: clip(p.name, 120), source: clip(p.source, 120), steps: p.steps.slice(0, 15).map((x) => clip(x, 120)) })),
+      open_points: c.documentedByCompany.open_points.slice(0, 15).map((x) => clip(x, 300)) } : null,
   });
 }
 
