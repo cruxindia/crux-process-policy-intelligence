@@ -15,7 +15,7 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
   const { supabase, userId, membership, permissions } = await requireMembership(companyId);
 
   await supabase.rpc("my_discovery_assignment", { p_company: companyId }); // idempotent: existing members get the conversation too
-  const [{ data: assignments }, { data: impactRaw }, { data: notes }, { data: forMe }, { data: me }, { count: myTasks }] = await Promise.all([
+  const [{ data: assignments }, { data: impactRaw }, { data: notes }, { data: forMe }, { data: me }, { count: myTasks }, { data: reviews }, docCount] = await Promise.all([
     supabase
       .from("interview_assignments")
       .select("id, status, due_on, department_id, process_id, interview_campaigns(name, purpose, due_on, interview_mode), departments(name), processes(code, name), interview_sessions(id)")
@@ -29,7 +29,10 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
       .eq("assignee_membership_id", membership.id).in("status", ["open", "assigned", "escalated"]).order("created_at"),
     supabase.from("user_profiles").select("display_name").eq("id", userId).maybeSingle(),
     supabase.from("tickets").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("assignee_membership_id", membership.id).in("status", ["open", "in_progress", "waiting"]),
+    supabase.rpc("my_doc_reviews", { p_company: companyId }),
+    permissions.has("org.manage") ? supabase.from("source_documents").select("id", { count: "exact", head: true }).eq("company_id", companyId) : Promise.resolve({ count: null }),
   ]);
+  const reviewOpen = ((reviews ?? []) as { open: number }[]).reduce((n, r) => n + r.open, 0);
   const impact = impactRaw as unknown as Impact | null;
   const link = (t: string | null, id: string | null) => t === "dispute" ? `/c/${companyId}/disputes/${id}` : t === "ticket" ? `/c/${companyId}/tasks/${id}`
     : t === "digest" ? `/c/${companyId}/tasks` : `/c/${companyId}/requests/${id}`;
@@ -41,6 +44,8 @@ export default async function CompanyHome({ params }: { params: Promise<{ compan
         const disc = assignments?.find((a) => a.interview_campaigns?.interview_mode === "discovery" && !["declined", "expired", "cancelled", "completed"].includes(a.status));
         const next = myTasks ? { text: `You have ${myTasks} task${myTasks === 1 ? "" : "s"} waiting`, cta: "Open my work", href: `/c/${companyId}/tasks` }
           : forMe?.length ? { text: `${forMe.length} colleague${forMe.length === 1 ? " is" : "s are"} waiting for your answer`, cta: "Reply now", href: `/c/${companyId}/requests/${forMe[0]!.id}` }
+          : reviewOpen ? { text: `${reviewOpen} point${reviewOpen === 1 ? "" : "s"} from your department's documents need your view`, cta: "Review now", href: `/c/${companyId}/my-review` }
+          : permissions.has("org.manage") && docCount.count === 0 ? { text: "Start with the documents you already have — policies, SOPs, letters, forms. We'll map what exists and what is missing", cta: "Bring documents", href: `/c/${companyId}/documents` }
           : disc ? { text: "Your knowledge is the most valuable input — tell us how your work really happens", cta: disc.interview_sessions?.[0] ? "Continue conversation" : "Start conversation", href: `/c/${companyId}/interviews/${disc.id}` }
           : permissions.has("dashboard.read") ? { text: "You're all caught up. See how the company is doing", cta: "Open dashboard", href: `/c/${companyId}/dashboard` }
           : { text: "You're all caught up — thank you", cta: "Browse processes", href: `/c/${companyId}/catalogue` };
