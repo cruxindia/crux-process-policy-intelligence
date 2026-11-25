@@ -140,7 +140,7 @@ end $$;
  *  near-identical rule documents are reported as duplicates. Returns counts. Safe to run again. */
 create or replace function public.doc_assessment_finalize(p_company uuid) returns jsonb
 language plpgsql security definer set search_path = '' as $$
-declare v_pending int; v_missing int := 0; v_found int; v_partial int; v_dup int := 0;
+declare v_pending int;
 begin
   if not private.has_permission(p_company, 'org.manage') then raise exception 'PPI_FORBIDDEN: company administrators only' using errcode = '42501'; end if;
   select count(*) into v_pending from public.source_documents
@@ -148,6 +148,13 @@ begin
   if v_pending > 0 then
     raise exception 'PPI_PENDING: % rule document(s) are still waiting for analysis; finish those first', v_pending using errcode = 'P0001';
   end if;
+  return private.doc_finalize_core(p_company);
+end $$;
+
+create or replace function private.doc_finalize_core(p_company uuid) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare v_missing int := 0; v_found int; v_partial int; v_dup int := 0;
+begin
   -- coverage from links (an item covered fully by any document is found; otherwise partial)
   update public.register_items r set status = case when exists (select 1 from public.doc_register_links l where l.company_id = r.company_id and l.register_item_id = r.id and l.coverage = 'full')
       then 'found' else 'partial' end, evidence_count = (select count(*) from public.doc_register_links l where l.company_id = r.company_id and l.register_item_id = r.id), updated_at = now()
@@ -183,6 +190,7 @@ begin
   return jsonb_build_object('covered', v_found, 'partly_covered', v_partial, 'missing', v_missing, 'duplicate_groups', v_dup);
 end $$;
 
+revoke all on function private.doc_finalize_core(uuid) from public, anon, authenticated;
 revoke all on function public.doc_finding_decide(uuid, uuid, text, text), public.doc_assessment_finalize(uuid) from public, anon;
 grant execute on function public.doc_finding_decide(uuid, uuid, text, text), public.doc_assessment_finalize(uuid) to authenticated;
 
