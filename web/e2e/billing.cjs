@@ -35,7 +35,7 @@ const month = ist.toISOString().slice(0, 7);
     await l.getByRole('button', { name: 'Issue invoice' }).click(); await l.waitForURL(/ok=Issued/);
     const number = (new URL(l.url()).searchParams.get('ok') ?? '').match(/Issued as (\S+)/)?.[1] ?? '';
     check('issued with a financial-year number', /^PPI\/\d\d-\d\d\/\d{4}$/.test(number), number);
-    check('labelled proforma while the platform billing profile is incomplete', /Proforma invoice/.test(await l.getByTestId('invoice').innerText()));
+    check('invoice shows the cost simply (no tax details unless a GSTIN exists)', /^Invoice$/m.test(await l.getByTestId('invoice').innerText()) && !/GSTIN|SAC|Proforma/.test(await l.getByTestId('invoice').innerText()));
 
     // ---- company admin: sees, downloads, disputes ----
     await l.goto(`${BASE}/c/${CO}/billing`);
