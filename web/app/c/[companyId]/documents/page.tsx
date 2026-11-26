@@ -18,22 +18,25 @@ export default async function Documents({ params, searchParams }: { params: Prom
   const { supabase, permissions } = await requireMembership(companyId);
   if (!permissions.has("org.manage")) notFound();
   const cat = ["governing", "record", "sensitive"].includes(sp.cat ?? "") ? sp.cat! : "governing";
-  const [{ data: docs }, { data: list }, { data: versions }, { data: adopted }, { data: reg }, { data: deptRows }, { data: members }] = await Promise.all([
-    supabase.from("source_documents").select("category, department_code, read_status, analysis_status").eq("company_id", companyId).limit(20000),
-    supabase.from("source_documents").select("id, file_name, folder, category, doc_type, department_code, reason, read_status, unreadable_reason, analysis_status, text_chars")
-      .eq("company_id", companyId).eq("category", cat).order("folder").order("file_name").limit(500),
+  const q = (sp.q ?? "").trim().slice(0, 80); const page = Math.max(0, Number.parseInt(sp.page ?? "0", 10) || 0); const PAGE = 200;
+  let listQ = supabase.from("source_documents").select("id, file_name, folder, category, doc_type, department_code, reason, read_status, unreadable_reason, analysis_status, text_chars", { count: "exact" })
+    .eq("company_id", companyId).eq("category", cat);
+  if (q) listQ = listQ.or(`file_name.ilike.%${q.replace(/[%,()*]/g, " ")}%,folder.ilike.%${q.replace(/[%,()*]/g, " ")}%`);
+  const [{ data: summary }, { data: list, count: listCount }, { data: versions }, { data: adopted }, { data: reg }, { data: deptRows }, { data: members }] = await Promise.all([
+    supabase.rpc("setup_summary", { p_company: companyId }),
+    listQ.order("folder").order("file_name").range(page * PAGE, page * PAGE + PAGE - 1),
     supabase.from("baseline_versions").select("id, title, version, as_of").eq("status", "active").order("activated_at", { ascending: false }),
     supabase.from("company_baselines").select("version_id").eq("company_id", companyId),
     supabase.from("register_items").select("kind, status").eq("company_id", companyId).limit(5000),
     supabase.rpc("doc_departments", { p_company: companyId }),
-    supabase.from("memberships").select("id, user_id").eq("company_id", companyId).eq("status", "active").limit(2000),
+    supabase.from("memberships").select("id, user_id, status").eq("company_id", companyId).in("status", ["active", "invited"]).limit(2000),
   ]);
   // memberships.user_id points at auth.users, so names come from user_profiles in a second lookup (no PostgREST embed).
   const uids = [...new Set((members ?? []).map((m) => m.user_id))];
   const { data: profiles } = uids.length ? await supabase.from("user_profiles").select("id, display_name").in("id", uids) : { data: [] };
   const nameOf = new Map((profiles ?? []).map((x) => [x.id, x.display_name]));
-  const all = docs ?? [];
-  const n = (f: (d: (typeof all)[number]) => boolean) => all.filter(f).length;
+  // Counted in the database (setup_summary), so the figures stay right past the API's 1,000-row page size.
+  const S = (summary ?? {}) as Record<string, number>;
   const adoptedIds = new Set((adopted ?? []).map((a) => a.version_id));
   const regDocs = (reg ?? []).filter((r) => r.kind === "document");
   const regBy = (s: string) => regDocs.filter((r) => r.status === s).length;
@@ -47,11 +50,11 @@ export default async function Documents({ params, searchParams }: { params: Prom
       {sp.ok && <div className="notice ok">{sp.ok}</div>}
 
       <div className="kpis" data-testid="doc-kpis">
-        <div className="kpi"><div className="kpi-label">Files brought in</div><div className="kpi-value">{all.length}</div><div className="kpi-sub">duplicates counted once</div></div>
-        <div className="kpi good"><div className="kpi-label">Rule documents</div><div className="kpi-value">{n((d) => d.category === "governing")}</div><div className="kpi-sub">{n((d) => d.analysis_status === "done")} analysed</div></div>
-        <div className="kpi"><div className="kpi-label">Records</div><div className="kpi-value">{n((d) => d.category === "record")}</div><div className="kpi-sub">evidence that work happens</div></div>
-        <div className="kpi attn"><div className="kpi-label">Personal / legal</div><div className="kpi-value">{n((d) => d.category === "sensitive")}</div><div className="kpi-sub">counted, never read</div></div>
-        <div className="kpi"><div className="kpi-label">Could not be read</div><div className="kpi-value">{n((d) => d.read_status === "unreadable")}</div><div className="kpi-sub">old formats or scans</div></div>
+        <div className="kpi"><div className="kpi-label">Files brought in</div><div className="kpi-value">{S.files ?? 0}</div><div className="kpi-sub">duplicates counted once</div></div>
+        <div className="kpi good"><div className="kpi-label">Rule documents</div><div className="kpi-value">{S.governing ?? 0}</div><div className="kpi-sub">{S.analysed ?? 0} analysed</div></div>
+        <div className="kpi"><div className="kpi-label">Records</div><div className="kpi-value">{S.records ?? 0}</div><div className="kpi-sub">evidence that work happens</div></div>
+        <div className="kpi attn"><div className="kpi-label">Personal / legal</div><div className="kpi-value">{S.sensitive ?? 0}</div><div className="kpi-sub">counted, never read</div></div>
+        <div className="kpi"><div className="kpi-label">Could not be read</div><div className="kpi-value">{S.unreadable ?? 0}</div><div className="kpi-sub">old formats or scans</div></div>
       </div>
 
       <div className="card" data-testid="checklist">
@@ -67,14 +70,14 @@ export default async function Documents({ params, searchParams }: { params: Prom
           </form>))}
       </div>
 
-      <Uploader companyId={companyId} />
+      <Uploader companyId={companyId} driveClientId={process.env.GOOGLE_DRIVE_CLIENT_ID || undefined} />
 
       <div className="card" data-testid="analysis">
         <h2 style={{ marginTop: 0 }}>Analysis</h2>
         <p className="small muted" style={{ maxWidth: 760 }}>Each rule document is read by an AI your administrator approved for company documents (personal and legal records are never sent): the process it describes (drawn as a flowchart), which checklist items it covers,
           what it is missing, loose ends, risks with suggested fixes, and questions for the people who run the work. Nothing is final until a person confirms it.</p>
-        <Analyse companyId={companyId} queued={n((d) => d.category === "governing" && d.read_status === "read" && ["queued", "running", "waiting_provider"].includes(d.analysis_status))} />
-        {n((d) => d.analysis_status === "waiting_provider") > 0 && <p className="notice small">{n((d) => d.analysis_status === "waiting_provider")} documents are waiting for an approved AI — approve one under Administration → AI connections → Data approvals.</p>}
+        <Analyse companyId={companyId} queued={S.to_analyse ?? 0} />
+        {(S.waiting_provider ?? 0) > 0 && <p className="notice small">{S.waiting_provider} documents are waiting for an approved AI — approve one under Administration → AI connections → Data approvals.</p>}
         <div className="row" style={{ gap: 10, marginTop: 10 }}>
           <a className="button secondary" href={`/c/${companyId}/documents/findings`}>See findings</a>
           {adoptedIds.size > 0 && <form action={finalise.bind(null, companyId)}><button type="submit" className="secondary">Check against the checklist</button></form>}
@@ -96,7 +99,7 @@ export default async function Documents({ params, searchParams }: { params: Prom
                   <form key={p.membership_id} action={removeStakeholder.bind(null, companyId, d.code, p.membership_id)} className="row" style={{ gap: 4 }}>
                     <span>{p.name}{p.job_title ? ` · ${p.job_title}` : ""}</span><button type="submit" className="link small" aria-label={`Remove ${p.name}`}>remove</button></form>))}
                   <StakeholderForm companyId={companyId} dept={d.code} departmentId={d.department_id}
-                    people={(members ?? []).map((m) => ({ id: m.id, name: nameOf.get(m.user_id) ?? "Unnamed" })).sort((a, b) => a.name.localeCompare(b.name))} /></td></tr>))}
+                    people={(members ?? []).map((m) => ({ id: m.id, name: `${nameOf.get(m.user_id) ?? "Unnamed"}${m.status === "invited" ? " (invited)" : ""}` })).sort((a, b) => a.name.localeCompare(b.name))} /></td></tr>))}
           </tbody></table>
         </div>) : null}
 
@@ -104,8 +107,11 @@ export default async function Documents({ params, searchParams }: { params: Prom
         <div className="row" style={{ justifyContent: "space-between" }}>
           <h2 style={{ margin: 0 }}>Files</h2>
           <nav className="row small" style={{ gap: 10 }}>{Object.entries(CAT).map(([k, [label]]) => (
-            <a key={k} href={`?cat=${k}#list`} aria-current={k === cat ? "page" : undefined} style={k === cat ? { fontWeight: 700 } : undefined}>{label} ({n((d) => d.category === k)})</a>))}</nav>
+            <a key={k} href={`?cat=${k}#list`} aria-current={k === cat ? "page" : undefined} style={k === cat ? { fontWeight: 700 } : undefined}>{label} ({S[k === "governing" ? "governing" : k === "record" ? "records" : "sensitive"] ?? 0})</a>))}</nav>
         </div>
+        <form className="row small" style={{ gap: 6, margin: "8px 0" }} action="#list"><input type="hidden" name="cat" value={cat} />
+          <input name="q" defaultValue={q} placeholder="Search file or folder name" aria-label="Search files" style={{ maxWidth: 280 }} />
+          <button type="submit" className="secondary">Search</button>{q && <a href={`?cat=${cat}#list`}>Clear</a>}</form>
         {(list ?? []).length === 0 ? <p className="muted">Nothing here yet.</p> : (
           <div style={{ overflowX: "auto" }}><table className="small"><thead><tr><th>File</th><th>Type</th><th>Department</th><th>Status</th><th>Change</th></tr></thead><tbody>
             {(list ?? []).map((d) => (
@@ -119,7 +125,12 @@ export default async function Documents({ params, searchParams }: { params: Prom
                     {Object.entries(DEPARTMENTS).map(([k, v]) => <option key={k} value={k}>{v.split(" / ")[0]}</option>)}</select>
                   <button type="submit" className="secondary">Save</button></form></td></tr>))}
           </tbody></table></div>)}
-        {(list ?? []).length === 500 && <p className="small muted">Showing the first 500.</p>}
+        {(listCount ?? 0) > PAGE && (
+          <p className="small row" style={{ gap: 12 }} data-testid="doc-pages">
+            <span className="muted">{page * PAGE + 1}–{Math.min((page + 1) * PAGE, listCount ?? 0)} of {listCount}</span>
+            {page > 0 && <a href={`?cat=${cat}&q=${encodeURIComponent(q)}&page=${page - 1}#list`}>Previous</a>}
+            {(page + 1) * PAGE < (listCount ?? 0) && <a href={`?cat=${cat}&q=${encodeURIComponent(q)}&page=${page + 1}#list`}>Next</a>}
+          </p>)}
       </div>
     </>
   );

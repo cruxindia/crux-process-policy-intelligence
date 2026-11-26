@@ -24,3 +24,6 @@ services:
         value: https://pahzxpileudulljgaciw.supabase.co
       - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
         value: sb_publishable_L2ykSIC91lAxg1Verk-8yQ_rP9-p80F
+      # Google Drive import (optional): the OAuth client ID for this site, created by the owner in Google Cloud. Not a secret.
+      - key: GOOGLE_DRIVE_CLIENT_ID
+        sync: false

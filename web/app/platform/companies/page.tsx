@@ -1,5 +1,5 @@
 import { requirePlatformAdmin } from "@/lib/session";
-import { setCompanyStatus } from "../actions";
+import { openCompany, setCompanyStatus } from "../actions";
 import { NewCompanyForm } from "./new-company";
 
 const when = (d: string | null) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -20,7 +20,7 @@ export default async function PlatformCompanies({ searchParams }: { searchParams
       <div className="table-wrap card" style={{ padding: 0 }}>
         <table data-testid="companies-table">
           <thead><tr><th>Company</th><th>Status</th><th className="num">People</th><th className="num">Interviews</th><th className="num">Processes</th>
-            <th className="num">Validated</th><th className="num">Documents</th><th className="num">AI runs 30d</th><th>Last activity</th><th>Change status</th></tr></thead>
+            <th className="num">Validated</th><th className="num">Documents</th><th className="num">AI runs 30d</th><th>Last activity</th><th>Set up</th><th>Change status</th></tr></thead>
           <tbody>
             {rows.map((c) => (
               <tr key={c.company_id}>
@@ -33,6 +33,8 @@ export default async function PlatformCompanies({ searchParams }: { searchParams
                 <td className="num">{c.documents_approved}</td>
                 <td className="num">{c.ai_runs_30d}</td>
                 <td>{when(c.last_activity)}</td>
+                <td><form action={openCompany.bind(null, c.company_id)}><button type="submit" className="secondary" data-testid={`open-${c.code}`}
+                  title="Opens this company as its administrator (recorded in the platform log and in the company's member list)">Open &amp; set up</button></form></td>
                 <td>
                   <form action={setCompanyStatus.bind(null, c.company_id)} className="row" style={{ flexWrap: "nowrap", gap: 6 }}>
                     <select name="status" defaultValue={c.status} aria-label={`Status of ${c.name}`} style={{ width: 120 }}>

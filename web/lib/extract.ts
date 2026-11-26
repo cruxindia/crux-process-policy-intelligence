@@ -3,7 +3,8 @@
 import { unzip, readDocx, readPptx, readXlsx, xlsxText, type Zip } from "./office-text";
 
 export type Extracted = { sha256: string; text: string | null; pages: number | null; unreadable: string | null };
-export type Entry = { name: string; folder: string; size: number; modified: number | null; bytes: () => Promise<ArrayBuffer> };
+export type Entry = { name: string; folder: string; size: number; modified: number | null; bytes: () => Promise<ArrayBuffer>;
+  /** Optional fingerprint (64 hex) used instead of downloading, when the file is only counted (Google Drive). */ fingerprint?: () => Promise<string> };
 
 export const sha256Hex = async (b: ArrayBuffer) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", b))].map((x) => x.toString(16).padStart(2, "0")).join("");
 export const extOf = (n: string) => (/\.([a-z0-9]{1,8})$/i.exec(n)?.[1] ?? "").toLowerCase();

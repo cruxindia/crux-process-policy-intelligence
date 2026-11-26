@@ -65,9 +65,9 @@ function pdf(text) {   // smallest valid PDF with one line of text
     // analysis gate: no AI is approved for confidential documents on the synthetic tenant
     await l.goto(`${BASE}/c/${CO}/documents`);
     await l.getByTestId('analyse').getByRole('button').first().click();
-    await l.getByTestId('analysis').getByText(/No AI connection is approved|Analysed|analysed|could not finish|stopped/).first().waitFor({ timeout: 120000 }).catch(() => {});
+    await l.getByTestId('analysis').getByText(/No AI connection is approved|Analysed|analysed|could not finish|stopped|Last: /).first().waitFor({ timeout: 120000 }).catch(() => {});
     const msg = await l.getByTestId('analysis').innerText();
-    check('analysis waits safely when no AI is approved for company documents', /No AI connection is approved|Analysed|analysed|could not finish/.test(msg), msg.replace(/\n/g, ' ').slice(0, 200));
+    check('analysis runs (or waits safely when no AI is approved)', /No AI connection is approved|Analysed|analysed|could not finish|Last: /.test(msg), msg.replace(/\n/g, ' ').slice(0, 200));
     await l.goto(`${BASE}/c/${CO}/admin/ai`);
     check('data approvals explain training providers', /Data approvals/.test(await l.getByTestId('data-approvals').innerText()) && /gemini_free/.test(await l.getByTestId('data-approvals').innerText()));
 

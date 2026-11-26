@@ -289,9 +289,9 @@ export type Database = {
         ]
       }
       companies: {
-        Row: { ai_connection_limit: number; catalogue_settings: Json; code: string; created_at: string; id: string; is_demo: boolean; name: string; status: string; status_note: string | null; timezone: string; updated_at: string }
-        Insert: { ai_connection_limit?: number; catalogue_settings?: Json; code: string; created_at?: string; id?: string; is_demo?: boolean; name: string; status?: string; status_note?: string | null; timezone?: string; updated_at?: string }
-        Update: { ai_connection_limit?: number; catalogue_settings?: Json; code?: string; created_at?: string; id?: string; is_demo?: boolean; name?: string; status?: string; status_note?: string | null; timezone?: string; updated_at?: string }
+        Row: { ai_connection_limit: number; catalogue_settings: Json; code: string; created_at: string; id: string; is_demo: boolean; name: string; profile: Json; status: string; status_note: string | null; timezone: string; updated_at: string }
+        Insert: { ai_connection_limit?: number; catalogue_settings?: Json; code: string; created_at?: string; id?: string; is_demo?: boolean; name: string; profile?: Json; status?: string; status_note?: string | null; timezone?: string; updated_at?: string }
+        Update: { ai_connection_limit?: number; catalogue_settings?: Json; code?: string; created_at?: string; id?: string; is_demo?: boolean; name?: string; profile?: Json; status?: string; status_note?: string | null; timezone?: string; updated_at?: string }
         Relationships: []
       }
       company_api_keys: {
@@ -462,7 +462,6 @@ export type Database = {
         Update: { added_by?: string | null; company_id?: string; created_at?: string; department_code?: string; membership_id?: string }
         Relationships: [
           { foreignKeyName: "doc_stakeholders_company_id_added_by_fkey"; columns: ["company_id", "added_by"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] },
-          { foreignKeyName: "doc_stakeholders_company_id_fkey"; columns: ["company_id"]; isOneToOne: false; referencedRelation: "companies"; referencedColumns: ["id"] },
           { foreignKeyName: "doc_stakeholders_company_id_membership_id_fkey"; columns: ["company_id", "membership_id"]; isOneToOne: false; referencedRelation: "memberships"; referencedColumns: ["company_id", "id"] }
         ]
       }
@@ -1022,6 +1021,7 @@ export type Database = {
       company_create_api_key: { Args: { p_company: string | null; p_name: string | null }; Returns: Json }
       company_dashboard: { Args: { p_company: string | null; p_project?: string | null }; Returns: Json }
       company_dispute_invoice: { Args: { p_company: string | null; p_invoice: string | null; p_reason: string | null }; Returns: string }
+      company_profile_set: { Args: { p_company: string | null; p_profile: Json | null }; Returns: Json }
       company_release_document: { Args: { p_company: string | null; p_case: string | null; p_slug: string | null; p_public_embed?: boolean | null }; Returns: string }
       company_revoke_api_key: { Args: { p_company: string | null; p_key: string | null }; Returns: undefined }
       company_revoke_release: { Args: { p_company: string | null; p_release: string | null }; Returns: undefined }
@@ -1034,6 +1034,7 @@ export type Database = {
       doc_assessment_finalize: { Args: { p_company: string | null }; Returns: Json }
       doc_departments: { Args: { p_company: string | null; p_create?: boolean | null }; Returns: Json }
       doc_finding_decide: { Args: { p_company: string | null; p_finding: string | null; p_status: string | null; p_note?: string | null }; Returns: undefined }
+      doc_reviewers_interview: { Args: { p_company: string | null }; Returns: Json }
       doc_stakeholder_add: { Args: { p_company: string | null; p_dept: string | null; p_membership: string | null }; Returns: undefined }
       doc_stakeholder_remove: { Args: { p_company: string | null; p_dept: string | null; p_membership: string | null }; Returns: undefined }
       intake_add: { Args: { p_company: string | null; p_batch: string | null; p_docs: Json | null }; Returns: Json }
@@ -1063,9 +1064,11 @@ export type Database = {
       platform_billing_settings: { Args: never; Returns: Json }
       platform_companies: { Args: never; Returns: { company_id: string; code: string; name: string; status: string; is_demo: boolean; created_at: string; members_active: number; members_invited: number; departments: number; interviews_started: number; interviews_submitted: number; processes_found: number; company_processes: number; validated: number; documents_approved: number; ai_runs_30d: number; last_activity: string }[] }
       platform_create_company: { Args: { p_code: string | null; p_name: string | null; p_admin_email: string | null; p_admin_name: string | null; p_admin_job?: string | null }; Returns: Json }
+      platform_create_company_self: { Args: { p_code: string | null; p_name: string | null }; Returns: string }
       platform_generate_invoices: { Args: { p_month: string | null }; Returns: Json }
       platform_invoice_action: { Args: { p_invoice: string | null; p_action: string | null; p_note?: string | null }; Returns: string }
       platform_mis: { Args: { p_report: string | null; p_from?: string | null; p_to?: string | null }; Returns: Json }
+      platform_open_company: { Args: { p_company: string | null }; Returns: string }
       platform_save_billing_settings: { Args: { p: Json | null }; Returns: undefined }
       platform_save_plan: { Args: { p_id: string | null; p_code: string | null; p_name: string | null; p_description: string | null; p_monthly_fee: number | null; p_included_people: number | null; p_price_per_extra_person: number | null; p_included_ai_runs: number | null; p_price_per_100_ai_runs: number | null; p_features: string[] | null; p_company?: string | null; p_status?: string | null }; Returns: string }
       platform_set_company_status: { Args: { p_company: string | null; p_status: string | null; p_note?: string | null }; Returns: undefined }
@@ -1082,6 +1085,7 @@ export type Database = {
       register_with_join_link: { Args: { p_token: string | null; p_mobile: string | null; p_full_name: string | null; p_password: string | null; p_email?: string | null }; Returns: Json }
       reissue_temporary_password: { Args: { p_company: string | null; p_membership: string | null }; Returns: string }
       set_join_interview_mode: { Args: { p_company: string | null; p_adaptive: boolean | null }; Returns: string }
+      setup_summary: { Args: { p_company: string | null }; Returns: Json }
       start_interview_session: { Args: { p_assignment: string | null }; Returns: string }
       ticket_assign: { Args: { p_company: string | null; p_ticket: string | null; p_assignee: string | null; p_due?: string | null; p_priority?: string | null }; Returns: undefined }
       ticket_comment: { Args: { p_company: string | null; p_ticket: string | null; p_body: string | null }; Returns: string }

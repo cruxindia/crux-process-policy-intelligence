@@ -17,6 +17,24 @@ export async function createCompany(_prev: CreateResult, form: FormData): Promis
   return { ok: true, companyId: r.company_id, tempPassword: r.temporary_password, email: g("email") };
 }
 
+/** New client company that the platform owner sets up himself (he becomes its administrator; logged). Opens the set-up guide. */
+export async function createCompanySelf(_prev: CreateResult, form: FormData): Promise<CreateResult> {
+  const { supabase } = await requirePlatformAdmin();
+  const g = (k: string) => String(form.get(k) ?? "").trim();
+  const { data, error } = await supabase.rpc("platform_create_company_self", { p_code: g("code").toUpperCase(), p_name: g("name") });
+  if (error) return { ok: false, error: explain(error) };
+  revalidatePath("/platform");
+  redirect(`/c/${data as string}/setup`);
+}
+
+/** Open an existing company as its administrator (logged in the platform log and visible in the company's member list). */
+export async function openCompany(companyId: string) {
+  const { supabase } = await requirePlatformAdmin();
+  const { error } = await supabase.rpc("platform_open_company", { p_company: companyId });
+  if (error) redirect(`/platform/companies?e=${encodeURIComponent(explain(error))}`);
+  redirect(`/c/${companyId}/setup`);
+}
+
 export async function setCompanyStatus(companyId: string, form: FormData) {
   const { supabase } = await requirePlatformAdmin();
   const { error } = await supabase.rpc("platform_set_company_status", { p_company: companyId, p_status: String(form.get("status")), p_note: String(form.get("note") ?? "") || null });
