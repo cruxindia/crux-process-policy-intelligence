@@ -77,7 +77,7 @@ export default async function Documents({ params, searchParams }: { params: Prom
         <p className="small muted" style={{ maxWidth: 760 }}>Each rule document is read by an AI your administrator approved for company documents (personal and legal records are never sent): the process it describes (drawn as a flowchart), which checklist items it covers,
           what it is missing, loose ends, risks with suggested fixes, and questions for the people who run the work. Nothing is final until a person confirms it.</p>
         <Analyse companyId={companyId} queued={S.to_analyse ?? 0} />
-        {(S.waiting_provider ?? 0) > 0 && <p className="notice small">{S.waiting_provider} documents are waiting for an approved AI — approve one under Administration → AI connections → Data approvals.</p>}
+        {(S.waiting_provider ?? 0) > 0 && <p className="notice small">{S.waiting_provider} documents are waiting for an approved AI — <a href={`/c/${companyId}/admin/ai#approvals`}>open Data approvals</a> and set your provider to “Company documents &amp; interviews”.</p>}
         <div className="row" style={{ gap: 10, marginTop: 10 }}>
           <a className="button secondary" href={`/c/${companyId}/documents/findings`}>See findings</a>
           {adoptedIds.size > 0 && <form action={finalise.bind(null, companyId)}><button type="submit" className="secondary">Check against the checklist</button></form>}

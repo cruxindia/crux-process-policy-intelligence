@@ -82,7 +82,7 @@ export default async function Setup({ params, searchParams }: { params: Promise<
         <h2 style={{ marginTop: 0 }}>4. Analysis {mark("analysis")}</h2>
         <p className="small">{n("analysed")} of {n("governing")} rule documents analysed · {n("processes_documented")} processes drawn · {n("findings_open")} open points (gaps, loose ends, risks, questions, missing documents).</p>
         <Analyse companyId={companyId} queued={n("to_analyse")} />
-        {n("waiting_provider") > 0 && <p className="notice small">{n("waiting_provider")} documents are waiting for an approved AI — <Link href={`/c/${companyId}/admin/ai`}>approve one under AI connections → Data approvals</Link>.</p>}
+        {n("waiting_provider") > 0 && <p className="notice small">{n("waiting_provider")} documents are waiting for an approved AI — <Link href={`/c/${companyId}/admin/ai#approvals`}>open Data approvals</Link> and set your provider to “Company documents &amp; interviews”.</p>}
         <p className="small" style={{ marginBottom: 0 }}><Link href={`/c/${companyId}/documents/findings`}>See all findings</Link></p>
       </section>
 
