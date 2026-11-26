@@ -8,16 +8,18 @@ import { createClient } from "@/lib/supabase/client";
 import { classify, mayShareText, type Classification } from "@/lib/doc-classify";
 import { extract, extOf, MAX_FILE, unzip, zipEntries, type Entry } from "@/lib/extract";
 import { connectDrive, folderIdFromLink, listDriveFolder } from "@/lib/drive";
+import { zipEntriesLazy } from "@/lib/zip-lazy";
 
 type Stats = { total: number; done: number; added: number; duplicate: number; governing: number; record: number; sensitive: number; unreadable: number; problems: string[] };
 const zero = (): Stats => ({ total: 0, done: 0, added: 0, duplicate: 0, governing: 0, record: 0, sensitive: 0, unreadable: 0, problems: [] });
 const READABLE = new Set(["docx", "docm", "pdf", "xlsx", "xlsm", "pptx", "txt", "md", "csv"]);
 const SKIP = /(^|\/)(\.|~\$|desktop\.ini$|thumbs\.db$)|\.(psd1|psm1|exe|dll|lnk|tmp|ini)$/i;
 
-const fromFile = (f: File): Entry => {
+type FileEntry = Entry & { blob?: Blob };
+const fromFile = (f: File): FileEntry => {
   const rel = (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name;
   const i = rel.lastIndexOf("/");
-  return { name: f.name, folder: i > 0 ? rel.slice(0, i) : "", size: f.size, modified: f.lastModified || null, bytes: () => f.arrayBuffer() };
+  return { name: f.name, folder: i > 0 ? rel.slice(0, i) : "", size: f.size, modified: f.lastModified || null, bytes: () => f.arrayBuffer(), blob: f };
 };
 
 export function Uploader({ companyId, driveClientId }: { companyId: string; driveClientId?: string }) {
@@ -35,8 +37,13 @@ export function Uploader({ companyId, driveClientId }: { companyId: string; driv
     for (const e of input) {
       if (SKIP.test(`${e.folder}/${e.name}`)) continue;
       if (extOf(e.name) === "zip") {
-        try { entries.push(...zipEntries(unzip(new Uint8Array(await e.bytes())), `${e.folder ? e.folder + "/" : ""}${e.name}`).filter((x) => !SKIP.test(`${x.folder}/${x.name}`))); }
-        catch (x) { s.problems.push(`${e.name}: could not open the archive (${(x as Error).message})`); }
+        // Read the archive entry by entry from disk: Drive folder downloads are often several GB (and split into parts).
+        try {
+          const blob = (e as FileEntry).blob ?? new Blob([await e.bytes()]);
+          const inner = (await zipEntriesLazy(blob, `${e.folder ? e.folder + "/" : ""}${e.name}`)).filter((x) => !SKIP.test(`${x.folder}/${x.name}`));
+          if (!inner.length) s.problems.push(`${e.name}: the archive is empty`);
+          entries.push(...inner);
+        } catch (x) { s.problems.push(`${e.name}: could not open the archive (${(x as Error).message})`); }
       } else entries.push(e);
     }
     s.total = entries.length; bump();

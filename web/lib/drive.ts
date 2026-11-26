@@ -44,6 +44,7 @@ async function get(token: string, url: string): Promise<Response> {
       if (r.status !== 403 || /rate|quota|limit/i.test(body)) { await new Promise((ok) => setTimeout(ok, 800 * 2 ** attempt)); continue; }
     }
     const msg = await r.text().catch(() => "");
+    if (r.status === 403 && /has not been used|is disabled|accessNotConfigured/i.test(msg)) throw new Error("The Google Drive API is not switched on for the Google Cloud project — enable \"Google Drive API\" under APIs & Services, wait a minute and try again");
     throw new Error(r.status === 404 ? "Folder not found — check the link, and that this Google account can open it"
       : r.status === 401 ? "Google sign-in expired — connect again" : `Google Drive error ${r.status}${msg ? `: ${msg.slice(0, 160)}` : ""}`);
   }
@@ -91,6 +92,14 @@ function toEntry(token: string, f: DriveFile, folder: string): Entry {
   };
 }
 
+const GOOGLE_ERR: Record<string, string> = {
+  popup_failed_to_open: "Your browser blocked the Google sign-in window — allow pop-ups for this site and try again",
+  popup_closed: "The Google sign-in window was closed before finishing",
+  access_denied: "Google access was not allowed. If you chose your account and still see this, add your Google account as a test user on the app's OAuth consent screen (Google Cloud → APIs & Services → OAuth consent screen)",
+  invalid_client: "Google does not recognise this site's sign-in ID — check GOOGLE_DRIVE_CLIENT_ID on Render",
+  idpiframe_initialization_failed: "Google sign-in is not allowed from this address — add https://crux-ppi.onrender.com under Authorized JavaScript origins of the OAuth client",
+};
+
 type TokenClient = { requestAccessToken: (o?: { prompt?: string }) => void };
 type GoogleOauth = { initTokenClient: (c: { client_id: string; scope: string; callback: (r: { access_token?: string; error?: string }) => void; error_callback?: (e: { type?: string }) => void }) => TokenClient };
 
@@ -105,8 +114,8 @@ export async function connectDrive(clientId: string): Promise<string> {
   }
   return new Promise((ok, bad) => {
     const client = w.google!.accounts!.oauth2!.initTokenClient({ client_id: clientId, scope: DRIVE_SCOPE,
-      callback: (r) => (r.access_token ? ok(r.access_token) : bad(new Error(r.error ?? "Google sign-in was cancelled"))),
-      error_callback: (e) => bad(new Error(e.type === "popup_closed" ? "Google sign-in window was closed" : "Google sign-in failed")) });
+      callback: (r) => (r.access_token ? ok(r.access_token) : bad(new Error(GOOGLE_ERR[r.error ?? ""] ?? `Google refused the sign-in (${r.error ?? "no reason given"})`))),
+      error_callback: (e) => bad(new Error(GOOGLE_ERR[e.type ?? ""] ?? `Google sign-in failed (${e.type ?? "unknown"})`)) });
     client.requestAccessToken({ prompt: "" });
   });
 }
